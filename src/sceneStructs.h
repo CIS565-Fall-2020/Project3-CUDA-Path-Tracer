@@ -64,6 +64,7 @@ struct PathSegment {
 	glm::vec3 color;
 	int pixelIndex;
 	int remainingBounces;
+    int ori_id;
 };
 
 // Use with a corresponding PathSegment to do:
@@ -72,5 +73,6 @@ struct PathSegment {
 struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
+  glm::vec3 tangent, bitangent;
   int materialId;
 };
