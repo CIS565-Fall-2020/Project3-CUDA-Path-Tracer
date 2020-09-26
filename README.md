@@ -44,6 +44,6 @@ milliseconds. I think this is caused by the fact that BSDF computation now is ha
 
 The experiments are conducted on the same number of iterations which is 3000 iterations for different max ray depths. 
 
-![pic 1](./img/performance.PNG)
+![pic 1](./img/Performance.PNG)
 
 As we can see from the graph above, with more depth, the performance is natually going to be bad. Besides, the experiments using first bounce cache always perform better than their counterparts that don't use it. 
