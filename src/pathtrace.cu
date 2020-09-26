@@ -15,6 +15,9 @@
 #include "intersections.h"
 #include "interactions.h"
 
+#define MATERIAL_SORT
+#define CACHE_BOUNCE
+
 #define ERRORCHECK 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -421,8 +424,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     // std::cout << "iter:" << iter << std::endl;
 
     // TODO: perform one iteration of path tracing
+#ifdef CACHE_BOUNCE
     if (iter == 1) {
-        generateRayFromCamera <<<blocksPerGrid2d, blockSize2d>>> (cam, iter, traceDepth, dev_paths);
+        generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
         checkCUDAError("generate camera ray");
     }
     else {
@@ -442,11 +446,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
         depth++;
     }
-    /*
-    if (iter >= 2) {
-        iterationComplete = true;
-    }
-    */
+#else
+    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+    checkCUDAError("generate camera ray");
+#endif // CACHE_BOUNCE
 	
     // std::cout << "traceDepth:" << traceDepth << std::endl;
 	// --- PathSegment Tracing Stage ---
@@ -470,18 +473,21 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
         depth++;
-	            
-
+        
+#ifdef MATERIAL_SORT
         // TODO: Sort rays by material
         thrust::stable_sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, mat_sort());
+#endif // 
 
+        
+#ifdef CACHE_BOUNCE
         // Cache the first intersection
         if (iter == 1 && depth == 1) {
             cudaMemcpy(dev_cache_intersections, dev_intersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
             cudaMemcpy(dev_cache_paths, dev_paths, pixelcount * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
             // print_remain_bounces << <numblocksPathSegmentTracing, blockSize1d >> > (pixelcount, dev_paths);
         }
-        
+#endif // CACHE_BOUNCE
 
 	    // TODO:
 	    // --- Shading Stage ---
@@ -508,16 +514,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // iterationComplete = true; 
     }
 
-    // Assemble this iteration and apply it to the image
-    // dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
-	// finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
-    // finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
-
     ///////////////////////////////////////////////////////////////////////////
 
     // Send results to OpenGL buffer for rendering
     sendImageToPBO<<<blocksPerGrid2d, blockSize2d>>>(pbo, cam.resolution, iter, dev_image);
-    // sendImageToPBO << <blocksPerGrid2d, blockSize2d >> > (pbo, cam.resolution, 1, dev_image);
 
     // Retrieve image from GPU
     cudaMemcpy(hst_scene->state.image.data(), dev_image,

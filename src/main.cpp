@@ -1,6 +1,8 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#include <chrono>
+#include <ctime>
 
 static std::string startTimeString;
 
@@ -25,6 +27,50 @@ int iteration;
 
 int width;
 int height;
+
+class Timer
+{
+public:
+    void start()
+    {
+        m_StartTime = std::chrono::system_clock::now();
+        m_bRunning = true;
+    }
+
+    void stop()
+    {
+        m_EndTime = std::chrono::system_clock::now();
+        m_bRunning = false;
+    }
+
+    double elapsedMilliseconds()
+    {
+        std::chrono::time_point<std::chrono::system_clock> endTime;
+
+        if (m_bRunning)
+        {
+            endTime = std::chrono::system_clock::now();
+        }
+        else
+        {
+            endTime = m_EndTime;
+        }
+
+        return std::chrono::duration_cast<std::chrono::milliseconds>(endTime - m_StartTime).count();
+    }
+
+    double elapsedSeconds()
+    {
+        return elapsedMilliseconds() / 1000.0;
+    }
+
+private:
+    std::chrono::time_point<std::chrono::system_clock> m_StartTime;
+    std::chrono::time_point<std::chrono::system_clock> m_EndTime;
+    bool                                               m_bRunning = false;
+};
+
+Timer timer;
 
 //-------------------------------
 //-------------MAIN--------------
@@ -69,8 +115,10 @@ int main(int argc, char** argv) {
     // Initialize CUDA and GL components
     init();
 
+    timer.start();
     // GLFW main loop
     mainLoop();
+    
 
     return 0;
 }
@@ -141,6 +189,8 @@ void runCuda() {
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
+        timer.stop();
+        std::cout << "Milliseconds: " << timer.elapsedMilliseconds() << std::endl;
         saveImage();
         pathtraceFree();
         cudaDeviceReset();
