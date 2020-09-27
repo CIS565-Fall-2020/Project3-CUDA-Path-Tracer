@@ -4,6 +4,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
 #include <thrust/remove.h>
+#include <thrust/count.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -46,8 +47,7 @@ thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int de
 
 // Predicate for thust__remove_if
 struct path_is_end {
-	__host__ __device__
-	bool operator()(const PathSegment &p) {
+	__host__ __device__ bool operator()(const PathSegment &p) {
 		return p.remainingBounces == 0;
 	}
 };
@@ -238,7 +238,7 @@ __global__ void shadeFakeMaterial (
 	)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < num_paths)
+  if (idx < num_paths && pathSegments[idx].remainingBounces > 0)
   {
     ShadeableIntersection intersection = shadeableIntersections[idx];
     if (intersection.t > 0.0f) { // if the intersection exists...
@@ -389,9 +389,11 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		dev_materials
 		);
 		// TODO (ADD): stream compaction
-		PathSegment *new_end = thrust::remove_if(dev_paths, dev_paths + num_paths, path_is_end());
-		num_paths = new_end - dev_paths;
-		iterationComplete = (num_paths == 0); // TODO: should be based off stream compaction results.
+		//PathSegment *new_end = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths, path_is_end());
+		//num_paths = new_end - dev_paths;
+		//iterationComplete = (num_paths == 0);
+		//iterationComplete = (thrust::count_if(thrust::device, dev_paths, dev_path_end, path_is_end()) == num_paths); // TODO: should be based off stream compaction results.
+		iterationComplete = (depth > 5000);
 	}
 
 	// Assemble this iteration and apply it to the image
