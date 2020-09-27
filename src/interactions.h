@@ -68,7 +68,7 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
+		PathSegment &pathSegment,
         glm::vec3 normal,
 		float t, // t as in ShadableIntersection
         const Material &m,
