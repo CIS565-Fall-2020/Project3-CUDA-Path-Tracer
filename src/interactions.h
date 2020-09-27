@@ -71,9 +71,22 @@ void scatterRay(
 		PathSegment & pathSegment,
         glm::vec3 intersect,
         glm::vec3 normal,
+		float t, // t as in ShadableIntersection
         const Material &m,
         thrust::default_random_engine &rng) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+	glm::vec3 dir_spec = glm::reflect(pathSegment.ray.direction, normal);
+	glm::vec3 dir_diff = calculateRandomDirectionInHemisphere(normal, rng);
+	glm::vec3 dir_final = 0.5f * dir_spec + 0.5f * dir_diff; // equal probability
+	// update ray
+	pathSegment.ray.direction = dir_final;
+	pathSegment.ray.origin = intersect;
+	// update color
+	float lightTerm = glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f));
+	thrust::uniform_real_distribution<float> u01(0, 1);
+	pathSegment.color *= (m.color * lightTerm) * 0.3f + ((1.0f - t * 0.02f) * m.color) * 0.7f;
+	pathSegment.color *= u01(rng); // apply some noise
+	pathSegment.remainingBounces--;
 }

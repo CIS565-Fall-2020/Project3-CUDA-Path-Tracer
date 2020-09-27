@@ -262,6 +262,7 @@ __global__ void shadeFakeMaterial (
     } else {
       pathSegments[idx].color = glm::vec3(0.0f);
     }
+	// TODO (ADD): bounce with BSDF
   }
 }
 
@@ -336,48 +337,50 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 
-  bool iterationComplete = false;
+	bool iterationComplete = false;
 	while (!iterationComplete) {
 
-	// clean shading chunks
-	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
+		// clean shading chunks
+		cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
-	// tracing
-	dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-	computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
-		depth
-		, num_paths
-		, dev_paths
-		, dev_geoms
-		, hst_scene->geoms.size()
-		, dev_intersections
+		// tracing
+		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
+		computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
+			depth
+			, num_paths
+			, dev_paths
+			, dev_geoms
+			, hst_scene->geoms.size()
+			, dev_intersections
+			);
+		checkCUDAError("trace one bounce");
+		cudaDeviceSynchronize();
+		depth++;
+
+
+		// TODO:
+		// --- Shading Stage ---
+		// Shade path segments based on intersections and generate new rays by
+		// evaluating the BSDF.
+		// Start off with just a big kernel that handles all the different
+		// materials you have in the scenefile.
+		// TODO: compare between directly shading the path segments and shading
+		// path segments that have been reshuffled to be contiguous in memory.
+
+		// TODO (ADD): sort rays by material
+		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
+		iter,
+		num_paths,
+		dev_intersections,
+		dev_paths,
+		dev_materials
 		);
-	checkCUDAError("trace one bounce");
-	cudaDeviceSynchronize();
-	depth++;
-
-
-	// TODO:
-	// --- Shading Stage ---
-	// Shade path segments based on intersections and generate new rays by
-  // evaluating the BSDF.
-  // Start off with just a big kernel that handles all the different
-  // materials you have in the scenefile.
-  // TODO: compare between directly shading the path segments and shading
-  // path segments that have been reshuffled to be contiguous in memory.
-
-  shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
-    iter,
-    num_paths,
-    dev_intersections,
-    dev_paths,
-    dev_materials
-  );
-  iterationComplete = true; // TODO: should be based off stream compaction results.
+		// TODO (ADD): stream compaction
+		iterationComplete = true; // TODO: should be based off stream compaction results.
 	}
 
-  // Assemble this iteration and apply it to the image
-  dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
+	// Assemble this iteration and apply it to the image
+	dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
 	finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
 
     ///////////////////////////////////////////////////////////////////////////
