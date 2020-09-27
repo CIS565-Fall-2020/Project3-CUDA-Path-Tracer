@@ -44,6 +44,14 @@ thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int de
     return thrust::default_random_engine(h);
 }
 
+// Predicate for thust__remove_if
+struct path_is_end {
+	__host__ __device__
+	bool operator()(const PathSegment &p) {
+		return p.remainingBounces == 0;
+	}
+};
+
 //Kernel that writes the image to the OpenGL PBO directly.
 __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
         int iter, glm::vec3* image) {
@@ -246,14 +254,19 @@ __global__ void shadeFakeMaterial (
       // If the material indicates that the object was a light, "light" the ray
       if (material.emittance > 0.0f) {
         pathSegments[idx].color *= (materialColor * material.emittance);
+		pathSegments[idx].remainingBounces = 0;
       }
       // Otherwise, do some pseudo-lighting computation. This is actually more
       // like what you would expect from shading in a rasterizer like OpenGL.
       // TODO: replace this! you should be able to start with basically a one-liner
       else {
-        float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
-        pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
-        pathSegments[idx].color *= u01(rng); // apply some noise because why not
+		  /*
+		float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
+		pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
+		pathSegments[idx].color *= u01(rng); // apply some noise because why not
+		*/
+		  scatterRay(pathSegments[idx], intersection.surfaceNormal, intersection.t, material, rng);
+		  pathSegments[idx].remainingBounces--;
       }
     // If there was no intersection, color the ray black.
     // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
@@ -261,8 +274,8 @@ __global__ void shadeFakeMaterial (
     // This can be useful for post-processing and image compositing.
     } else {
       pathSegments[idx].color = glm::vec3(0.0f);
+	  pathSegments[idx].remainingBounces = 0;
     }
-	// TODO (ADD): bounce with BSDF
   }
 }
 
@@ -376,7 +389,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		dev_materials
 		);
 		// TODO (ADD): stream compaction
-		iterationComplete = true; // TODO: should be based off stream compaction results.
+		PathSegment *new_end = thrust::remove_if(dev_paths, dev_paths + num_paths, path_is_end());
+		num_paths = new_end - dev_paths;
+		iterationComplete = (num_paths == 0); // TODO: should be based off stream compaction results.
 	}
 
 	// Assemble this iteration and apply it to the image

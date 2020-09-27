@@ -69,7 +69,6 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 __host__ __device__
 void scatterRay(
 		PathSegment & pathSegment,
-        glm::vec3 intersect,
         glm::vec3 normal,
 		float t, // t as in ShadableIntersection
         const Material &m,
@@ -81,6 +80,7 @@ void scatterRay(
 	glm::vec3 dir_diff = calculateRandomDirectionInHemisphere(normal, rng);
 	glm::vec3 dir_final = 0.5f * dir_spec + 0.5f * dir_diff; // equal probability
 	// update ray
+	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
 	pathSegment.ray.direction = dir_final;
 	pathSegment.ray.origin = intersect;
 	// update color
@@ -88,5 +88,4 @@ void scatterRay(
 	thrust::uniform_real_distribution<float> u01(0, 1);
 	pathSegment.color *= (m.color * lightTerm) * 0.3f + ((1.0f - t * 0.02f) * m.color) * 0.7f;
 	pathSegment.color *= u01(rng); // apply some noise
-	pathSegment.remainingBounces--;
 }
