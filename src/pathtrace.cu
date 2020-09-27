@@ -5,6 +5,8 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include <thrust/partition.h>
+#include <thrust/sort.h>
+#include <thrust/device_vector.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -17,6 +19,8 @@
 
 #define ERRORCHECK 1
 #define STREAM_COMPACTION 1
+#define SORT_BY_MATERIAL 1
+#define CACHE_ENABLE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -75,6 +79,7 @@ static Geom* dev_geoms = NULL;
 static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
+static ShadeableIntersection* dev_intersections_cache = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -97,6 +102,11 @@ void pathtraceInit(Scene* scene) {
 	cudaMalloc(&dev_intersections, pixelcount * sizeof(ShadeableIntersection));
 	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
+#if CACHE_ENABLE
+	cudaMalloc(&dev_intersections_cache, pixelcount * sizeof(ShadeableIntersection));
+	cudaMemset(dev_intersections_cache, 0, pixelcount * sizeof(ShadeableIntersection));
+#endif // CACHE_ENABLE
+
 	// TODO: initialize any extra device memeory you need
 
 	checkCUDAError("pathtraceInit");
@@ -108,6 +118,9 @@ void pathtraceFree() {
 	cudaFree(dev_geoms);
 	cudaFree(dev_materials);
 	cudaFree(dev_intersections);
+#if CACHE_ENABLE
+	cudaFree(dev_intersections_cache);
+#endif // CACHE_ENABLE
 	// TODO: clean up any extra device memory you created
 
 	checkCUDAError("pathtraceFree");
@@ -336,6 +349,13 @@ struct is_zero
 };
 
 
+
+struct material_cmp {
+	__host__ __device__ bool operator()(const ShadeableIntersection& s1, const ShadeableIntersection& s2) {
+		return s1.materialId < s2.materialId;
+	}
+};
+
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
@@ -402,8 +422,40 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		// clean shading chunks
 		cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
-		// tracing
 		dim3 numblocksPathSegmentTracing = (remaining_paths + blockSize1d - 1) / blockSize1d;
+#if CACHE_ENABLE
+		if (depth <= 0) {
+			if (iter > 1) {
+				// tracing
+				cudaMemcpy(dev_intersections, dev_intersections_cache, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
+			}
+			else {
+				computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+					depth
+					, remaining_paths
+					, dev_paths
+					, dev_geoms
+					, hst_scene->geoms.size()
+					, dev_intersections
+					);
+				checkCUDAError("trace one bounce");
+				cudaMemcpy(dev_intersections_cache, dev_intersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
+			}
+		}
+		else {
+			// tracing
+			computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+				depth
+				, remaining_paths
+				, dev_paths
+				, dev_geoms
+				, hst_scene->geoms.size()
+				, dev_intersections
+				);
+			checkCUDAError("trace one bounce");
+		}
+#else
+		// tracing
 		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
 			depth
 			, remaining_paths
@@ -413,8 +465,18 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			, dev_intersections
 			);
 		checkCUDAError("trace one bounce");
+#endif // CACHE_ENABLE
 		cudaDeviceSynchronize();
 		depth++;
+
+#if SORT_BY_MATERIAL
+		//sort by material id
+		thrust::device_ptr<ShadeableIntersection> pIntersection = thrust::device_pointer_cast<ShadeableIntersection>(dev_intersections);
+		thrust::device_ptr<PathSegment> pPathSegment = thrust::device_pointer_cast<PathSegment>(dev_paths);
+		thrust::sort_by_key(pIntersection, pIntersection + remaining_paths, pPathSegment, material_cmp());
+#endif // SORT_BY_MATERIAL
+
+		
 
 		// TODO:
 		// --- Shading Stage ---
@@ -438,10 +500,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			iterationComplete = true;
 		}
 
-#ifdef STREAM_COMPACTION
+#if STREAM_COMPACTION
 		PathSegment* new_dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + remaining_paths, is_zero());
 		remaining_paths = new_dev_path_end - dev_paths;
-		std::cout << remaining_paths << std::endl;
 		if (remaining_paths <= 0) {
 			iterationComplete = true;
 		}
