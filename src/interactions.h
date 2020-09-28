@@ -8,7 +8,7 @@
  * Used for diffuse lighting.
  */
 __host__ __device__
-glm::vec3 calculateRandomDirectionInHemisphere(
+glm::vec4 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
@@ -36,9 +36,12 @@ glm::vec3 calculateRandomDirectionInHemisphere(
     glm::vec3 perpendicularDirection2 =
         glm::normalize(glm::cross(normal, perpendicularDirection1));
 
-    return up * normal
+    return glm::vec4(
+        up * normal
         + cos(around) * over * perpendicularDirection1
-        + sin(around) * over * perpendicularDirection2;
+        + sin(around) * over * perpendicularDirection2,
+        up
+    );
 }
 
 /**
@@ -68,11 +71,26 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
+		PathSegment & path,
         glm::vec3 intersect,
         glm::vec3 normal,
-        const Material &m,
+        Material m,
         thrust::default_random_engine &rng) {
+    path.ray.origin = intersect;
+    path.color *= m.color;
+    if (m.emittance > 0.0f) { // terminate path
+        path.color *= m.emittance;
+        path.remainingBounces = -1;
+    } else {
+        --path.remainingBounces;
+        if (m.hasReflective) {
+            path.ray.direction = glm::reflect(path.ray.direction, normal);
+        } else {
+            glm::vec4 dir = calculateRandomDirectionInHemisphere(normal, rng);
+            path.ray.direction = glm::vec3(dir);
+        }
+        path.ray.origin += 0.01f * path.ray.direction;
+    }
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
