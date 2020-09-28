@@ -80,10 +80,17 @@ void scatterRay(
 	glm::vec3 dir_spec = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
 	glm::vec3 dir_diff = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
 	float choice = u01(rng);
-	if (!m.hasReflective) {
-		choice = 0.1f;
+	bool spec;
+	float scale;
+	if (m.hasReflective) {
+		spec = choice > 0.2f;
+		scale = 0.8f;
 	}
-	glm::vec3 dir_final = choice > 0.5f ? dir_spec : dir_diff;
+	else {
+		spec = choice > 0.8f;
+		scale = 0.2f;
+	}
+	glm::vec3 dir_final = spec ? dir_spec : dir_diff;
 	// update ray
 	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
 	pathSegment.ray.direction = dir_final;
@@ -93,10 +100,12 @@ void scatterRay(
 	
 	//pathSegment.color *= (m.color * lightTerm) * 0.3f + ((1.0f - t * 0.02f) * m.color) * 0.7f;
 	//pathSegment.color *= u01(rng); // apply some noise
-	if (choice > 0.5f) {
-		pathSegment.color *= m.specular.color * 0.5f;
+	
+	if (spec) {
+		pathSegment.color *= m.specular.color * scale;
 	}
 	else {
-		pathSegment.color *= m.color * 0.7f;
+		pathSegment.color *= m.color * (1 - scale);
 	}
+	
 }
