@@ -142,3 +142,46 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+// Based on https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution.
+// Assumes that the geometry passed in has been confirmed to be
+// a triangle.
+__host__ __device__ float triangleIntersectionTest(Geom tri, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    glm::vec3 p1 = tri.triangleData.point1;
+    glm::vec3 p2 = tri.triangleData.point2;
+    glm::vec3 p3 = tri.triangleData.point3;
+    glm::vec3 p1p2 = p2 - p1;
+    glm::vec3 p1p3 = p3 - p1;
+
+    normal = glm::cross(p1p2, p1p3);
+    normal = glm::normalize(normal);
+    float area2 = glm::length(normal);
+
+    // Step 1: finding P
+
+    float normalDotRayDir = glm::dot(normal, r.direction);
+    if (fabsf(normalDotRayDir) < 0.0001f) {
+        return -1.0f;
+    }
+    
+    float dot = glm::dot(normal, p1);
+
+    float t = (glm::dot(normal, r.origin) + dot) / normalDotRayDir;
+
+    if (t < 0) return 1.0f;
+
+    glm::vec3 p = r.origin + t * r.direction;
+
+    glm::vec3 perpToTri;
+    perpToTri = glm::cross(p1p2, p - p1);
+    if (glm::dot(normal, perpToTri) < 0) return -1.0f;
+
+    perpToTri = glm::cross(p3 - p2, p - p2);
+    if (glm::dot(normal, perpToTri) < 0) return -1.0f;
+
+    perpToTri = glm::cross(p1 - p3, p - p3);
+    if (glm::dot(normal, perpToTri) < 0) return -1.0f;
+
+    return t;
+}
