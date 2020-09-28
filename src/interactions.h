@@ -41,6 +41,12 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__
+glm::vec3 calculatePerfectSpecular(glm::vec3 normal, glm::vec3 ray) {
+    return glm::reflect(ray, normal);
+}
+
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -76,4 +82,41 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+    
+    /*
+    glm::vec3 ray = intersect - pathSegment.ray.origin;
+    glm::vec3 diffuseRayDirection = calculateRandomDirectionInHemisphere(normal, rng);
+    glm::vec3 specularRayDirection = calculatePerfectSpecular(normal, ray);
+    glm::vec3 specularColor = m.specular.color * m.specular.exponent;
+    glm::vec3 diffuseColor = m.color / 0.5f;
+    glm::vec3 newRay = 0.5f * diffuseRayDirection + 0.5f * specularRayDirection;
+    pathSegment.ray.origin = intersect;
+    pathSegment.ray.direction = glm::normalize(newRay);
+    pathSegment.color *= (0.5f * specularColor + 0.5f * diffuseColor);
+    */
+
+    // Diffuse
+    
+
+    
+    // Specular
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    if (u01(rng) < m.specular.exponent) {
+        glm::vec3 ray = intersect - pathSegment.ray.origin;
+        glm::vec3 diffuseRayDirection = calculateRandomDirectionInHemisphere(normal, rng);
+        glm::vec3 specularRayDirection = calculatePerfectSpecular(normal, ray);
+        glm::vec3 specularColor = m.specular.color;
+        glm::vec3 diffuseColor = m.color / 0.5f;
+        glm::vec3 newRay = 0.5f * diffuseRayDirection + 0.5f * specularRayDirection;
+        pathSegment.ray.origin = intersect;
+        pathSegment.ray.direction = glm::normalize(newRay);
+        pathSegment.color *= (0.5f * specularColor + 0.5f * diffuseColor);
+    }
+    else {
+        glm::vec3 diffuseRayDirection = calculateRandomDirectionInHemisphere(normal, rng);
+        pathSegment.ray.origin = intersect;
+        pathSegment.ray.direction = glm::normalize(diffuseRayDirection);
+        pathSegment.color *= m.color;
+    }
+    
 }
