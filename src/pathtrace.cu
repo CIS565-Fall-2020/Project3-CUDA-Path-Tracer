@@ -16,8 +16,8 @@
 #include "interactions.h"
 
 // Improve performance
-#define SORTMATERIAL 1
-#define CACHEFIRSTINTERSECTION 1
+#define SORTPATHSBYMATERIAL 1
+#define CACHEFIRSTINTERSECTIONS 1
 
 #define ERRORCHECK 1
 
@@ -80,6 +80,7 @@ static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
+static ShadeableIntersection* dev_firstIntersections = NULL;
 
 void pathtraceInit(Scene* scene) {
   hst_scene = scene;
@@ -101,6 +102,8 @@ void pathtraceInit(Scene* scene) {
   cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
   // TODO: initialize any extra device memeory you need
+  cudaMalloc(&dev_firstIntersections, pixelcount * sizeof(ShadeableIntersection));
+  cudaMemset(dev_firstIntersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
   checkCUDAError("pathtraceInit");
 }
@@ -112,6 +115,7 @@ void pathtraceFree() {
   cudaFree(dev_materials);
   cudaFree(dev_intersections);
   // TODO: clean up any extra device memory you created
+  cudaFree(dev_firstIntersections);
 
   checkCUDAError("pathtraceFree");
 }
@@ -299,6 +303,13 @@ struct pathIsAlive {
   }
 };
 
+struct compareMaterial {
+  __host__ __device__
+    bool operator()(const ShadeableIntersection& isect1, const ShadeableIntersection& isect2) {
+    return isect1.materialId > isect2.materialId;
+  }
+};
+
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
@@ -366,19 +377,47 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
     // tracing
     dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
+
+#if CACHEFIRSTINTERSECTIONS
+    if (depth == 0) {
+      if (iter <= 1) {
+        computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+          depth
+          , num_paths
+          , dev_paths
+          , dev_geoms
+          , hst_scene->geoms.size()
+          , dev_firstIntersections
+          );
+        checkCUDAError("trace first bounce, first iter");
+      }
+      thrust::copy(thrust::device, dev_firstIntersections, dev_firstIntersections + pixelcount, dev_intersections);
+    }
+    else {
+      computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+        depth
+        , num_paths
+        , dev_paths
+        , dev_geoms
+        , hst_scene->geoms.size()
+        , dev_intersections
+        );
+      checkCUDAError("trace one bounce");
+    }
+#else
     computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
-      depth
-      , num_paths
-      , dev_paths
-      , dev_geoms
-      , hst_scene->geoms.size()
-      , dev_intersections
-      );
+        depth
+        , num_paths
+        , dev_paths
+        , dev_geoms
+        , hst_scene->geoms.size()
+        , dev_intersections
+        );
     checkCUDAError("trace one bounce");
+#endif
+
     cudaDeviceSynchronize();
     depth++;
-
-
     // TODO:
     // --- Shading Stage ---
     // Shade path segments based on intersections and generate new rays by
@@ -387,6 +426,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     // materials you have in the scenefile.
     // TODO: compare between directly shading the path segments and shading
     // path segments that have been reshuffled to be contiguous in memory.
+
+    #if SORTPATHSBYMATERIAL
+    thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareMaterial());
+    #endif
 
     shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (
       iter,
@@ -397,7 +440,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
       );
     dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_path_end, pathIsAlive());
     num_paths = dev_path_end - dev_paths;
-    iterationComplete = num_paths == 0; // TODO: should be based off stream compaction results.
+    iterationComplete = num_paths == 0; 
   }
 
   // Assemble this iteration and apply it to the image
