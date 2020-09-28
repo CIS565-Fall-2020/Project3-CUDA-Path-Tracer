@@ -1,6 +1,8 @@
 #pragma once
 
 #include "intersections.h"
+#include <thrust/remove.h>
+#include <thrust/execution_policy.h>
 
 // CHECKITOUT
 /**
@@ -82,12 +84,26 @@ void scatterRay(
     glm::vec3 newDir = calculateRandomDirectionInHemisphere(normal, rng);
     float z = glm::abs(glm::dot(normal, newDir));
     float pdf = INV_PI * z;
-    pathSegment.color *= m.color * z / pdf;
+    glm::vec3 f = m.color * INV_PI;
+    if (pdf == 0.f) {
+        pathSegment.color = glm::vec3(0.f);
+        pathSegment.remainingBounces = 0;
+    }
+    else {
+        pathSegment.color *= f * z / pdf;
+        pathSegment.remainingBounces--;
+    }
 
 
     // endtodo
 
-    pathSegment.remainingBounces--;
+    
     pathSegment.ray.origin = intersect;
     pathSegment.ray.direction = newDir;
 }
+
+struct path_terminated {
+    __host__ __device__ bool operator()(const PathSegment segment) {
+        return segment.remainingBounces <= 0;
+    }
+};
