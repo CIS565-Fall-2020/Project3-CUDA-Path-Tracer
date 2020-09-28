@@ -236,7 +236,7 @@ __global__ void shadeMaterial(
             // If the material indicates that the object was a light, "light" the ray
             if (material.emittance > 0.0f) {
                 pathSegments[idx].color *= (materialColor * material.emittance);
-                pathSegments[idx].remainingBounces = -1;
+                pathSegments[idx].remainingBounces = 0;
             }
             else {
                 scatterRay(pathSegments[idx], pathSegments[idx].ray.origin + pathSegments[idx].ray.direction * intersection.t,
@@ -246,7 +246,7 @@ __global__ void shadeMaterial(
         }
         else {
             pathSegments[idx].color = glm::vec3(0.0f);
-            pathSegments[idx].remainingBounces = -1;
+            pathSegments[idx].remainingBounces = 0;
         }
         
     }
