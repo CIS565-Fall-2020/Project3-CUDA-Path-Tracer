@@ -269,7 +269,7 @@ __global__ void shadeFakeMaterial (
 
 #pragma region myMaterial
 __global__ void shadeTrueMaterial(
-    int depth,
+    int depth, 
     int iter
     , int num_paths
     , ShadeableIntersection* shadeableIntersections
@@ -297,7 +297,7 @@ __global__ void shadeTrueMaterial(
                 // If the material indicates that the object was a light, "light" the ray
                 if (material.emittance > 0.0f) {
 
-                    cur_pathSegment.color *= (materialColor );
+                    cur_pathSegment.color *= (materialColor * material.emittance);
                     // stop if hit a light
                     cur_pathSegment.remainingBounces = 0;
                 }
@@ -319,12 +319,19 @@ __global__ void shadeTrueMaterial(
                 // This can be useful for post-processing and image compositing.
             }
             else {
-                if (depth == 1) {
+                /*if (depth == 1) {
                     cur_pathSegment.color = glm::vec3(0.0f);
-                }
+                }*/
+                cur_pathSegment.color = glm::vec3(0.0f);
                 cur_pathSegment.remainingBounces = 0;
             }
         }
+        /*else {
+            if (depth == max_depth) {
+                cur_pathSegment.color = glm::vec3(0.0f);
+            }
+
+        }*/
         
     }
 }
