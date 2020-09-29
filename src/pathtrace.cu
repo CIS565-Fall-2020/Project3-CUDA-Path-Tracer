@@ -296,12 +296,12 @@ __global__ void shadeBSDFMaterial(
 	if (idx < num_paths)
 	{
 		ShadeableIntersection intersection = shadeableIntersections[idx];
+		if (pathSegments[idx].remainingBounces <= 0) {
+			return;
+		}
 		if (intersection.t > 0.0f) { // if the intersection exists...
-		  // Set up the RNG
-		  // LOOK: this is how you use thrust's RNG! Please look at
-		  // makeSeededRandomEngine as well.
-			thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
-			thrust::uniform_real_distribution<float> u01(0, 1);
+
+			thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, pathSegments[idx].remainingBounces);
 
 			Material material = materials[intersection.materialId];
 			glm::vec3 materialColor = material.color;
@@ -310,19 +310,22 @@ __global__ void shadeBSDFMaterial(
 			if (material.emittance > 0.0f) {
 				if (pathSegments[idx].remainingBounces >= 0) {
 					pathSegments[idx].color *= (materialColor * material.emittance);
-					pathSegments[idx].remainingBounces = 0;
+					pathSegments[idx].remainingBounces = -1;
 				}
-
 			}
 			else {
 				scatterRay(pathSegments[idx], intersection.point, intersection.surfaceNormal, material, rng);
+				pathSegments[idx].remainingBounces--;
+				// if the last bounce is not the light source, it should not be shaded
+				if (pathSegments[idx].remainingBounces <= 0) {
+					pathSegments[idx].color = glm::vec3(0.0f);
+				}
 			}
 		}
 		else {
 			pathSegments[idx].color = glm::vec3(0.0f);
 			pathSegments[idx].remainingBounces = 0;
 		}
-		pathSegments[idx].remainingBounces--;
 	}
 }
 
