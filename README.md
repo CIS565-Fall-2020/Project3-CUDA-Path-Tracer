@@ -3,11 +3,17 @@ CUDA Path Tracer
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Han Yan
+* Tested on: CETS Virtual lab
 
-### (TODO: Your README)
+## Part 1
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+### Sort by materials
 
+For cornell.txt, since there are only a few kinds of materials, sorting the rays by material does not boost the performance (even slows it down a little bit because it has to call sort function in every depth and iteration).
+
+But I expect that as the number of materials grwos larger, sorting would have some effect on the overall performance.
+
+### Cache the first bounce/intersections
+
+I ran performance analysis with varying depth 4, 8, 12, with and without caching. Here are the total time taken in each case by the kernel function 'computeIntersections'. The improvement on performance diminishes as the depth increases. This makes sense because we are only caching the first intersection, which could become negligible with a large depth.
