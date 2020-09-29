@@ -142,3 +142,34 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+__host__ __device__ float Clamp(float val, float low, float high) {
+    if (val < low) return low;
+    else if (val > high) return high;
+    else return val;
+}
+
+__host__ __device__ float frDielectric(float cosThetaI, float etaI, float etaT)
+{
+    cosThetaI = Clamp(cosThetaI, -1.0, 1.0);
+    bool entering = cosThetaI > 0.0f;
+    if (!entering)
+    {
+        std::swap(etaI, etaT);
+        cosThetaI = std::fabs(cosThetaI);
+    }
+    float sinThetaI = std::sqrt(std::fmax((float)0.0f, 1 - cosThetaI * cosThetaI));
+    float sinThetaT = etaI / etaT * sinThetaI;
+    if (sinThetaT >= 1)
+        return 1;
+
+    float cosThetaT = std::sqrt(std::fmax(0.0f, 1 - sinThetaT * sinThetaT));
+
+    float Rparl = ((etaT * cosThetaI) - (etaI * cosThetaT)) /
+        ((etaT * cosThetaI) + (etaI * cosThetaT));
+
+    float Rperp = ((etaI * cosThetaI) - (etaT * cosThetaT)) /
+        ((etaI * cosThetaI) + (etaT * cosThetaT));
+
+    return (Rparl * Rparl + Rperp * Rperp) / 2;
+}

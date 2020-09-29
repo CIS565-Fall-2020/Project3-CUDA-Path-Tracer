@@ -40,6 +40,7 @@ struct Material {
     float emittance;
 };
 
+
 struct Camera {
     glm::ivec2 resolution;
     glm::vec3 position;
@@ -66,6 +67,15 @@ struct PathSegment {
 	int remainingBounces;
 };
 
+struct is_terminated 
+{
+    __host__ __device__
+    bool operator()(const PathSegment& path) 
+    {
+        return (path.remainingBounces != 0);
+    }
+};
+
 // Use with a corresponding PathSegment to do:
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
@@ -73,4 +83,13 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+};
+
+struct material_sort
+{
+    __host__ __device__
+    bool operator()(const ShadeableIntersection& sI1, const ShadeableIntersection& sI2)
+    {
+        return (sI1.materialId > sI2.materialId);
+    }
 };

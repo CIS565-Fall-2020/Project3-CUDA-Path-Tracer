@@ -1,7 +1,7 @@
 #pragma once
 
 #include "intersections.h"
-
+#include "utilities.h"
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -66,6 +66,8 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  *
  * You may need to change the parameter list for your purposes!
  */
+
+
 __host__ __device__
 void scatterRay(
 		PathSegment & pathSegment,
@@ -76,4 +78,58 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+
+    // Specular Scattering
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float result = u01(rng);
+
+    if (m.hasReflective == 1.0f && m.hasRefractive == 0.0f) 
+    {
+        // Specular
+        glm::vec3 specularDir = glm::reflect(pathSegment.ray.direction, normal);
+        pathSegment.color *= m.specular.color;
+        Ray scatterRay;
+        scatterRay.origin = intersect + 0.001f * specularDir;
+        scatterRay.direction = specularDir;
+        pathSegment.ray = scatterRay;
+    }
+    else if(m.hasReflective == 0.0f && m.hasRefractive == 0.0f)
+    {
+        // Diffuse Scattering
+        float Pi = 3.1415926f;
+        glm::vec3 scatteredDir = calculateRandomDirectionInHemisphere(normal, rng);
+        Ray scatterRay;
+        scatterRay.origin = intersect + 0.001f * scatteredDir;
+        scatterRay.direction = scatteredDir;
+        float diffusePdf = glm::dot(normal, scatteredDir) / Pi;
+        if (diffusePdf == 0)
+        {
+            pathSegment.color = glm::vec3(0.0f, 0.0f, 0.0f);
+            pathSegment.remainingBounces = -1;
+        }
+        else
+        {
+            glm::vec3 f = m.color / Pi;
+            pathSegment.color *= (f * glm::abs(glm::dot(scatteredDir, normal))) / diffusePdf;
+            pathSegment.ray = scatterRay;
+        }
+    }
+    else if (m.hasRefractive == 1.0f && m.hasReflective == 0.0f) 
+    {
+        // Refractive
+        bool entering = glm::normalize(pathSegment.ray.direction).z > 0;
+        float etaI = entering ? 1.0f : 1.0f / m.indexOfRefraction;
+        float etaT = entering ? 1.0f / m.indexOfRefraction : 1.0f;
+
+        glm::vec3 transmissionDir = glm::refract(pathSegment.ray.direction, normal, etaI / etaT);
+        pathSegment.color *= (m.color * (glm::vec3(1.0f) - frDielectric(glm::normalize(transmissionDir).z, etaI, etaT)) 
+                             / fabs(glm::normalize(transmissionDir).z));
+
+        Ray scatterRay;
+        scatterRay.origin = intersect + 0.001f * transmissionDir;
+        scatterRay.direction = transmissionDir;
+        pathSegment.ray = scatterRay;
+    }
+ 
+    pathSegment.remainingBounces--;
 }

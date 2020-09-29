@@ -3,11 +3,25 @@ CUDA Path Tracer
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Xuecheng Sun
+* Tested on: Windows 10, R7 3700x @3.7GHz, RTX 2070 super 8GB
 
-### (TODO: Your README)
+### Path Tracer Part 1
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+**Finished Feature:** 
 
+	1. Specular and Diffuse Ray Scatter
+ 	2. Basic stream compaction of stop thread
+ 	3. First bounce caching
+
+![](./img/PathTracerPart1.png)
+
+
+
+**Performance Analysis**
+
+1. Sorted material can reduce the divergence in a thread warp which can significantly boost the render speed.
+
+2. First bounce cache always provide a constant value improvement with different depth setting
+
+![](img/PathTracerDepth.png)
