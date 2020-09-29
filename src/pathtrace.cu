@@ -77,11 +77,8 @@ static ShadeableIntersection * dev_intersections = NULL;
 static PathSegment * dev_paths_first_bounce = NULL;
 static ShadeableIntersection * dev_intersections_first_bounce = NULL;
 
-#if CACHE_FIRST_BOUNCE
-static firstBounceStored = false;
-#endif
-// TODO: static variables for device memory, any extra info you need, etc
-// ...
+static int firstBounceNumPaths = 0;
+static bool firstBounceStored = false;
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
@@ -350,13 +347,21 @@ struct path_alive {
 
 };
 
+struct intersection_comp {
+    __host__ __device__
+    bool operator()(const ShadeableIntersection &i1,
+                    const ShadeableIntersection &i2) {
+        return i1.materialId < i2.materialId;
+    }
+};
+
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
 
-#define SORT_BY_MATERIAL 0
-#define CACHE_FIRST_BOUNCE 1
+#define SORT_BY_MATERIAL 1
+#define CACHE_FIRST_BOUNCE 0
 
 void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
@@ -409,10 +414,17 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	int depth = 0;
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
-    int originalNumPaths = num_paths;
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
+
+    #if CACHE_FIRST_BOUNCE
+    if (firstBounceStored) {
+        cudaMemcpy(dev_paths, dev_paths_first_bounce, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
+        num_paths = firstBounceNumPaths;
+        depth++;
+    }
+    #endif
 
   bool iterationComplete = false;
 	while (!iterationComplete) {
@@ -434,10 +446,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	cudaDeviceSynchronize();
 	depth++;
 
-    #if CACHE_FIRST_BOUNCE
-    cudaMemcpy(dev_paths_first_bounce, dev_paths, pixelcount * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
-    #endif
-
 	// TODO:
 	// --- Shading Stage ---
 	// Shade path segments based on intersections and generate new rays by
@@ -449,8 +457,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     #if SORT_BY_MATERIAL
         // thrust sort by key (where key is material)
-        // kernel that for index, puts it in the right place...
+    thrust::stable_sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, intersection_comp());
     #endif
+
 
 
     shadeBSDFs << <numblocksPathSegmentTracing, blockSize1d >> > (
@@ -464,6 +473,16 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_path_end, path_alive());
     num_paths = dev_path_end - dev_paths;
     iterationComplete = num_paths == 0;
+
+
+    #if CACHE_FIRST_BOUNCE
+    if (!firstBounceStored) {
+        cudaMemcpy(dev_paths_first_bounce, dev_paths, pixelcount * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
+        firstBounceNumPaths = num_paths;
+        firstBounceStored = true;
+    }
+    #endif
+
 	}
 
     // Assemble this iteration and apply it to the image

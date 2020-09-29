@@ -41,6 +41,17 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+// specular exponent
+// material going to look
+// reflection
+// if ray bouncing off of material, what is chance that it's perfect reflection
+// diffuse or refractive
+// black sphere
+// if specular exponent bigger,
+// that dot would be larger
+// lighting equation
+// use specex as power
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
