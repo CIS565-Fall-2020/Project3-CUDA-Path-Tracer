@@ -274,7 +274,8 @@ __global__ void shadeTrueMaterial(
     , int num_paths
     , ShadeableIntersection* shadeableIntersections
     , PathSegment* pathSegments
-    , Material* materials
+    , Material* materials,
+    glm::vec3* dev_image
 )
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -301,6 +302,7 @@ __global__ void shadeTrueMaterial(
                 //cur_pathSegment.color = glm::vec3(1.0, 1.0, 1.0);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
+                dev_image[cur_pathSegment.pixelIndex] += cur_pathSegment.color;
             }
             // Otherwise, do some pseudo-lighting computation. This is actually more
             // like what you would expect from shading in a rasterizer like OpenGL.
@@ -452,26 +454,29 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         num_paths,
         dev_intersections,
         dev_paths,
-        dev_materials
+        dev_materials,
+        dev_image
         );
         if (depth > traceDepth) {
             iterationComplete = true;
         }
 
          // TODO: should be based off stream compaction results.
-        PathSegment* end_of_bounce = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths, remove_if_remain_0_bounce());
-        if (end_of_bounce == dev_paths) {
+        PathSegment* end_of_bounce_nonzero = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths, remove_if_remain_0_bounce());
+        if (end_of_bounce_nonzero == dev_paths) {
             iterationComplete = true;
         }
         else {
-            num_paths = end_of_bounce - dev_paths;
+            num_paths = end_of_bounce_nonzero - dev_paths;
         }
+        dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
+        //finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image, dev_paths);
 
 	}
 
   // Assemble this iteration and apply it to the image
-    dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
-	finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
+    
+	//finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
     //finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
 
     ///////////////////////////////////////////////////////////////////////////
