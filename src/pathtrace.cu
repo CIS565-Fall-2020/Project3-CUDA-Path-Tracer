@@ -5,6 +5,8 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include <thrust/count.h>
+#include <thrust/device_ptr.h>
+#include <thrust/sort.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -16,6 +18,7 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
+#define SORTBYMAT 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -78,8 +81,8 @@ static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
-static PathSegment **dev_path_ptrs = NULL;
 static int *dev_path_idxes = NULL;
+static int *dev_path_mats = NULL;
 
 // Predicate for thust__remove_if
 struct path_is_end {
@@ -109,10 +112,11 @@ void pathtraceInit(Scene *scene) {
   	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
     // TODO: initialize any extra device memeory you need
-	cudaMalloc(&dev_path_ptrs, pixelcount * sizeof(PathSegment*));
-
 	cudaMalloc(&dev_path_idxes, pixelcount * sizeof(int));
 	cudaMemset(dev_path_idxes, 0, pixelcount * sizeof(int));
+
+	cudaMalloc(&dev_path_mats, pixelcount * sizeof(int));
+	cudaMemset(dev_path_mats, 0, pixelcount * sizeof(int));
 
     checkCUDAError("pathtraceInit");
 }
@@ -124,8 +128,8 @@ void pathtraceFree() {
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
     // TODO: clean up any extra device memory you created
-	cudaFree(dev_path_ptrs);
 	cudaFree(dev_path_idxes);
+	cudaFree(dev_path_mats);
 
     checkCUDAError("pathtraceFree");
 }
@@ -183,6 +187,7 @@ __global__ void computeIntersections(
 	, int num_paths
 	, PathSegment *pathSegments
 	, int *pathIndexes
+	, int *pathMats
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
@@ -236,6 +241,7 @@ __global__ void computeIntersections(
 		if (hit_geom_index == -1)
 		{
 			intersections[path_index].t = -1.0f;
+			pathMats[index] = -1;
 		}
 		else
 		{
@@ -243,6 +249,7 @@ __global__ void computeIntersections(
 			intersections[path_index].t = t_min;
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
+			pathMats[index] = geoms[hit_geom_index].materialid;
 		}
 	}
 }
@@ -384,6 +391,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	//fillPathSegmentPtrs <<<numblocksInit, blockSize1d>>> (num_paths, dev_paths, dev_path_ptrs);
 	fillPathIndexes <<<numblocksInit, blockSize1d>>> (num_paths, dev_path_idxes);
 	
+	thrust::device_ptr<int> dev_thrust_pathIdxes(dev_path_idxes);
+	thrust::device_ptr<int> dev_thrust_pathMats(dev_path_mats);
+
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 
@@ -400,6 +410,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, num_paths
 			, dev_paths
 			, dev_path_idxes
+			, dev_path_mats
 			, dev_geoms
 			, hst_scene->geoms.size()
 			, dev_intersections
@@ -419,6 +430,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		// path segments that have been reshuffled to be contiguous in memory.
 
 		// TODO (ADD): sort rays by material
+		thrust::sort_by_key(dev_thrust_pathMats, dev_thrust_pathMats + num_paths, dev_thrust_pathIdxes);
+
 		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
 		iter,
 		num_paths,
