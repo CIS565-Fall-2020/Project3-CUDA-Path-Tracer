@@ -282,58 +282,53 @@ __global__ void shadeTrueMaterial(
     {
         ShadeableIntersection intersection = shadeableIntersections[idx];
         PathSegment& cur_pathSegment = pathSegments[idx];
-        if (cur_pathSegment.remainingBounces > 0) {
-            if (intersection.t > 0.0f) { // if the intersection exists...
-              // Set up the RNG
-              // LOOK: this is how you use thrust's RNG! Please look at
-              // makeSeededRandomEngine as well.
-                thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
-                thrust::uniform_real_distribution<float> u01(0, 1);
+        
+        if (intersection.t > 0.0f) { // if the intersection exists...
+            // Set up the RNG
+            // LOOK: this is how you use thrust's RNG! Please look at
+            // makeSeededRandomEngine as well.
+            thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
+            thrust::uniform_real_distribution<float> u01(0, 1);
 
-                Material material = materials[intersection.materialId];
-                glm::vec3 materialColor = material.color;
+            Material material = materials[intersection.materialId];
+            glm::vec3 materialColor = material.color;
 
 
-                // If the material indicates that the object was a light, "light" the ray
-                if (material.emittance > 0.0f) {
+            // If the material indicates that the object was a light, "light" the ray
+            if (material.emittance > 0.0f) {
 
-                    cur_pathSegment.color *= (materialColor * material.emittance);
-                    // stop if hit a light
-                    cur_pathSegment.remainingBounces = 0;
-                }
-                // Otherwise, do some pseudo-lighting computation. This is actually more
-                // like what you would expect from shading in a rasterizer like OpenGL.
-                // TODO: replace this! you should be able to start with basically a one-liner
-                else {
-                    scatterRay(
-                        cur_pathSegment,
-                        getPointOnRay(cur_pathSegment.ray, intersection.t),
-                        intersection.surfaceNormal,
-                        material,
-                        rng
-                    );
-                }
-                // If there was no intersection, color the ray black.
-                // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
-                // used for opacity, in which case they can indicate "no opacity".
-                // This can be useful for post-processing and image compositing.
-            }
-            else {
-                /*if (depth == 1) {
-                    cur_pathSegment.color = glm::vec3(0.0f);
-                }*/
-                cur_pathSegment.color = glm::vec3(0.0f);
+                cur_pathSegment.color *= (materialColor * material.emittance);
+                //cur_pathSegment.color = glm::vec3(1.0, 1.0, 1.0);
+                // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
             }
-        }
-        /*else {
-            if (depth == max_depth) {
-                cur_pathSegment.color = glm::vec3(0.0f);
+            // Otherwise, do some pseudo-lighting computation. This is actually more
+            // like what you would expect from shading in a rasterizer like OpenGL.
+            // TODO: replace this! you should be able to start with basically a one-liner
+            else {
+                scatterRay(
+                    cur_pathSegment,
+                    getPointOnRay(cur_pathSegment.ray, intersection.t),
+                    intersection.surfaceNormal,
+                    material,
+                    rng
+                );
             }
-
-        }*/
-        
+            // If there was no intersection, color the ray black.
+            // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
+            // used for opacity, in which case they can indicate "no opacity".
+            // This can be useful for post-processing and image compositing.
+        }
+        else {
+            /*if (depth == 1) {
+                cur_pathSegment.color = glm::vec3(0.0f);
+            }*/
+            cur_pathSegment.color = glm::vec3(0.0f);
+            cur_pathSegment.remainingBounces = 0;
+        }
     }
+        
+    
 }
 #pragma endregion
 
@@ -348,6 +343,19 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 		image[iterationPath.pixelIndex] += iterationPath.color;
 	}
 }
+
+
+// ref:https://thrust.github.io/doc/group__stream__compaction_ga5fa8f86717696de88ab484410b43829b.html
+struct remove_if_remain_0_bounce
+{
+    __host__ __device__
+        bool operator()(const PathSegment ps)
+    {
+        return ps.remainingBounces == 0;
+    }
+};
+
+
 
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
@@ -451,11 +459,20 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
 
          // TODO: should be based off stream compaction results.
+        PathSegment* end_of_bounce = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths, remove_if_remain_0_bounce());
+        if (end_of_bounce == dev_paths) {
+            iterationComplete = true;
+        }
+        else {
+            num_paths = end_of_bounce - dev_paths;
+        }
+
 	}
 
   // Assemble this iteration and apply it to the image
     dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
 	finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
+    //finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
 
     ///////////////////////////////////////////////////////////////////////////
 

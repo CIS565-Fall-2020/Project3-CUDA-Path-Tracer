@@ -90,7 +90,7 @@ void scatterRay(
         pathSegment.ray.direction = diffuse_dir;
 
         pathSegment.color *= m.color;
-
+        //pathSegment.color = glm::normalize(normal);
         
     } 
     else if (p > m.hasRefractive) {
@@ -103,5 +103,4 @@ void scatterRay(
     }
     pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
     pathSegment.remainingBounces--;
-
 }
