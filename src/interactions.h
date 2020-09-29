@@ -81,13 +81,9 @@ void scatterRay(
     float etaT = entering ? m.indexOfRefraction : 1;
     float eta = etaI / etaT;
     glm::vec3 refractDir = glm::refract(pathSegment.ray.direction, normal, eta);
-    if (!m.hasReflective && !m.hasRefractive) {
-        // uniform diffuse material
-        pathSegment.ray.direction = diffuseDir;
-        pathSegment.color *= m.color;
-    }
-    else if (m.hasReflective) {
-        // two possibilities - diffuse and reflective
+
+    if (m.hasReflective) {
+        // reflective
         thrust::uniform_real_distribution<float> u01(0, 1);
         float r = u01(rng);
 
@@ -99,15 +95,32 @@ void scatterRay(
         else {
             // specular
             pathSegment.ray.direction = reflectDir;
-            float r0 = glm::pow((etaI - etaT) / (etaI + etaT), 2.f);
-            float schlick_coeff = r0 + (1 - r0) * glm::pow(1.f - glm::dot(pathSegment.ray.direction, normal), 5.f);
-            pathSegment.color *= (m.specular.color * schlick_coeff * m.specular.exponent);
+            pathSegment.color *= (m.specular.color * m.specular.exponent);
+            //float r0 = glm::pow((etaI - etaT) / (etaI + etaT), 2.f);
+            //float schlick_coeff = r0 + (1 - r0) * glm::pow(1.f - glm::dot(pathSegment.ray.direction, normal), 5.f);
+            //pathSegment.color *= (m.specular.color * schlick_coeff * m.specular.exponent);
         }
     }
     else if (m.hasRefractive) {
-        // two possibilities - diffuse and refractive
-        pathSegment.ray.direction = refractDir;
-        pathSegment.color *= (m.color * 0.5f + m.specular.color * 0.5f);
+        // refractive
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        float r = u01(rng);
+
+        if (r < 1.f - m.specular.exponent) {
+            // diffuse
+            pathSegment.ray.direction = diffuseDir;
+            pathSegment.color *= (m.color * (1.f - m.specular.exponent));
+        }
+        else {
+            // specular
+            pathSegment.ray.direction = refractDir;
+            pathSegment.color *= (m.specular.color * m.specular.exponent);
+        }
+    }
+    else {
+        // uniform diffuse
+        pathSegment.ray.direction = diffuseDir;
+        pathSegment.color *= m.color;
     }
     pathSegment.ray.origin = intersect + 0.005f * pathSegment.ray.direction; // avoid shadow acne
 }
