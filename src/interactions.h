@@ -79,31 +79,64 @@ void scatterRay(
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
 
-    // todo: add different bsdf
-
-    glm::vec3 newDir = calculateRandomDirectionInHemisphere(normal, rng);
-    float z = glm::abs(glm::dot(normal, newDir));
-    float pdf = INV_PI * z;
-    glm::vec3 f = m.color * INV_PI;
-    if (pdf == 0.f) {
-        pathSegment.color = glm::vec3(0.f);
-        pathSegment.remainingBounces = 0;
+    int BxDFs[3] = { 0, 0, 0 }; // [0]: Diffuse [1]: Reflection [2]: Refraction
+    int matCt = 0;
+    
+    if (m.hasReflective) {
+        BxDFs[1] = 1;
+        matCt++;
     }
-    else {
+    if (m.hasRefractive) {
+        BxDFs[2] = 1;
+        matCt++;
+    }
+    if (matCt == 0) {
+        BxDFs[0] = 1;
+        matCt++;
+    }
+    
+    thrust::uniform_int_distribution<int> uMat(0, matCt - 1);
+    int comp = uMat(rng);
+    int bxdf = 0;
+    while (bxdf < 3) {
+        if (BxDFs[bxdf] == 1 && (comp-- == 0)) {
+            break;
+        }
+        bxdf++;
+    }
+    
+    glm::vec3 newDir;
+    float pdf;
+    glm::vec3 f;
+
+    if (bxdf == 0) { // Diffuse
+        newDir = calculateRandomDirectionInHemisphere(normal, rng);
+        float z = glm::abs(glm::dot(normal, newDir));
+        pdf = INV_PI * z / matCt;
+        f = m.color * INV_PI;
+        if (pdf == 0.f) {
+            pathSegment.color = glm::vec3(0.f);
+            pathSegment.remainingBounces = 0;
+        }
+        else {
+            pathSegment.color *= f * z / pdf;
+            pathSegment.remainingBounces--;
+        }
+    }
+    else if (bxdf == 1) { // Reflection
+        newDir = glm::reflect(pathSegment.ray.direction, normal);
+        float z = glm::abs(glm::dot(normal, newDir));
+        pdf = 1 / matCt;
+        f = m.specular.color;
         pathSegment.color *= f * z / pdf;
         pathSegment.remainingBounces--;
     }
-
-
-    // endtodo
-
+    else { // Refraction
+        // TODO
+        pathSegment.color = glm::vec3(0.f);
+        pathSegment.remainingBounces = 0;
+    }
     
     pathSegment.ray.origin = intersect;
     pathSegment.ray.direction = newDir;
 }
-
-struct path_terminated {
-    __host__ __device__ bool operator()(const PathSegment segment) {
-        return segment.remainingBounces <= 0;
-    }
-};
