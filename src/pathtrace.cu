@@ -19,6 +19,7 @@
 
 #define ERRORCHECK 1
 #define SORTBYMAT 1
+#define CACHE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -83,6 +84,8 @@ static ShadeableIntersection * dev_intersections = NULL;
 // ...
 static int *dev_path_idxes = NULL;
 static int *dev_path_mats = NULL;
+static ShadeableIntersection *dev_intersections_cache = NULL;
+static bool state_updated = true;
 
 // Predicate for thust__remove_if
 struct path_is_end {
@@ -117,6 +120,11 @@ void pathtraceInit(Scene *scene) {
 
 	cudaMalloc(&dev_path_mats, pixelcount * sizeof(int));
 	cudaMemset(dev_path_mats, 0, pixelcount * sizeof(int));
+
+	cudaMalloc(&dev_intersections_cache, pixelcount * sizeof(ShadeableIntersection));
+	cudaMemset(dev_intersections_cache, 0, pixelcount * sizeof(ShadeableIntersection));
+
+	state_updated = true;
 
     checkCUDAError("pathtraceInit");
 }
@@ -191,67 +199,81 @@ __global__ void computeIntersections(
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
+	, ShadeableIntersection * cached_intersections
+	, bool state_changed
 	)
 {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
-	
+	if (index >= num_paths) {
+		return;
 
-	if (index < num_paths)
+	}
+#if CACHE
+	if (depth == 0 && !state_changed) {
+		// first intersection, use cache
+		intersections[index] = cached_intersections[index];
+		return;
+	}
+#endif
+
+	int path_index = pathIndexes[index];
+	PathSegment pathSegment = pathSegments[path_index];
+
+	float t;
+	glm::vec3 intersect_point;
+	glm::vec3 normal;
+	float t_min = FLT_MAX;
+	int hit_geom_index = -1;
+	bool outside = true;
+
+	glm::vec3 tmp_intersect;
+	glm::vec3 tmp_normal;
+
+	// naive parse through global geoms
+
+	for (int i = 0; i < geoms_size; i++)
 	{
-		int path_index = pathIndexes[index];
-		PathSegment pathSegment = pathSegments[path_index];
+		Geom & geom = geoms[i];
 
-		float t;
-		glm::vec3 intersect_point;
-		glm::vec3 normal;
-		float t_min = FLT_MAX;
-		int hit_geom_index = -1;
-		bool outside = true;
-
-		glm::vec3 tmp_intersect;
-		glm::vec3 tmp_normal;
-
-		// naive parse through global geoms
-
-		for (int i = 0; i < geoms_size; i++)
+		if (geom.type == CUBE)
 		{
-			Geom & geom = geoms[i];
-
-			if (geom.type == CUBE)
-			{
-				t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
-			}
-			else if (geom.type == SPHERE)
-			{
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
-			}
-			// TODO: add more intersection tests here... triangle? metaball? CSG?
-
-			// Compute the minimum t from the intersection tests to determine what
-			// scene geometry object was hit first.
-			if (t > 0.0f && t_min > t)
-			{
-				t_min = t;
-				hit_geom_index = i;
-				intersect_point = tmp_intersect;
-				normal = tmp_normal;
-			}
+			t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 		}
-
-		if (hit_geom_index == -1)
+		else if (geom.type == SPHERE)
 		{
-			intersections[path_index].t = -1.0f;
-			pathMats[index] = -1;
+			t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 		}
-		else
+		// TODO: add more intersection tests here... triangle? metaball? CSG?
+
+		// Compute the minimum t from the intersection tests to determine what
+		// scene geometry object was hit first.
+		if (t > 0.0f && t_min > t)
 		{
-			//The ray hits something
-			intersections[path_index].t = t_min;
-			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
-			intersections[path_index].surfaceNormal = normal;
-			pathMats[index] = geoms[hit_geom_index].materialid;
+			t_min = t;
+			hit_geom_index = i;
+			intersect_point = tmp_intersect;
+			normal = tmp_normal;
 		}
 	}
+
+	if (hit_geom_index == -1)
+	{
+		intersections[path_index].t = -1.0f;
+		pathMats[index] = -1;
+	}
+	else
+	{
+		//The ray hits something
+		intersections[path_index].t = t_min;
+		intersections[path_index].materialId = geoms[hit_geom_index].materialid;
+		intersections[path_index].surfaceNormal = normal;
+		pathMats[index] = geoms[hit_geom_index].materialid;
+	}
+#if CACHE
+	if (depth == 0) {
+		cached_intersections[index] = intersections[index];
+	}
+#endif
 }
 
 // LOOK: "fake" shader demonstrating what you might do with the info in
@@ -414,10 +436,13 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, dev_geoms
 			, hst_scene->geoms.size()
 			, dev_intersections
+			, dev_intersections_cache
+			, state_updated
 			);
 		checkCUDAError("trace one bounce");
 		cudaDeviceSynchronize();
 		depth++;
+		state_updated = false;
 
 
 		// TODO:
@@ -430,8 +455,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		// path segments that have been reshuffled to be contiguous in memory.
 
 		// TODO (ADD): sort rays by material
+#if SORTBYMAT
 		thrust::sort_by_key(dev_thrust_pathMats, dev_thrust_pathMats + num_paths, dev_thrust_pathIdxes);
-
+#endif
 		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
 		iter,
 		num_paths,
