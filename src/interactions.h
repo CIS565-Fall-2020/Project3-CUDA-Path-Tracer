@@ -1,5 +1,7 @@
 #pragma once
-
+#include <thrust/execution_policy.h>
+#include <thrust/random.h>
+#include <thrust/remove.h>
 #include "intersections.h"
 
 // CHECKITOUT
