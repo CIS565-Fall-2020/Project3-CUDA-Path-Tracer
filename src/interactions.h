@@ -74,9 +74,7 @@ void scatterRay(
         const Material &m,
         thrust::default_random_engine &rng) {
   thrust::uniform_real_distribution<float> u01(0, 1);
-  if (m.hasRefractive > 0.f) {
-    // TODO: Refractive
-  } else if (u01(rng) < m.hasReflective) {
+  if (u01(rng) < m.hasReflective) {
     // Specular
     pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
     pathSegment.color *= m.specular.color;
