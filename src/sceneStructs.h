@@ -80,3 +80,11 @@ struct isContinuing {
         return segment.remainingBounces >= 0;
     }
 };
+
+
+struct material_sort {
+	__host__ __device__ bool operator()(const ShadeableIntersection& a,
+		const ShadeableIntersection& b) {
+		return a.materialId < b.materialId;
+	}
+};

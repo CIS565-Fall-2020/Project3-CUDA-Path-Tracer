@@ -86,7 +86,7 @@ void scatterRay(
 		glm::vec3 f = m.color / PI;
 		if (pdf == 0.f)
 		{
-			pathSegment.remainingBounces = 0;
+			pathSegment.remainingBounces = -1;
 			pathSegment.color = glm::vec3(0.f, 0.f, 0.f);
 		}
 		else
@@ -103,5 +103,5 @@ void scatterRay(
     }
 
 	pathSegment.ray.direction = newDir;
-	pathSegment.ray.origin = intersect + newDir * 0.0001f;  // to make the intersection point outside of the primitive
+	pathSegment.ray.origin = intersect + newDir * EPSILON;  // to make the intersection point outside of the primitive
 }

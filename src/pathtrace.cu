@@ -15,6 +15,8 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
+#define CACHE_BOUNCE 1
+#define MATERIAL_SORT 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -285,7 +287,7 @@ __global__ void shadeRealMaterial (
 
             if(material.emittance > 0.f) {
                 pathSegments[idx].color *= (materialColor * material.emittance);
-                pathSegments[idx].remainingBounces = 0;
+                pathSegments[idx].remainingBounces = -1;
             }
             else
             {
@@ -296,7 +298,7 @@ __global__ void shadeRealMaterial (
         } 
         else {
             pathSegments[idx].color = glm::vec3(0.0f);
-            pathSegments[idx].remainingBounces = 0;
+            pathSegments[idx].remainingBounces = -1;
         }
     }
 }
@@ -392,6 +394,11 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	    cudaDeviceSynchronize();
 	    depth++;
 
+    #if MATERIAL_SORT == 1
+        // Sort the rays/path segments
+        thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, material_sort());
+    #endif  //MATERIAL_SORT
+
 
 	    // TODO:
 	    // --- Shading Stage ---
@@ -415,6 +422,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // Stream compact away all of the terminated paths
         //dev_path_end = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths, isTerminated());
 
+        dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, isContinuing());
         num_paths = dev_path_end - dev_paths;
 
         if(num_paths <= 0 || depth >= traceDepth)
@@ -438,5 +446,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     checkCUDAError("pathtrace");
 }
+
+
 
 
