@@ -16,6 +16,7 @@
 #include "interactions.h"
 
 #include <device_launch_parameters.h>
+#include "cfg.h"
 
 #define ERRORCHECK 1
 
@@ -24,7 +25,7 @@
 
 
 #pragma region feature_parameter
-# define camera_jittering 1 // camera antialiasing
+//# define camera_jittering 1 // camera antialiasing
 
 #pragma endregion
 void checkCUDAErrorFn(const char *msg, const char *file, int line) {

@@ -74,6 +74,7 @@ set(headers
     src/preview.h
     src/utilities.h
     src/PerformanceTimer.h
+    src/cfg.h
     )
 
 set(sources
