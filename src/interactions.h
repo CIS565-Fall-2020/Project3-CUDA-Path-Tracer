@@ -79,20 +79,26 @@ void scatterRay(
 	// A basic implementation of pure-diffuse shading will just call the
 	// calculateRandomDirectionInHemisphere defined above.
 
-	// Ideal Diffuse surfaces
+	thrust::uniform_real_distribution<float> u01(0, 1);
+	float xi = u01(rng);
+
 	glm::vec3 wo = pathSegment.ray.direction;
-	glm::vec3 wi = calculateRandomDirectionInHemisphere(normal, rng);
-	glm::vec3 f = m.color * INV_PI;
-	float absCosTheta = glm::abs(glm::dot(normal, wi));
-	float pdf = absCosTheta * INV_PI;
+	glm::vec3 wi;
 
-	//if (pdf > 0.0f)
-	//{
-		//pathSegment.color *= (f * absCosTheta / pdf);
-		pathSegment.color *= m.color;
-		pathSegment.ray.direction = wi;
-		pathSegment.ray.origin = intersect;
-	//}
-
-
+	if (xi < m.hasReflective)	// Specular
+	{
+		wi = glm::normalize(glm::reflect(wo, normal));
+		pathSegment.color *= m.specular.color / m.hasReflective;
+	}
+	else    // Diffuse
+	{
+		//float absCosTheta = glm::abs(glm::dot(normal, wi));
+		//float pdf = absCosTheta * INV_PI;
+		//glm::vec3 f = m.color * INV_PI;
+		//pathSegment.color *= (f * absCosTheta / pdf) / (1 - m.hasReflective);
+		wi = calculateRandomDirectionInHemisphere(normal, rng);
+		pathSegment.color *= m.color / (1 - m.hasReflective);
+	}
+	pathSegment.ray.direction = wi;
+	pathSegment.ray.origin = intersect + wi * 0.001f;
 }

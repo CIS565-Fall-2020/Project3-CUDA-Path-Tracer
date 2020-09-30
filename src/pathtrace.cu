@@ -4,6 +4,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
 #include <thrust/remove.h>
+#include <thrust/partition.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -15,6 +16,9 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
+
+#define STREAM_COMPACTION
+#define SORT_MATERIAL
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -74,7 +78,10 @@ static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
-// ...
+
+// Cache the first bounce intersections for re-use
+static PathSegment* dev_cachedFirstPaths = NULL;
+static ShadeableIntersection* dev_cachedFirstIntersections = NULL;
 
 void pathtraceInit(Scene *scene) {
 	hst_scene = scene;
@@ -96,6 +103,9 @@ void pathtraceInit(Scene *scene) {
 	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 	// TODO: initialize any extra device memeory you need
+	cudaMalloc(&dev_cachedFirstPaths, pixelcount * sizeof(PathSegment));
+	cudaMalloc(&dev_cachedFirstIntersections, pixelcount * sizeof(ShadeableIntersection));
+	cudaMemset(dev_cachedFirstIntersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 	checkCUDAError("pathtraceInit");
 }
@@ -107,7 +117,8 @@ void pathtraceFree() {
 	cudaFree(dev_materials);
 	cudaFree(dev_intersections);
 	// TODO: clean up any extra device memory you created
-
+	cudaFree(dev_cachedFirstIntersections);
+	cudaFree(dev_cachedFirstPaths);
 	checkCUDAError("pathtraceFree");
 }
 
@@ -206,60 +217,6 @@ __global__ void computeIntersections(int depth, int num_paths,
 	}
 }
 
-// LOOK: "fake" shader demonstrating what you might do with the info in
-// a ShadeableIntersection, as well as how to use thrust's random number
-// generator. Observe that since the thrust random number generator basically
-// adds "noise" to the iteration, the image should start off noisy and get
-// cleaner as more iterations are computed.
-//
-// Note that this shader does NOT do a BSDF evaluation!
-// Your shaders should handle that - this can allow techniques such as
-// bump mapping.
-__global__ void shadeFakeMaterial(
-	int iter
-	, int num_paths
-	, ShadeableIntersection * shadeableIntersections
-	, PathSegment * pathSegments
-	, Material * materials
-)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (idx < num_paths)
-	{
-		ShadeableIntersection intersection = shadeableIntersections[idx];
-		if (intersection.t > 0.0f) { // if the intersection exists...
-		  // Set up the RNG
-		  // LOOK: this is how you use thrust's RNG! Please look at
-		  // makeSeededRandomEngine as well.
-			thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
-			thrust::uniform_real_distribution<float> u01(0, 1);
-
-			Material material = materials[intersection.materialId];
-			glm::vec3 materialColor = material.color;
-
-			// If the material indicates that the object was a light, "light" the ray
-			if (material.emittance > 0.0f) {
-				pathSegments[idx].color *= (materialColor * material.emittance);
-			}
-			// Otherwise, do some pseudo-lighting computation. This is actually more
-			// like what you would expect from shading in a rasterizer like OpenGL.
-			// TODO: replace this! you should be able to start with basically a one-liner
-			else {
-				float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
-				pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
-				pathSegments[idx].color *= u01(rng); // apply some noise because why not
-			}
-		// If there was no intersection, color the ray black.
-		// Lots of renderers use 4 channel color, RGBA, where A = alpha, often
-		// used for opacity, in which case they can indicate "no opacity".
-		// This can be useful for post-processing and image compositing.
-		}
-		else {
-			pathSegments[idx].color = glm::vec3(0.0f);
-		}
-	}
-}
-
 __global__ void shadeMaterial(
 	int iter, int num_paths,
 	ShadeableIntersection * shadeableIntersections,
@@ -269,11 +226,11 @@ __global__ void shadeMaterial(
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < num_paths)
 	{
-		ShadeableIntersection intersection = shadeableIntersections[idx];
 		if (pathSegments[idx].remainingBounces == 0)
 		{
 			return;
 		}
+		ShadeableIntersection intersection = shadeableIntersections[idx];
 		if (intersection.t > 0.0f) { // if the intersection exists...
 			// Set up the RNG
 			thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
@@ -291,6 +248,10 @@ __global__ void shadeMaterial(
 				scatterRay(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t),
 					intersection.surfaceNormal, material, rng);
 				pathSegments[idx].remainingBounces--;
+				if (pathSegments[idx].remainingBounces == 0)
+				{
+					pathSegments[idx].color = glm::vec3(0, 0, 0);
+				}
 			}
 		}
 		// If there was no intersection, color the ray black.
@@ -314,13 +275,19 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 }
 
 
-// Reference: thrust::remove_if
-// https://thrust.github.io/doc/group__stream__compaction_ga307d7f64566909172a3f9e16b7e2ad53.html#ga307d7f64566909172a3f9e16b7e2ad53
-struct isRemainingBounceZero
+struct isRemainingBounceNotZero
 {
 	__host__ __device__ bool operator()(const PathSegment& segment)
 	{
-		return segment.remainingBounces == 0;
+		return segment.remainingBounces > 0;
+	}
+};
+
+struct CompMaterial
+{
+	__host__ __device__ bool operator()(const ShadeableIntersection& i0, const ShadeableIntersection& i1)
+	{
+		return i0.materialId < i1.materialId;
 	}
 };
 
@@ -408,10 +375,19 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (iter, num_paths, 
 			dev_intersections, dev_paths, dev_materials);
 
+#ifdef STREAM_COMPACTION
 		// Thrust stream compaction
-		//dev_path_end = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths,
-		//	isRemainingBounceZero());
-		//num_paths = dev_path_end - dev_paths;
+		// Reomve_if does not work
+		dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths,
+			isRemainingBounceNotZero());
+		num_paths = dev_path_end - dev_paths;
+#endif
+
+#ifdef SORT_MATERIAL
+		// Thrust sort materials
+		thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths,
+			dev_paths, CompMaterial());
+#endif
 
 		depth++;
 		std::cout << "Depth:" << depth << " num paths:" << num_paths << std::endl;
