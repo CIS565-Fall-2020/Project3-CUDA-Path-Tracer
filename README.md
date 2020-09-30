@@ -3,11 +3,40 @@ CUDA Path Tracer
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Haoyu Sui
+  	* [LinkedIn](http://linkedin.com/in/haoyu-sui-721284192)
+* Tested on: Windows 10, i5-9600K @ 3.70GHz 16GB, RTX 2070 SUPER 8GB 
+* SM：7.5
 
-### (TODO: Your README)
+### Features
+* Ideal diffuse surface
+* Specular-reflective surface
+* Stream compaction for path continue and termination 
+* Sort rays with same material
+* Cache first bounce
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+### Results
+
+![](img/iteration.gif)
+
+**Specular surface reflection & Diffuse surface reflection**
+
+
+
+<left class="half">
+    <img src="img/specular.png"  width="400">
+    <img src="img/diffuse.png" width="400">
+</left>
+
+### Performance Analysis
+
+![](img/analysis.png)
+
+I calculated the average time spent in each depth loop in 200 iterations and got the result shown in the figure above. 
+
+In terms of sorting rays, I originally thought that sorting would reduce the time it took because it would reduce the divergence in a thread warp, but from the results, on my computer, sorting actually reduced performance.
+
+For caching the first bounce, it can be seen from the chart that there is a slight and stable improvement in performance, because the cache can only reduce the time to calculate the intersection for the first time, so the larger the depth, the smaller the performance improvement. And it has nothing to do with the number of iterations.
+
+
 

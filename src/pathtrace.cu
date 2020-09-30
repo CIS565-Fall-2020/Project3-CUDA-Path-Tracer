@@ -14,9 +14,11 @@
 #include "intersections.h"
 #include "interactions.h"
 
+using utilTimer::PerformanceTimer;
+
 #define ERRORCHECK 1
 #define CACHE_BOUNCE 1
-#define MATERIAL_SORT 1
+#define MATERIAL_SORT 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -38,6 +40,12 @@ void checkCUDAErrorFn(const char *msg, const char *file, int line) {
 #  endif
     exit(EXIT_FAILURE);
 #endif
+}
+
+PerformanceTimer& timer()
+{
+    static PerformanceTimer timer;
+    return timer;
 }
 
 __host__ __device__
@@ -372,7 +380,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     // TODO: perform one iteration of path tracing
 
-
+    timer().startGpuTimer();
 
 #if CACHE_BOUNCE == 1
 
@@ -489,6 +497,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             iterationComplete = true;
         }
     }
+    timer().endGpuTimer();
+
+    printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(CUDA Measured)");
 
     // Assemble this iteration and apply it to the image
     dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
