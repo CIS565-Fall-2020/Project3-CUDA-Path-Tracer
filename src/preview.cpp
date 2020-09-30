@@ -168,11 +168,13 @@ bool init() {
     return true;
 }
 
-void mainLoop() {
-    while (!glfwWindowShouldClose(window)) {
+void mainLoop() 
+{
+    while (!glfwWindowShouldClose(window))
+    {
         glfwPollEvents();
         runCuda();
-
+      
         string title = "CIS565 Path Tracer | " + utilityCore::convertIntToString(iteration) + " Iterations";
         glfwSetWindowTitle(window, title.c_str());
 
