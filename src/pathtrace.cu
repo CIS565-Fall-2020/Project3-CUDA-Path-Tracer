@@ -4,6 +4,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
 #include <thrust/remove.h>
+#include <thrust/device_vector.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -208,6 +209,7 @@ __global__ void computeIntersections(
 			intersections[path_index].t = t_min;
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
+			intersections[path_index].intersectPos = intersect_point;
 		}
 	}
 }
@@ -264,9 +266,10 @@ __global__ void shadeFakeMaterial(
 			// like what you would expect from shading in a rasterizer like OpenGL.
 			// TODO: replace this! you should be able to start with basically a one-liner
 			else {
-				float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
-				pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
-				pathSegments[idx].color *= u01(rng); // apply some noise because why not
+				scatterRay(pathSegments[idx], intersection, material, rng);
+				//float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
+				//pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
+				//pathSegments[idx].color *= u01(rng); // apply some noise because why not
 			}
 		}
 		else {
@@ -349,6 +352,12 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
 
+	struct is_terminated {
+		__host__ __device__ bool operator()(const PathSegment& ps) {
+			return ps.color == glm::vec3(0.f);
+		}
+	};
+
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 
@@ -390,7 +399,15 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			dev_materials
 			);
 
-		iterationComplete = true; // TODO: should be based off stream compaction results.
+		thrust::device_ptr<PathSegment> thrust_dev_paths(dev_paths);
+		thrust::device_ptr<PathSegment> thrust_dev_path_end(dev_path_end);
+		dev_path_end = thrust::remove_if(thrust_dev_paths, thrust_dev_path_end, is_terminated());
+		num_paths = dev_path_end - dev_paths;
+		if (num_paths < 0) {
+			iterationComplete = true; // TODO: should be based off stream compaction results.
+		}
+
+		// iterationComplete = true; // TODO: should be based off stream compaction results.
 	}
 
 	// Assemble this iteration and apply it to the image
