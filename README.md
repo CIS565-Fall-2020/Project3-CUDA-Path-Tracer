@@ -18,4 +18,44 @@ Thanks to [FLARE LAB](http://faculty.sist.shanghaitech.edu.cn/faculty/liuxp/flar
 Add 
 
 1. [PerformanceTimer.h](https://github.com/Jack12xl/Project2-Stream-Compaction/blob/master/src/csvfile.hpp) : Measure performance by system time clock. 
-2. [radixSort.h](https://github.com/Jack12xl/Project2-Stream-Compaction/blob/master/stream_compaction/radixSort.h), [radixSort.cu](https://github.com/Jack12xl/Project2-Stream-Compaction/blob/master/stream_compaction/radixSort.cu) for [Part 6](
+2. [cfg.h](https://github.com/Jack12xl/Project2-Stream-Compaction/blob/master/stream_compaction/radixSort.h),  as a configure
+
+#### Intro
+
+In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's still under construction and more features will come soon.
+
+#### Current feature
+
+- [x] A basic BSDF 
+  - [x]  Diffuse
+  - [x] Reflective
+  - [ ] Refraction
+- [x] Path continuation/termination
+- [x] First bounce cache
+- [x] contiguous memory shuffle by material sort
+
+##### [BSDF]()
+
+![alt text](https://github.com/Jack12xl/Project1-CUDA-Flocking/blob/master/images/demo_2.gif)
+
+Basic kernel to represent the physical lighting attribute of each material.
+
+##### First bounce cache
+
+Basically, first bounce cache is a time-space trade-off that use memory to store the first intersection results for further use  instead of calculating intersections at each iterations.
+
+Here shows the results based on my implementation.
+
+![alt text](https://github.com/Jack12xl/Project1-CUDA-Flocking/blob/master/images/demo_2.gif)
+
+Well, obviously cache can trigger more performance with same results.
+
+**Material Sort**
+
+Material sort tries to sort the shader working sequence on material ID, which can makes threads do the same job as much as possible. 
+
+| With material sort  | Without             |
+| ------------------- | ------------------- |
+| 122.94 milliseconds | 62.412 milliseconds |
+
+However, for scenes simple like Cornell box, the more contiguous memory read can not cover the overhead of sorting(we use thrust::sort, basically a O(n) radix sort). 
