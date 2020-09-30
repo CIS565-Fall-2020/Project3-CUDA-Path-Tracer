@@ -68,12 +68,36 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
+		PathSegment& pathSegment,
         glm::vec3 intersect,
         glm::vec3 normal,
         const Material &m,
         thrust::default_random_engine &rng) {
-    // TODO: implement this.
-    // A basic implementation of pure-diffuse shading will just call the
-    // calculateRandomDirectionInHemisphere defined above.
+    // change the ray's origin to be at the intersection point
+    // make sure to shift it along the normal a bit to avoid intersecting itself (floating point error)
+    pathSegment.ray.origin = intersect + normal * 0.001f;
+
+    // change the ray's direction depending on its material type
+    // according to piazza @144, we should take the probably of each of event 
+    // - uniform diffuse, perfect reflection, refraction etc (based on your scene file) and all of these should add exactly to 1.0.
+    // Then you can generate a uniform random number between[0, 1], and then you can do an if - else if on the probability 
+    //to determine the next ray direction
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float probability = u01(rng);
+
+    if (probability < m.hasReflective) {
+        // reflective
+        pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+    } 
+    else if (probability < (m.hasReflective + m.hasRefractive)) {
+        // refraction
+        // TO DO: Later
+    }
+    else {
+        // default is diffuse
+        pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    }
+
+    // finally we want to change the ray's color to have the current surface's color
+    pathSegment.color *= m.color;
 }
