@@ -25,12 +25,12 @@ CUDA Path Tracer
 
 <left class="half">
     <img src="img/specular.png"  width="600">
-    <img src="img/diffuse.png" width="600">
+    <img src="img/diffuse.png" width="600">@
 </left>
 
 ### Performance Analysis
 
-![](img/analysis.png)
+![](img/Analysis.png)
 
 I calculated the average time spent in each depth loop in 200 iterations and got the result shown in the figure above. 
 
