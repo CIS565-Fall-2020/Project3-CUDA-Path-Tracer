@@ -143,7 +143,7 @@ void runCuda() {
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
-        std::cout << "time: " << totalTime << std::endl;
+        //std::cout << "time: " << totalTime << std::endl;
         saveImage();
         pathtraceFree();
         cudaDeviceReset();
