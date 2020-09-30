@@ -338,14 +338,26 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	// * Finally, add this iteration's results to the image. This has been done
 	//   for you.
 
-	// TODO: perform one iteration of path tracing
+	// DONE: perform one iteration of path tracing
 
-	generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
-	checkCUDAError("generate camera ray");
+
 
 	int depth = 0;
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
+
+	// Cache the first intersection
+	if (iter == 1)
+	{
+		generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_cachedFirstPaths);
+		checkCUDAError("generate camera ray");
+		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
+		cudaMemset(dev_cachedFirstIntersections, 0, pixelcount * sizeof(ShadeableIntersection));
+		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (depth, num_paths,
+			dev_cachedFirstPaths, dev_geoms, hst_scene->geoms.size(), dev_cachedFirstIntersections);
+		checkCUDAError("trace one bounce");
+		cudaDeviceSynchronize();
+	}
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
@@ -353,15 +365,24 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	bool iterationComplete = false;
 	while (!iterationComplete) {
 
-		// clean shading chunks
-		cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
-
-		// tracing
 		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (depth, num_paths, 
-			dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections);
-		checkCUDAError("trace one bounce");
-		cudaDeviceSynchronize();
+		// Use cached first intersection
+		if (depth == 0)
+		{
+			cudaMemcpy(dev_paths, dev_cachedFirstPaths, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
+			cudaMemcpy(dev_intersections, dev_cachedFirstIntersections, num_paths * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
+		}
+		else
+		{
+			// clean shading chunks
+			cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
+
+			// tracing
+			computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (depth, num_paths,
+				dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections);
+			checkCUDAError("trace one bounce");
+			cudaDeviceSynchronize();
+		}
 		
 		// TODO:
 		// --- Shading Stage ---
@@ -390,7 +411,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 #endif
 
 		depth++;
-		std::cout << "Depth:" << depth << " num paths:" << num_paths << std::endl;
+		//std::cout <<"Iter:" <<iter << " Depth:" << depth << " num paths:" << num_paths << std::endl;
 		iterationComplete = (num_paths == 0 || depth == traceDepth);
 	}
 	
