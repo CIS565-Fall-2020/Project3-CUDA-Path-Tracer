@@ -255,12 +255,12 @@ __global__ void shadeFakeMaterial(
 				pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
 				pathSegments[idx].color *= u01(rng); // apply some noise because why not
 			}
+		}
+		else {
 			// If there was no intersection, color the ray black.
 			// Lots of renderers use 4 channel color, RGBA, where A = alpha, often
 			// used for opacity, in which case they can indicate "no opacity".
 			// This can be useful for post-processing and image compositing.
-		}
-		else {
 			pathSegments[idx].color = glm::vec3(0.0f);
 		}
 	}
@@ -288,7 +288,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
 
 	// 2D block for generating ray from camera
+	// 8x8-sized block represents 8x8 chunk of image
 	const dim3 blockSize2d(8, 8);
+	// the grid represents the image
 	const dim3 blocksPerGrid2d(
 		(cam.resolution.x + blockSize2d.x - 1) / blockSize2d.x,
 		(cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
@@ -327,7 +329,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 	// TODO: perform one iteration of path tracing
 
-	generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+	generateRayFromCamera<<<blocksPerGrid2d, blockSize2d>>>(cam, iter, traceDepth, dev_paths);
 	checkCUDAError("generate camera ray");
 
 	int depth = 0;
@@ -345,7 +347,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 		// tracing
 		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+		computeIntersections<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			depth
 			, num_paths
 			, dev_paths
@@ -361,19 +363,20 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		// TODO:
 		// --- Shading Stage ---
 		// Shade path segments based on intersections and generate new rays by
-	  // evaluating the BSDF.
-	  // Start off with just a big kernel that handles all the different
-	  // materials you have in the scenefile.
-	  // TODO: compare between directly shading the path segments and shading
-	  // path segments that have been reshuffled to be contiguous in memory.
+		// evaluating the BSDF.
+		// Start off with just a big kernel that handles all the different
+		// materials you have in the scenefile.
+		// TODO: compare between directly shading the path segments and shading
+		// path segments that have been reshuffled to be contiguous in memory.
 
-		shadeFakeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (
+		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			iter,
 			num_paths,
 			dev_intersections,
 			dev_paths,
 			dev_materials
 			);
+
 		iterationComplete = true; // TODO: should be based off stream compaction results.
 	}
 
