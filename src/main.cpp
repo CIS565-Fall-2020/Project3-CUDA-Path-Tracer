@@ -90,7 +90,8 @@ void saveImage() {
 
     std::string filename = renderState->imageName;
     std::ostringstream ss;
-    ss << filename << "." << startTimeString << "." << samples << "samp";
+    ss << filename << "_" << startTimeString << "_" << samples << "samp" <<
+        "_" << renderState -> traceDepth << "depth";
     filename = ss.str();
 
     // CHECKITOUT
