@@ -82,6 +82,13 @@ struct path_terminated {
     }
 };
 
+// Boolean function for path continuing
+struct path_continue {
+    __host__ __device__ bool operator()(const PathSegment& segment) {
+        return segment.remainingBounces > 0;
+    }
+};
+
 // Sort function for different materials of intersection
 struct path_sort {
     __host__ __device__ bool operator()(const ShadeableIntersection& a,

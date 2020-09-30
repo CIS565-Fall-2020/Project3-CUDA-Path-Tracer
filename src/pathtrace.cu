@@ -6,6 +6,7 @@
 #include <thrust/remove.h>
 #include <thrust/device_vector.h>
 #include <thrust/sort.h>
+#include <thrust/partition.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -305,7 +306,6 @@ __global__ void shadeMaterial(
             if (material.emittance > 0.0f) {
                 pathSegments[idx].color *= (materialColor * material.emittance);
                 pathSegments[idx].remainingBounces = 0;
-                image[pathSegments[idx].pixelIndex] += pathSegments[idx].color;
             }
             else {
                 scatterRay(
@@ -315,6 +315,9 @@ __global__ void shadeMaterial(
                     material,
                     rng
                 );
+                if (pathSegments[idx].remainingBounces <= 0) {
+                    pathSegments[idx].color = glm::vec3(0.f);
+                }
             }
             // If there was no intersection, color the ray black.
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
@@ -468,8 +471,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             dev_image
         );
 
-        dev_path_end = thrust::remove_if(thrust::device,
-            dev_paths, dev_paths + num_paths, path_terminated());
+        // Stream compaction
+        dev_path_end = thrust::partition(thrust::device, dev_paths,
+            dev_paths + num_paths, path_continue());
         num_paths = dev_path_end - dev_paths;
 
         if (num_paths <= 0) { // Stop based on stream compaction
@@ -478,9 +482,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	}
 
     // Assemble this iteration and apply it to the image
-    //dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
-	//finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image, dev_paths);
-
+    dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
+	finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image, dev_paths);
+    
     ///////////////////////////////////////////////////////////////////////////
 
     // Send results to OpenGL buffer for rendering
