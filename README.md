@@ -24,8 +24,8 @@ CUDA Path Tracer
 
 
 <left class="half">
-    <img src="img/specular.png"  width="400">
-    <img src="img/diffuse.png" width="400">
+    <img src="img/specular.png"  width="350">
+    <img src="img/diffuse.png" width="350">
 </left>
 
 ### Performance Analysis
