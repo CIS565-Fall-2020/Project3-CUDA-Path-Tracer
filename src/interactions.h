@@ -1,6 +1,8 @@
 #pragma once
 
 #include "intersections.h"
+#include "glm/glm.hpp"
+#include "glm/gtx/norm.hpp"
 
 // CHECKITOUT
 /**
@@ -76,4 +78,40 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+	
+	if (m.emittance > 0.0f) {
+		pathSegment.color *= (m.color * m.emittance);
+		//pathSegment.remainingBounces = 0;
+		//return;
+	}
+	if (pathSegment.remainingBounces <= 0) {
+		return;
+	}
+	// pure-diffusive
+	/*float reflectiveRatio;
+	if (m.hasReflective) {
+		reflectiveRatio = 0.8;
+	}
+	else {
+		reflectiveRatio = 0.2;
+	}
+
+	thrust::uniform_real_distribution<float> u01(0, 1);
+	float randomNum = u01(rng);
+	*/
+	if (!m.hasReflective) {
+		glm::vec3 diffuseDirection = calculateRandomDirectionInHemisphere(normal, rng);
+		pathSegment.ray.direction = diffuseDirection;
+		//float lightTerm = glm::abs(glm::dot(normal, diffuseDirection));
+		pathSegment.color *= m.color;
+	}
+	if (m.hasReflective) {
+		glm::vec3 reflectDirection = glm::reflect(pathSegment.ray.direction, normal); 
+		pathSegment.ray.direction = reflectDirection;
+		float lightTerm = glm::abs(glm::dot(normal, reflectDirection));
+		pathSegment.color *= (m.color * lightTerm);
+	}
+	pathSegment.ray.origin = intersect + 0.01f * normal;
+	pathSegment.remainingBounces--;
+
 }
