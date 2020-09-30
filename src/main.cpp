@@ -2,6 +2,15 @@
 #include "preview.h"
 #include <cstring>
 #include <iostream>
+#include "common.h"
+
+
+using StreamCompaction::Common::PerformanceTimer;
+PerformanceTimer& timer()
+{
+    static PerformanceTimer timer;
+    return timer;
+}
 
 static std::string startTimeString;
 
@@ -141,6 +150,7 @@ void runCuda() {
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
+        //timer().startGpuTimer();
     }
 
     if (iteration < renderState->iterations) {
@@ -154,6 +164,12 @@ void runCuda() {
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
+
+        /*if (iteration == 1000) {
+            timer().endGpuTimer();
+            std::cout << timer().getGpuElapsedTimeForPreviousOperation() << std::endl;
+        }*/
+
     } else {
         saveImage();
         pathtraceFree();
