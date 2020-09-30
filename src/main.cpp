@@ -1,5 +1,6 @@
 #include "main.h"
 #include "preview.h"
+#include "common.h"
 #include <cstring>
 
 static std::string startTimeString;

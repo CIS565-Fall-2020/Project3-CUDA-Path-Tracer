@@ -41,6 +41,48 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+#define PI 3.141592
+//TODO: try and implement stratified sampler
+// Samples a disc concentrically; used for thin lens camera
+// Taken from http://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations.html
+__host__ __device__
+glm::vec3 sampleDiskConcentric(thrust::default_random_engine& rng) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float x = u01(rng),
+          y = u01(rng);
+
+    float phi, r, u, v;
+    float a = 2 * x - 1;
+    float b = 2 * y - 1;
+
+    if (a > -b) {
+        if (a > b) {
+            r = a;
+            phi = (PI / 4) * (b / a);
+        }
+        else {
+            r = b;
+            phi = (PI / 4) * (2 - (a / b));
+        }
+    }
+    else {
+        if (a < b) {
+            r = -a;
+            phi = (PI / 4) * (4 + (b / a));
+        }
+        else {
+            r = -b;
+            if (b < 0 || b > 0) {
+                phi = (PI / 4) * (6 - (a / b));
+            }
+            else {
+                phi = 0;
+            }
+        }
+    }
+    return glm::vec3(r * cosf(phi), r * sinf(phi), 0);
+}
+
 // specular exponent
 // material going to look
 // reflection
@@ -51,6 +93,85 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 // that dot would be larger
 // lighting equation
 // use specex as power
+
+__host__ __device__ void calculateDiffuse(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng) {
+
+    Ray& r = pathSegment.ray;
+    glm::vec3 hemiDir = calculateRandomDirectionInHemisphere(normal, rng);
+    r.origin = intersect + 0.0001f * normal;
+    r.direction = hemiDir;
+    pathSegment.color *= m.color;
+}
+
+__host__ __device__ void calculateReflect(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng) {
+
+    Ray& r = pathSegment.ray;
+    glm::vec3 reflectedDir = glm::reflect(r.direction,
+        normal);
+    // color specular
+    glm::vec3 specularColor = m.specular.color;
+    r.origin = intersect + 0.0001f * normal;
+    r.direction = reflectedDir;
+
+    if (m.specular.exponent > 0) {
+        glm::vec3 specularColor = m.specular.color;
+        r.direction = reflectedDir;
+        pathSegment.color *= specularColor;
+    }
+}
+
+__host__ __device__ glm::vec3 evaluateFresnel(float cosThetaI, float eI, float eT) {
+    float sinThetaI = std::sqrt(std::max(0.f, 1 - cosThetaI * cosThetaI));
+    float sinThetaT = eI / eT * sinThetaI;
+    if (sinThetaT >= 1) {
+        return glm::vec3(1.);
+    }
+    float cosThetaT = std::sqrt(std::max(0.f, 1 - sinThetaT * sinThetaT));
+    float Rparl = ((eT * cosThetaI) - (eI * cosThetaT)) /
+        ((eT * cosThetaI) + (eI * cosThetaT));
+    float Rperp = ((eI * cosThetaI) - (eT * cosThetaT)) /
+        ((eI * cosThetaI) + (eT * cosThetaT));
+    return glm::clamp(glm::vec3((Rparl * Rparl + Rperp * Rperp)) / 2.f, 0.f, 1.f);
+}
+
+__host__ __device__ void calculateRefract(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng) {
+
+    Ray& r = pathSegment.ray;
+
+    //thrust::uniform_real_distribution<float> u01(0, 1);
+    //float random = u01(rng);
+
+    // assumes that the other medium is air, whose IOR is approximately 1.
+    float cosTheta = glm::dot(r.direction, normal);
+    bool entering = cosTheta > 0;
+    float etaI = entering ? 1.0f : m.indexOfRefraction;
+    float etaT = entering ? m.indexOfRefraction : 1.0f;
+    if (!entering) {
+        cosTheta = fabsf(cosTheta);
+    }
+
+    glm::vec3 reflectDir = glm::reflect(r.direction, normal);
+    glm::vec3 refractedDir = glm::refract(r.direction, normal, etaI / etaT);
+    if (!entering) {
+        refractedDir = glm::refract(r.direction, -normal, etaI / etaT);
+    }
+    r.direction = refractedDir;
+    r.origin = intersect - 0.0001f * normal;
+
+    pathSegment.color *= m.specular.color;
+}
 
 /**
  * Scatter a ray with some probabilities according to the material properties.
@@ -89,43 +210,74 @@ void scatterRay(
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
 
-    Ray& r = pathSegment.ray;
-    glm::vec3 hemiDir = calculateRandomDirectionInHemisphere(normal, rng);
+    float probThresholdDiffuse = -1.0f;
+    float probThresholdReflect = -1.0f;
+    float probThresholdRefract = -1.0f;
 
-    r.origin = intersect + 0.0001f * normal;
+    const unsigned int bsdf_diffuse = 1 << 0;
+    const unsigned int bsdf_reflection = 1 << 1;
+    const unsigned int bsdf_refraction = 1 << 2;
+
+    unsigned int flags = 0;
+    int numFlags = 0;
+
+    if (m.hasDiffuse) {
+        flags = flags | bsdf_diffuse;
+        numFlags++;
+    }
 
     if (m.hasReflective) {
-        glm::vec3 reflectedDir = glm::reflect(r.direction,
-            normal);
+        flags = flags | bsdf_reflection;
+        numFlags++;
+    }
 
-        if (m.specular.exponent > 0) {
-            glm::vec3 specularColor = m.specular.color;
-            r.direction = reflectedDir;
-            pathSegment.color *= specularColor;
-        } 
-        else {
-            // 50-50 chance to choose specular or diffuse
-            // call scatter ray
-            thrust::uniform_real_distribution<float> u01(0, 1);
-            float random = u01(rng);
-            if (random < 0.5) {
-                // color specular
-                glm::vec3 specularColor = m.specular.color;
-                r.direction = reflectedDir;
+    if (m.hasRefractive) {
+        flags = flags | bsdf_refraction;
+        numFlags++;
+    }
 
-                pathSegment.color *= specularColor;
-            }
-            else {
-                // color diffuse
-                r.direction = hemiDir;
-                pathSegment.color *= m.color;
-            }
-        }
+    switch (flags) {
+    case bsdf_diffuse:
+        probThresholdDiffuse = 1.0f;
+        break;
+    case bsdf_reflection:
+        probThresholdReflect = 1.0f;
+        break;
+    case bsdf_refraction:
+        probThresholdRefract = 1.0f;
+        break;
+    case bsdf_diffuse | bsdf_reflection:
+        probThresholdDiffuse = 0.5f;
+        probThresholdReflect = 1.0f;
+        break;
+    case bsdf_diffuse | bsdf_refraction:
+        probThresholdDiffuse = 0.5f;
+        probThresholdRefract = 1.0f;
+        break;
+    case bsdf_reflection | bsdf_refraction:
+        probThresholdReflect = 0.5f;
+        probThresholdRefract = 1.0f;
+        break;
+    case bsdf_diffuse | bsdf_reflection | bsdf_refraction:
+        probThresholdDiffuse = 0.333f;
+        probThresholdReflect = 0.667f;
+        probThresholdReflect = 1.0f;
+        break;
 
     }
-    else {
-        r.direction = hemiDir;
-        pathSegment.color *= m.color;
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float random = u01(rng);
+
+    if (random <= probThresholdDiffuse) {
+        calculateDiffuse(pathSegment, intersect, normal, m, rng);
     }
+    else if (random <= probThresholdReflect) {
+        calculateReflect(pathSegment, intersect, normal, m, rng);
+    }
+    else if (random <= probThresholdRefract) {
+        calculateRefract(pathSegment, intersect, normal, m, rng);
+    }
+
+    pathSegment.color *= numFlags;
 }
-

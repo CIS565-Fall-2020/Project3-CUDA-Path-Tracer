@@ -32,7 +32,6 @@ struct Geom {
         glm::vec3 point2;
         glm::vec3 point3;
         glm::vec3 normal;
-        glm::vec3 d;
     } triangleData;
 };
 
@@ -42,6 +41,7 @@ struct Material {
         float exponent;
         glm::vec3 color;
     } specular;
+    float hasDiffuse;
     float hasReflective;
     float hasRefractive;
     float indexOfRefraction;
