@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=m.specular.color.x, etaI, etaT, cosThetaI
+Expressions=m.specular.color.x, etaI, etaT, enterDot

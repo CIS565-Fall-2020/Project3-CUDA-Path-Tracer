@@ -16,8 +16,6 @@ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(360): warning : va
   
 E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(84): warning : variable "firstTimeRender" was declared but never referenced
   
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(158): warning : calling a __host__ function("std::swap<float, void> ") from a __host__ __device__ function("frDielectric") is not allowed
-  
   pathtrace.cu
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(66): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
           with

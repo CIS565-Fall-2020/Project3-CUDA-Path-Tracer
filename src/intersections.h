@@ -149,21 +149,17 @@ __host__ __device__ float Clamp(float val, float low, float high) {
     else return val;
 }
 
-__host__ __device__ float frDielectric(float cosThetaI, float etaI, float etaT)
+__host__ __device__ float frDielectric(float cosThetaI, float cosThetaT, float etaI, float etaT, bool entering)
 {
     cosThetaI = Clamp(cosThetaI, -1.0, 1.0);
-    bool entering = cosThetaI > 0.0f;
     if (!entering)
     {
-        std::swap(etaI, etaT);
-        cosThetaI = std::fabs(cosThetaI);
+        cosThetaI = -cosThetaI;
+        cosThetaT = -cosThetaT;
     }
-    float sinThetaI = std::sqrt(std::fmax((float)0.0f, 1 - cosThetaI * cosThetaI));
-    float sinThetaT = etaI / etaT * sinThetaI;
-    if (sinThetaT >= 1)
-        return 1;
 
-    float cosThetaT = std::sqrt(std::fmax(0.0f, 1 - sinThetaT * sinThetaT));
+
+    //float cosThetaT = std::sqrt(std::fmax(0.0f, 1 - sinThetaT * sinThetaT));
 
     float Rparl = ((etaT * cosThetaI) - (etaI * cosThetaT)) /
         ((etaT * cosThetaI) + (etaI * cosThetaT));

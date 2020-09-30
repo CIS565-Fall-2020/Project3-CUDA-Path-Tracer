@@ -79,19 +79,39 @@ void scatterRay(
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
 
-    // Specular Scattering
-    thrust::uniform_real_distribution<float> u01(0, 1);
-    float result = u01(rng);
-
     if (m.hasReflective == 1.0f && m.hasRefractive == 0.0f) 
     {
-        // Specular
-        glm::vec3 specularDir = glm::reflect(pathSegment.ray.direction, normal);
-        pathSegment.color *= m.specular.color;
-        Ray scatterRay;
-        scatterRay.origin = intersect + 0.001f * specularDir;
-        scatterRay.direction = specularDir;
-        pathSegment.ray = scatterRay;
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        float shininess = m.specular.exponent;
+
+        if (shininess < 50000.0f) {
+            // Use Importance sampling to find the reflected vector
+            // Get random vector based on the reflective value
+            float st = acos(powf(u01(rng), 1.0f / (shininess + 1.0f))); // Spectral Theta
+            float sp = 2.0f * PI * u01(rng); // Spectral Psi
+            float cosPsi = cos(sp);
+            float sinPsi = sin(sp);
+            float cosTheta = cos(st);
+            float sinTheta = sin(st);
+            glm::vec3 sample(cosPsi * sinTheta, sinPsi * sinTheta, cosTheta);
+
+            glm::vec3 reflected = glm::reflect(pathSegment.ray.direction, normal);
+            glm::vec3 transform_z = glm::normalize(reflected);
+            glm::vec3 transform_x = glm::normalize(glm::cross(transform_z, glm::vec3(0.0f, 0.0f, 1.0f)));
+            glm::vec3 transform_y = glm::normalize(glm::cross(transform_z, transform_x));
+            glm::mat3 transform = glm::mat3(transform_x, transform_y, transform_z);
+
+            // Transform the vector so that it aligns with the reflected vector as Z axis
+            pathSegment.ray.direction = transform * sample;
+            pathSegment.color *= m.specular.color;
+            pathSegment.ray.origin = intersect + (.001f) * pathSegment.ray.direction;
+        }
+        else {
+            // If the object is VERY shiny, just do a perfect reflection
+            pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+            pathSegment.color *= m.specular.color;
+            pathSegment.ray.origin = intersect + (.001f) * pathSegment.ray.direction;
+        }
     }
     else if(m.hasReflective == 0.0f && m.hasRefractive == 0.0f)
     {
@@ -117,18 +137,78 @@ void scatterRay(
     else if (m.hasRefractive == 1.0f && m.hasReflective == 0.0f) 
     {
         // Refractive
-        bool entering = glm::normalize(pathSegment.ray.direction).z > 0;
-        float etaI = entering ? 1.0f : 1.0f / m.indexOfRefraction;
-        float etaT = entering ? 1.0f / m.indexOfRefraction : 1.0f;
-
+        float cosThetaI = glm::dot(normal, pathSegment.ray.direction);
+        bool entering = cosThetaI > 0.0f;
+        float etaI = entering ? m.indexOfRefraction : 1.0f;
+        float etaT = entering ? 1.0f : m.indexOfRefraction;
+        
         glm::vec3 transmissionDir = glm::refract(pathSegment.ray.direction, normal, etaI / etaT);
-        pathSegment.color *= (m.color * (glm::vec3(1.0f) - frDielectric(glm::normalize(transmissionDir).z, etaI, etaT)) 
-                             / fabs(glm::normalize(transmissionDir).z));
-
+        float cosThetaT = glm::dot(normal, glm::normalize(transmissionDir));
+        if (glm::l2Norm(transmissionDir) <= 0.0001f) 
+        {
+            pathSegment.color = glm::vec3(0.0f);
+        }
+        else 
+        {
+            pathSegment.color *= m.specular.color;
+        }
+  
         Ray scatterRay;
         scatterRay.origin = intersect + 0.001f * transmissionDir;
         scatterRay.direction = transmissionDir;
         pathSegment.ray = scatterRay;
+    }
+    else if (m.hasRefractive == 1.0f && m.hasReflective == 1.0f) 
+    {
+        float cosThetaI = glm::dot(normal, pathSegment.ray.direction);
+        bool entering = cosThetaI > 0.0f;
+        float etaI = entering ? m.indexOfRefraction : 1.0f;
+        float etaT = entering ? 1.0f : m.indexOfRefraction;
+        float R0 = (1.0f - m.indexOfRefraction) / (1.0f + m.indexOfRefraction);
+        R0 = R0 * R0;
+        float R = R0 + (1 - R0) * powf((1 - glm::abs(cosThetaI)), 5);
+
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        float result = u01(rng);
+
+        glm::vec3 transmissionDir = glm::refract(pathSegment.ray.direction, normal, etaI / etaT);
+        glm::vec3 specularDir = glm::reflect(pathSegment.ray.direction, normal);
+
+       
+        if (R < result) 
+        {
+            Ray scatterRay;
+            scatterRay.origin = intersect + 0.001f * transmissionDir;
+            scatterRay.direction = transmissionDir;
+            pathSegment.ray = scatterRay;
+
+            if (glm::l2Norm(transmissionDir) <= 0.0001f)
+            {
+                pathSegment.color = glm::vec3(0.0f);
+            }
+            else
+            {
+                pathSegment.color *= m.specular.color;
+            }
+        }
+        else
+        {
+            Ray scatterRay;
+            scatterRay.origin = intersect + 0.001f * specularDir;
+            scatterRay.direction = specularDir;
+            pathSegment.ray = scatterRay;
+
+            if (glm::l2Norm(specularDir) <= 0.0001f)
+            {
+                pathSegment.color = glm::vec3(0.0f);
+            }
+            else
+            {
+                pathSegment.color *= m.specular.color;
+            }
+        }
+
+        
     }
  
     pathSegment.remainingBounces--;

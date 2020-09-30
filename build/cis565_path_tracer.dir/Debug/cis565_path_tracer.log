@@ -12,11 +12,9 @@
   E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
   -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
   D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(352): warning : variable "firstIteration" was declared but never referenced
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(360): warning : variable "firstIteration" was declared but never referenced
   
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(81): warning : variable "firstTimeRender" was declared but never referenced
-  
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(158): warning : calling a __host__ function("std::swap<float, void> ") from a __host__ __device__ function("frDielectric") is not allowed
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(84): warning : variable "firstTimeRender" was declared but never referenced
   
   pathtrace.cu
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(66): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
@@ -24,10 +22,10 @@ E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(66): warning C4
           [
               T=float
           ]
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(346): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(363): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(387): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(431): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(354): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(374): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(398): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(442): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'initializing': conversion from 'Integer' to 'int', possible loss of data
           with
           [
@@ -71,7 +69,7 @@ D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
               ValuesIt=PathSegment *,
               CompareOp=material_sort
           ]
-  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(411): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
+  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(422): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
           with
           [
               DerivedPolicy=thrust::cuda_cub::par_t,
