@@ -137,7 +137,7 @@ void pathtraceFree() {
 * motion blur - jitter rays "in time"
 * lens effect - jitter ray origin positions based on a lens
 */
-__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
+__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments, bool cacheFirstBounce)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -149,17 +149,18 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.ray.origin = cam.position;
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-        /*thrust::default_random_engine rng1 = makeSeededRandomEngine(iter, x, 0);
-        thrust::default_random_engine rng2 = makeSeededRandomEngine(iter, y, 0);
+        glm::vec2 s(0.f);
 
-        thrust::uniform_real_distribution<float> u01(0, 1);
-        glm::vec2 s(cam.pixelLength.x * u01(rng1), cam.pixelLength.y * u01(rng2));*/
+        if (!cacheFirstBounce) {
+            thrust::default_random_engine rng1 = makeSeededRandomEngine(iter, x, 0);
+            thrust::default_random_engine rng2 = makeSeededRandomEngine(iter, y, 0);
+            thrust::uniform_real_distribution<float> u01(0, 1);
+            s = glm::vec2(cam.pixelLength.x * u01(rng1), cam.pixelLength.y * u01(rng2));
+        }
 
 		segment.ray.direction = glm::normalize(cam.view
-			//- (cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f) - s[0])
-			//- (cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f) - s[1])
-            - (cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f))
-            - (cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f))
+			- (cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f) - s[0])
+			- (cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f) - s[1])
 			);
 
 		segment.pixelIndex = index;
@@ -353,25 +354,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
     // * Finally, add this iteration's results to the image. This has been done
     //   for you.
 
-    /*if (!cacheFirstBounce) {
-        generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
-        checkCUDAError("generate camera ray");
-        if (iter == 1) {
-            cudaMemcpy(dev_first_bounce_paths, dev_paths, pixelcount * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
-        }
-    }
-    else {
-        if (iter == 1) {
-            generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
-            checkCUDAError("generate camera ray");
-            cudaMemcpy(dev_first_bounce_paths, dev_paths, pixelcount * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
-        }
-        else {
-            cudaMemcpy(dev_paths, dev_first_bounce_paths, pixelcount * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
-        }
-    }*/
 
-    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths, cacheFirstBounce);
     checkCUDAError("generate camera ray");
 
 	int depth = 0;
