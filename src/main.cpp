@@ -1,4 +1,4 @@
-#include "main.h"
+﻿#include "main.h"
 #include "preview.h"
 #include <cstring>
 #include "PerformanceTimer.h"
@@ -27,8 +27,10 @@ int iteration;
 int width;
 int height;
 
-float time_passed;
+double time_passed;
 
+std::chrono::steady_clock::time_point begin;
+std::chrono::steady_clock::time_point end;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -102,7 +104,7 @@ void saveImage() {
     //img.saveHDR(filename);  // Save a Radiance HDR file
 }
 
-void runCuda() {
+void runCuda(PerformanceTimer& m_timer) {
     if (camchanged) {
         iteration = 0;
         Camera &cam = renderState->camera;
@@ -120,8 +122,8 @@ void runCuda() {
         cam.position = cameraPosition;
         cameraPosition += cam.lookAt;
         cam.position = cameraPosition;
-        camchanged = false;
-      }
+        camchanged = false;    
+    }
 
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
@@ -129,9 +131,10 @@ void runCuda() {
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
+
+        m_timer.startSysTimer();
     }
-    PerformanceTimer m_timer;
-    m_timer.startSysTimer();
+    
     if (iteration < renderState->iterations) {
         uchar4 *pbo_dptr = NULL;
         iteration++;
@@ -147,7 +150,7 @@ void runCuda() {
     } else {
         m_timer.endSysTimer();
         time_passed = m_timer.getSysElapsedTimeForPreviousOperation();
-        std::cout << "Average iteration time " << time_passed  << std::endl;
+        std::cout << "Average iteration time " << time_passed / iteration  << std::endl;
         
 
         saveImage();

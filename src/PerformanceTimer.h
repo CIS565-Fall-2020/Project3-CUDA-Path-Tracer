@@ -65,18 +65,21 @@ public:
     }
 
     void startSysTimer() {
-        if (system_timer_started) { throw std::runtime_error("System timer already started"); }
+        if (system_timer_started) { 
+            //throw std::runtime_error("System timer already started"); 
+        }
         system_timer_started = true;
-        time_start_system = std::chrono::system_clock::now();
+        time_start_system = std::chrono::steady_clock::now();
     }
 
     void endSysTimer() {
         if (!system_timer_started) { throw std::runtime_error("System timer not started"); }
         system_timer_started = false;
-        time_end_system = std::chrono::system_clock::now();
+        time_end_system = std::chrono::steady_clock::now();
 
-        std::cout <<(time_end_system - time_start_system).count()  << std::endl;
-        prev_elapsed_time_sys_milliseconds = std::chrono::duration_cast<std::chrono::microseconds>(time_end_system - time_start_system).count();
+        prev_elapsed_time_sys_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds> (time_end_system - time_start_system).count();
+        //std::cout <<(time_end_system - time_start_system).count()  << std::endl;
+        //std::cout << std::chrono::duration_cast<std::chrono::microseconds>(time_end_system - time_start_system).count() << std::endl;
     }
 
     float getCpuElapsedTimeForPreviousOperation() //noexcept //(damn I need VS 2015
@@ -108,8 +111,8 @@ private:
     time_point_t time_start_cpu;
     time_point_t time_end_cpu;
 
-    std::chrono::time_point<std::chrono::system_clock> time_start_system;
-    std::chrono::time_point<std::chrono::system_clock> time_end_system;
+    std::chrono::steady_clock::time_point time_start_system;
+    std::chrono::steady_clock::time_point time_end_system;
 
     bool cpu_timer_started = false;
     bool gpu_timer_started = false;
@@ -117,5 +120,5 @@ private:
 
     float prev_elapsed_time_cpu_milliseconds = 0.f;
     float prev_elapsed_time_gpu_milliseconds = 0.f;
-    float prev_elapsed_time_sys_milliseconds = 0.f;
+    double prev_elapsed_time_sys_milliseconds = 0.f;
 };
