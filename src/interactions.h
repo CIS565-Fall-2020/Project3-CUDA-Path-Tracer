@@ -74,6 +74,7 @@ void scatterRay(
         const Material &m,
         thrust::default_random_engine &rng) {
 
+    glm::vec3 originOffset = 0.0005f * normal;
     glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng);
     glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
     bool entering = glm::dot(pathSegment.ray.direction, normal) < 0;
@@ -81,6 +82,10 @@ void scatterRay(
     float etaT = entering ? m.indexOfRefraction : 1;
     float eta = etaI / etaT;
     glm::vec3 refractDir = glm::refract(pathSegment.ray.direction, normal, eta);
+    if (glm::length(refractDir) == 0.f) {
+        refractDir = glm::reflect(pathSegment.ray.direction, normal);
+    }
+
 
     if (m.hasReflective) {
         // reflective
@@ -91,11 +96,15 @@ void scatterRay(
             // diffuse
             pathSegment.ray.direction = diffuseDir;
             pathSegment.color *= (m.color * (1.f - m.specular.exponent));
+            originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+            pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
         }
         else {
             // specular
             pathSegment.ray.direction = reflectDir;
             pathSegment.color *= (m.specular.color * m.specular.exponent);
+            originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+            pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
             //float r0 = glm::pow((etaI - etaT) / (etaI + etaT), 2.f);
             //float schlick_coeff = r0 + (1 - r0) * glm::pow(1.f - glm::dot(pathSegment.ray.direction, normal), 5.f);
             //pathSegment.color *= (m.specular.color * schlick_coeff * m.specular.exponent);
@@ -110,17 +119,21 @@ void scatterRay(
             // diffuse
             pathSegment.ray.direction = diffuseDir;
             pathSegment.color *= (m.color * (1.f - m.specular.exponent));
+            originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+            pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
         }
         else {
             // specular
             pathSegment.ray.direction = refractDir;
             pathSegment.color *= (m.specular.color * m.specular.exponent);
+            pathSegment.ray.origin = intersect + 0.0005f * refractDir; // avoid shadow acne
         }
     }
     else {
         // uniform diffuse
         pathSegment.ray.direction = diffuseDir;
         pathSegment.color *= m.color;
+        originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+        pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
     }
-    pathSegment.ray.origin = intersect + 0.005f * pathSegment.ray.direction; // avoid shadow acne
 }
