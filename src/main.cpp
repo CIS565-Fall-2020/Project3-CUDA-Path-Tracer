@@ -15,7 +15,7 @@ static double lastY;
 static bool camchanged = true;
 static bool cacheChanged = true;
 static bool sortMaterialChanged = true;
-static bool cacheFirstBounce = false;
+static bool cacheFirstBounce = true;
 static bool sortByMaterial = true;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;

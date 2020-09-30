@@ -76,7 +76,7 @@ void scatterRay(
 
     glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng);
     glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
-    bool entering = glm::dot(pathSegment.ray.direction, normal) > 0;
+    bool entering = glm::dot(pathSegment.ray.direction, normal) < 0;
     float etaI = entering ? 1 : m.indexOfRefraction;
     float etaT = entering ? m.indexOfRefraction : 1;
     float eta = etaI / etaT;

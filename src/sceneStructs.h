@@ -83,3 +83,10 @@ struct keep_path
         return path.remainingBounces > 0;
     }
 };
+
+struct material_sort {
+    __host__ __device__
+        bool operator()(const ShadeableIntersection& i1, const ShadeableIntersection& i2) {
+        return i1.materialId < i2.materialId;
+    }
+};
