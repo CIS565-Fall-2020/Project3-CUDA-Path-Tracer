@@ -86,6 +86,10 @@ static ShadeableIntersection * dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
+#if cache_first_bounce
+static ShadeableIntersection* dev_first_intersections_cache = NULL;
+#endif
+
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
@@ -106,6 +110,10 @@ void pathtraceInit(Scene *scene) {
   	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
     // TODO: initialize any extra device memeory you need
+#if cache_first_bounce
+    cudaMalloc(&dev_first_intersections_cache, pixelcount * sizeof(ShadeableIntersection));
+    cudaMemset(dev_first_intersections_cache, 0, pixelcount * sizeof(ShadeableIntersection));
+#endif
 
     checkCUDAError("pathtraceInit");
 }
@@ -117,7 +125,9 @@ void pathtraceFree() {
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
     // TODO: clean up any extra device memory you created
-
+#if cache_first_bounce
+    cudaFree(dev_first_intersections_cache);
+#endif
     checkCUDAError("pathtraceFree");
 }
 
@@ -369,12 +379,20 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 struct parition_not_end
 {
     __host__ __device__
-        bool operator()(const PathSegment ps)
+        bool operator()(const PathSegment& ps)
     {
         return ps.remainingBounces > 0;
     }
 };
 
+struct material_operator_bigger {
+    __host__ __device__
+        bool operator()(const ShadeableIntersection& intsct1, const ShadeableIntersection& intsct2)
+    {
+
+        return intsct1.materialId > intsct2.materialId;
+    }
+};
 
 
 /**
@@ -444,16 +462,53 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
         // tracing
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-        computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
-	        depth
-	        , num_paths
-	        , dev_paths
-	        , dev_geoms
-	        , hst_scene->geoms.size()
-	        , dev_intersections
-	        );
-        checkCUDAError("trace one bounce");
-        cudaDeviceSynchronize();
+#if cache_first_bounce
+        if (iter == 1 && depth == 0) {
+            computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+                depth
+                , num_paths
+                , dev_paths
+                , dev_geoms
+                , hst_scene->geoms.size()
+                , dev_first_intersections_cache
+                );
+            checkCUDAError("no caching first bounce trace one bounce");
+            //cudaDeviceSynchronize();
+            cudaMemcpy(dev_intersections, dev_first_intersections_cache, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
+        }
+        else {
+            if (depth == 0) {
+                cudaMemcpy( dev_intersections, dev_first_intersections_cache, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
+            }
+            else {
+                // can not cache the rest depth bounce
+                computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+                    depth
+                    , num_paths
+                    , dev_paths
+                    , dev_geoms
+                    , hst_scene->geoms.size()
+                    , dev_intersections
+                    );
+                checkCUDAError("no caching first bounce trace one bounce");
+                //cudaDeviceSynchronize();
+            }
+        }
+#else
+        computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+            depth
+            , num_paths
+            , dev_paths
+            , dev_geoms
+            , hst_scene->geoms.size()
+            , dev_intersections
+            );
+        checkCUDAError("no caching first bounce trace one bounce");
+        //cudaDeviceSynchronize();
+#endif // cache_first_bounce
+
+        
+       
         depth++;
 
 
@@ -465,7 +520,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // materials you have in the scenefile.
         // TODO: compare between directly shading the path segments and shading
         // path segments that have been reshuffled to be contiguous in memory.
-
+#if material_sort
+        thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, material_operator_bigger());
+#endif
         shadeTrueMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
         iter,
         num_paths,
