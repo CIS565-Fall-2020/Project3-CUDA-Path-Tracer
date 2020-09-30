@@ -12,6 +12,10 @@ static double lastX;
 static double lastY;
 
 static bool camchanged = true;
+static bool sort_by_material_on = false;
+static bool sort_by_material_changed = false;
+static bool cache_first_iteration_on = false;
+static bool cache_first_iteration_changed = false;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
 
@@ -119,6 +123,19 @@ void runCuda() {
         camchanged = false;
       }
 
+    if (sort_by_material_changed) {
+        sort_by_material_on = !sort_by_material_on;
+        std::cout << "Sort By Material Option: " << std::boolalpha << sort_by_material_on << std::endl;
+        iteration = 0;
+        sort_by_material_changed = false;
+    }
+
+    if (cache_first_iteration_changed) {
+        cache_first_iteration_on = !cache_first_iteration_on;
+        std::cout << "Cache First Iteration Option: " << std::boolalpha << cache_first_iteration_on << std::endl;
+        iteration = 0;
+        cache_first_iteration_changed = false;
+    }
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
@@ -134,7 +151,7 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        pathtrace(pbo_dptr, frame, iteration, sort_by_material_on, cache_first_iteration_on);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
@@ -155,6 +172,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         break;
       case GLFW_KEY_S:
         saveImage();
+        break;
+      case GLFW_KEY_M:
+        sort_by_material_changed = true;
+        break;
+      case GLFW_KEY_C:
+        cache_first_iteration_changed = true;
         break;
       case GLFW_KEY_SPACE:
         camchanged = true;
