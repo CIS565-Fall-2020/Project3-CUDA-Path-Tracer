@@ -1,0 +1,198 @@
+﻿  Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/Debug/stream_compaction_generated_common.cu.obj
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_common.cu.obj
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_common.cu.obj
+  -- Generating dependency file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.NVCC-depend
+  D:/cuda/dev/bin/nvcc.exe -M -D__CUDACC__ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/common.cu -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.NVCC-depend -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  common.cu
+  -- Generating temporary cmake readable file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend.tmp
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -D input_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.NVCC-depend -D output_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend.tmp -D verbose=ON -P E:/Learning/cmake-3.17.2-win64-x64/share/cmake-3.17/Modules/FindCUDA/make2cmake.cmake
+  -- Copy if different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend.tmp to E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E copy_if_different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend.tmp and E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.NVCC-depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.NVCC-depend
+  -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_common.cu.obj
+  D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/common.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_common.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  common.cu
+  Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_common.cu.obj successfully.
+  Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/Debug/stream_compaction_generated_cpu.cu.obj
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_cpu.cu.obj
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_cpu.cu.obj
+  -- Generating dependency file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.NVCC-depend
+  D:/cuda/dev/bin/nvcc.exe -M -D__CUDACC__ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/cpu.cu -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.NVCC-depend -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  cpu.cu
+  -- Generating temporary cmake readable file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend.tmp
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -D input_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.NVCC-depend -D output_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend.tmp -D verbose=ON -P E:/Learning/cmake-3.17.2-win64-x64/share/cmake-3.17/Modules/FindCUDA/make2cmake.cmake
+  -- Copy if different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend.tmp to E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E copy_if_different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend.tmp and E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.NVCC-depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.NVCC-depend
+  -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_cpu.cu.obj
+  D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/cpu.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_cpu.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  cpu.cu
+  Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_cpu.cu.obj successfully.
+  Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/Debug/stream_compaction_generated_efficient.cu.obj
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_efficient.cu.obj
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_efficient.cu.obj
+  -- Generating dependency file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.NVCC-depend
+  D:/cuda/dev/bin/nvcc.exe -M -D__CUDACC__ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.NVCC-depend -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  efficient.cu
+  -- Generating temporary cmake readable file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend.tmp
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -D input_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.NVCC-depend -D output_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend.tmp -D verbose=ON -P E:/Learning/cmake-3.17.2-win64-x64/share/cmake-3.17/Modules/FindCUDA/make2cmake.cmake
+  -- Copy if different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend.tmp to E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E copy_if_different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend.tmp and E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.NVCC-depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.NVCC-depend
+  -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_efficient.cu.obj
+  D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_efficient.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  efficient.cu
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(94): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(107): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(107): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(115): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(115): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(138): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(157): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(157): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(169): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(169): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(265): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(314): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(314): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(322): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/efficient.cu(322): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+  Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_efficient.cu.obj successfully.
+  Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/Debug/stream_compaction_generated_naive.cu.obj
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_naive.cu.obj
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_naive.cu.obj
+  -- Generating dependency file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.NVCC-depend
+  D:/cuda/dev/bin/nvcc.exe -M -D__CUDACC__ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/naive.cu -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.NVCC-depend -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  naive.cu
+  -- Generating temporary cmake readable file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend.tmp
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -D input_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.NVCC-depend -D output_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend.tmp -D verbose=ON -P E:/Learning/cmake-3.17.2-win64-x64/share/cmake-3.17/Modules/FindCUDA/make2cmake.cmake
+  -- Copy if different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend.tmp to E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E copy_if_different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend.tmp and E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.NVCC-depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.NVCC-depend
+  -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_naive.cu.obj
+  D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/naive.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_naive.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/naive.cu(114): warning : variable "dev_finalData" was declared but never referenced
+  
+  naive.cu
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/naive.cu(114): warning C4101: 'dev_finalData': unreferenced local variable
+  Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_naive.cu.obj successfully.
+  Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/Debug/stream_compaction_generated_thrust.cu.obj
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_thrust.cu.obj
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_thrust.cu.obj
+  -- Generating dependency file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.NVCC-depend
+  D:/cuda/dev/bin/nvcc.exe -M -D__CUDACC__ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/thrust.cu -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.NVCC-depend -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  thrust.cu
+  -- Generating temporary cmake readable file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend.tmp
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -D input_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.NVCC-depend -D output_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend.tmp -D verbose=ON -P E:/Learning/cmake-3.17.2-win64-x64/share/cmake-3.17/Modules/FindCUDA/make2cmake.cmake
+  -- Copy if different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend.tmp to E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E copy_if_different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend.tmp and E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.NVCC-depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.NVCC-depend
+  -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_thrust.cu.obj
+  D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/thrust.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_thrust.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  thrust.cu
+D:\cuda\dev\include\thrust/system/cuda/detail/scan.h(718): warning C4244: 'initializing': conversion from 'Size' to 'thrust::detail::int32_t', possible loss of data
+          with
+          [
+              Size=diff_t
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/scan.h(852): note: see reference to function template instantiation 'OutputIt thrust::cuda_cub::__scan::scan<thrust::detail::false_type,thrust::cuda_cub::tag,InputIt,OutputIt,Size,ScanOp,thrust::cuda_cub::__scan::AddInitToExclusiveScan<int,ScanOp>>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,OutputIt,Size,ScanOp,AddInitToExclusiveScan)' being compiled
+          with
+          [
+              OutputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              Size=diff_t,
+              ScanOp=thrust::plus<int>,
+              AddInitToExclusiveScan=thrust::cuda_cub::__scan::AddInitToExclusiveScan<int,thrust::plus<int>>
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/scan.h(889): note: see reference to function template instantiation 'OutputIt thrust::cuda_cub::exclusive_scan_n<thrust::cuda_cub::tag,InputIt,diff_t,OutputIt,T,ScanOp>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,Size,OutputIt,T,ScanOp)' being compiled
+          with
+          [
+              OutputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              T=int,
+              ScanOp=thrust::plus<int>,
+              Size=diff_t
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/scan.h(903): note: see reference to function template instantiation 'OutputIt thrust::cuda_cub::exclusive_scan<thrust::cuda_cub::tag,InputIt,OutputIt,T,thrust::plus<T>>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,InputIt,OutputIt,T,ScanOp)' being compiled
+          with
+          [
+              OutputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              T=int,
+              ScanOp=thrust::plus<int>
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/scan.h(920): note: see reference to function template instantiation 'OutputIt thrust::cuda_cub::exclusive_scan<thrust::cuda_cub::tag,InputIt,OutputIt,int>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,OutputIt,OutputIt,T)' being compiled
+          with
+          [
+              OutputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              T=int
+          ]
+  D:\cuda\dev\include\thrust/detail/scan.inl(78): note: see reference to function template instantiation 'OutputIt thrust::cuda_cub::exclusive_scan<thrust::cuda_cub::tag,InputIterator,InputIterator>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,OutputIt,OutputIt)' being compiled
+          with
+          [
+              OutputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              InputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>
+          ]
+  D:\cuda\dev\include\thrust/detail/scan.inl(307): note: see reference to function template instantiation 'OutputIterator thrust::exclusive_scan<DerivedPolicy,InputIterator,OutputIterator>(const thrust::detail::execution_policy_base<DerivedPolicy> &,InputIterator,InputIterator,OutputIterator)' being compiled
+          with
+          [
+              OutputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              DerivedPolicy=thrust::cuda_cub::tag,
+              InputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>
+          ]
+  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/thrust.cu(30): note: see reference to function template instantiation 'OutputIterator thrust::exclusive_scan<thrust::detail::normal_iterator<thrust::device_ptr<T>>,thrust::detail::normal_iterator<thrust::device_ptr<T>>>(InputIterator,InputIterator,OutputIterator)' being compiled
+          with
+          [
+              OutputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              T=int,
+              InputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>
+          ]
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<9>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1496): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<9>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<8>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1491): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<8>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<7>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1486): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<7>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<6>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1481): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<6>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<5>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1476): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<5>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<4>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1471): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<4>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<3>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1466): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<3>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<2>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1461): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<2>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<1>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1456): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<1>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<0>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1451): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<0>>' being compiled
+D:\cuda\dev\include\thrust/system/cuda/detail/scan.h(737): warning C4244: 'initializing': conversion from 'Size' to 'thrust::detail::int32_t', possible loss of data
+          with
+          [
+              Size=diff_t
+          ]
+D:\cuda\dev\include\thrust\detail\allocator\allocator_traits.inl(251): warning C4700: uninitialized local variable 'result' used
+  Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//Debug/stream_compaction_generated_thrust.cu.obj successfully.
+  Building Custom Rule E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/CMakeLists.txt
+  CMake is re-running because E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/generate.stamp is out-of-date.
+    the file 'E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir/stream_compaction_generated_common.cu.obj.depend'
+    is newer than 'E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/generate.stamp.depend'
+    result='-1'
+  -- E:/Learning/CIS565/Project3-CUDA-Path-Tracer/cmake/cuda_compute_capability.cpp
+  -- CUDA Compute Detection Output: 75
+  -- CUDA Compute Detection Return: 0
+  -- CUDA Compute Detection Worked
+  -- Number of Computes Detected = 1
+  -- Setting Compute 75 to ON
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build
+  stream_compaction.vcxproj -> E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\lib\Debug\stream_compaction.lib

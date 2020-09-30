@@ -41,6 +41,28 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__ 
+glm::vec2 concentricSampling(const glm::vec2& u) 
+{
+    glm::vec2 uOffset = 2.0f * u - glm::vec2(1.0f, 1.0f);
+    if (uOffset.x == 0 && uOffset.y == 0)
+        return glm::vec2(0.0f);
+
+    float theta, r;
+    if (fabs(uOffset.x) > fabs(uOffset.y)) 
+    {
+        r = uOffset.x;
+        theta = PI / 4 * (uOffset.y / uOffset.x);
+    }
+    else 
+    {
+        r = uOffset.y;
+        theta = PI / 2 - PI / 4 * (uOffset.x / uOffset.y);
+    }
+
+    return r * glm::vec2(cos(theta), sin(theta));
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.

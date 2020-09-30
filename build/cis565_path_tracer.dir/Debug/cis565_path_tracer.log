@@ -12,7 +12,7 @@
   E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
   -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
   D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(360): warning : variable "firstIteration" was declared but never referenced
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(378): warning : variable "firstIteration" was declared but never referenced
   
 E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(84): warning : variable "firstTimeRender" was declared but never referenced
   
@@ -22,10 +22,10 @@ E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(66): warning C4
           [
               T=float
           ]
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(354): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(374): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(398): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(442): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(372): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(392): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(416): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(460): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'initializing': conversion from 'Integer' to 'int', possible loss of data
           with
           [
@@ -69,7 +69,7 @@ D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
               ValuesIt=PathSegment *,
               CompareOp=material_sort
           ]
-  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(422): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
+  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(440): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
           with
           [
               DerivedPolicy=thrust::cuda_cub::par_t,
@@ -98,4 +98,29 @@ D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
   D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<0>' being compiled
   D:\cuda\dev\include\thrust/functional.h(1451): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<0>>' being compiled
   Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj successfully.
+  main.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(79,19): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(130,19): warning C4018: '<': signed/unsigned mismatch
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(133,1): warning C4996: 'cudaGLMapBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(356): message : see declaration of 'cudaGLMapBufferObject'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(140,1): warning C4996: 'cudaGLUnmapBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(382): message : see declaration of 'cudaGLUnmapBufferObject'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(179,34): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(180,37): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(185,36): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+  preview.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(83,1): warning C4996: 'cudaGLUnregisterBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(404): message : see declaration of 'cudaGLUnregisterBufferObject'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(107,1): warning C4996: 'cudaGLSetGLDevice': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(305): message : see declaration of 'cudaGLSetGLDevice'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(127,1): warning C4996: 'cudaGLRegisterBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(327): message : see declaration of 'cudaGLRegisterBufferObject'
+  scene.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(107,24): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(171,53): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(176,49): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(178,49): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(180,53): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(182,45): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  Generating Code...
   cis565_path_tracer.vcxproj -> E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\bin\Debug\cis565_path_tracer.exe

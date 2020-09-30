@@ -144,13 +144,31 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+
+       
 
 		// TODO: implement antialiasing by jittering the ray
 		segment.ray.direction = glm::normalize(cam.view
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 			);
+
+        // Depth of Field
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, traceDepth);
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        float x = u01(rng);
+        float y = u01(rng);
+        glm::vec2 pLens = cam.lensRadius * concentricSampling(glm::vec2(x, y));
+
+        x = pLens.x;
+        y = pLens.y;
+
+        float ft = cam.focalDistance / segment.ray.direction.z;
+        glm::vec3 pFocus = segment.ray.origin + cam.focalDistance * segment.ray.direction;
+
+        segment.ray.origin += glm::vec3(pLens.x, pLens.y, 0.0f);
+        segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
 
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
