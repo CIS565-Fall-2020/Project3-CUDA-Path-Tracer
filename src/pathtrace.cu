@@ -5,6 +5,9 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include <thrust/partition.h>
+#include <chrono>
+#include <iostream>
+#include <iomanip>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -15,9 +18,12 @@
 #include "intersections.h"
 #include "interactions.h"
 
+// Measure performance
+#define TIMEPATHTRACE 1
+
 // Improve performance
 #define SORTPATHSBYMATERIAL 1
-#define CACHEFIRSTINTERSECTIONS 1
+#define CACHEFIRSTINTERSECTIONS 0
 
 #define ERRORCHECK 1
 
@@ -80,6 +86,10 @@ static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
+
+// Measure performance
+static std::chrono::steady_clock::time_point timePathTrace;
+
 static ShadeableIntersection* dev_firstIntersections = NULL;
 
 void pathtraceInit(Scene* scene) {
@@ -164,6 +174,8 @@ __global__ void computeIntersections(
   , ShadeableIntersection* intersections
 )
 {
+#if TIMEPATHTRACE
+#endif
   int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (path_index < num_paths)
@@ -315,9 +327,10 @@ struct compareMaterial {
  * of memory management
  */
 void pathtrace(uchar4* pbo, int frame, int iter) {
-  const int traceDepth = hst_scene->state.traceDepth;
+  const int traceDepth = 10;// hst_scene->state.traceDepth;
   const Camera& cam = hst_scene->state.camera;
   const int pixelcount = cam.resolution.x * cam.resolution.y;
+
 
   // 2D block for generating ray from camera
   const dim3 blockSize2d(8, 8);
@@ -359,6 +372,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
   // TODO: perform one iteration of path tracing
 
+#if TIMEPATHTRACE
+  timePathTrace = std::chrono::high_resolution_clock::now();
+#endif
+
   generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
   checkCUDAError("generate camera ray");
 
@@ -391,7 +408,8 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
           );
         checkCUDAError("trace first bounce, first iter");
       }
-      thrust::copy(thrust::device, dev_firstIntersections, dev_firstIntersections + pixelcount, dev_intersections);
+      cudaDeviceSynchronize();
+      cudaMemcpy(dev_intersections, dev_firstIntersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
     }
     else {
       computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
@@ -447,6 +465,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
   dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
   finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
 
+#if TIMEPATHTRACE
+  double ms = (double)std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - timePathTrace).count();
+  std::cout << ms << std::endl;
+#endif
   ///////////////////////////////////////////////////////////////////////////
 
   // Send results to OpenGL buffer for rendering
