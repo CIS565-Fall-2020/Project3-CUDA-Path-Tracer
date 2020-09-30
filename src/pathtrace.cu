@@ -19,8 +19,9 @@
 
 #define ERRORCHECK 1
 #define STREAM_COMPACTION 1
-#define SORT_BY_MATERIAL 1
-#define CACHE_ENABLE 1
+#define SORT_BY_MATERIAL 0
+#define CACHE_ENABLE 0
+#define PROFILE_ENABLE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -83,6 +84,11 @@ static ShadeableIntersection* dev_intersections_cache = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
+// variables for profiling
+cudaEvent_t start, stop;
+float totalTime = 0.0;
+bool countStart = true;
+
 void pathtraceInit(Scene* scene) {
 	hst_scene = scene;
 	const Camera& cam = hst_scene->state.camera;
@@ -108,6 +114,9 @@ void pathtraceInit(Scene* scene) {
 #endif // CACHE_ENABLE
 
 	// TODO: initialize any extra device memeory you need
+
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
 
 	checkCUDAError("pathtraceInit");
 }
@@ -416,6 +425,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	int num_paths = dev_path_end - dev_paths;
 	int remaining_paths = num_paths;
 
+#if PROFILE_ENABLE
+	cudaEventRecord(start);
+#endif // PROFILE_ENABLE
+
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 
@@ -473,7 +486,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		depth++;
 
 #if SORT_BY_MATERIAL
-		//sort by material id
+		// sort by material id
 		thrust::device_ptr<ShadeableIntersection> pIntersection = thrust::device_pointer_cast<ShadeableIntersection>(dev_intersections);
 		thrust::device_ptr<PathSegment> pPathSegment = thrust::device_pointer_cast<PathSegment>(dev_paths);
 		thrust::sort_by_key(pIntersection, pIntersection + remaining_paths, pPathSegment, material_cmp());
@@ -504,13 +517,26 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		}
 
 #if STREAM_COMPACTION
-		PathSegment* new_dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + remaining_paths, is_zero());
+		PathSegment* new_dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_paths + remaining_paths, is_zero());
 		remaining_paths = new_dev_path_end - dev_paths;
 		if (remaining_paths <= 0) {
 			iterationComplete = true;
 		}
 #endif // STREAM_COMPACTION
 	}
+
+#if PROFILE_ENABLE
+	cudaEventRecord(stop);
+	cudaEventSynchronize(stop);
+	float t;
+	cudaEventElapsedTime(&t, start, stop);
+
+	totalTime += t;
+	if (countStart && iter > 100) {
+		std::cout << totalTime / iter << std::endl;
+		countStart = false;
+	}
+#endif // PROFILE_ENABLE
 
 	// Assemble this iteration and apply it to the image
 	dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
