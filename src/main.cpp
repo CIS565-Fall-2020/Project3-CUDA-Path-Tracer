@@ -88,7 +88,7 @@ void saveImage() {
         }
     }
 
-    std::string filename = renderState->imageName;
+    std::string filename = "C:/Users/keyiy/Penn/CIS565/Project3-CUDA-Path-Tracer/img/" + renderState->imageName;
     std::ostringstream ss;
     ss << filename << "." << startTimeString << "." << samples << "samp";
     filename = ss.str();

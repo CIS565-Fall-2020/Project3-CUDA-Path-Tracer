@@ -101,11 +101,12 @@ void scatterRay(
     
     // Specular
     thrust::uniform_real_distribution<float> u01(0, 1);
+    
     if (u01(rng) < m.specular.exponent) {
         glm::vec3 ray = intersect - pathSegment.ray.origin;
         glm::vec3 diffuseRayDirection = calculateRandomDirectionInHemisphere(normal, rng);
         glm::vec3 specularRayDirection = calculatePerfectSpecular(normal, ray);
-        glm::vec3 specularColor = m.specular.color;
+        glm::vec3 specularColor = m.specular.color / 0.5f;
         glm::vec3 diffuseColor = m.color / 0.5f;
         glm::vec3 newRay = 0.5f * diffuseRayDirection + 0.5f * specularRayDirection;
         pathSegment.ray.origin = intersect;
@@ -117,6 +118,7 @@ void scatterRay(
         pathSegment.ray.origin = intersect;
         pathSegment.ray.direction = glm::normalize(diffuseRayDirection);
         pathSegment.color *= m.color;
+        
     }
     
 }

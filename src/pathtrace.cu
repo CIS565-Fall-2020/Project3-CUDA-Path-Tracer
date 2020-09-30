@@ -5,6 +5,7 @@
 #include <thrust/random.h>
 #include <thrust/partition.h>
 #include <thrust/device_ptr.h>
+#include <cuda_runtime.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -16,9 +17,8 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define STREAMCOMPACTION 1
-#define SORTBYMATERIAL 1
-#define CACHE 1
+#define SORTBYMATERIAL 0
+#define CACHE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -81,6 +81,8 @@ static ShadeableIntersection * dev_intersections = NULL;
 // ...
 static PathSegment* dev_paths_cache = NULL;
 static ShadeableIntersection* dev_intersections_cache = NULL;
+
+
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
@@ -236,7 +238,9 @@ __global__ void shadeFakeMaterial (
   , int num_paths
 	, ShadeableIntersection * shadeableIntersections
 	, PathSegment * pathSegments
-	, Material * materials
+	, Material * materials,
+    int depth,
+    int traceDepth
 	)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -265,10 +269,17 @@ __global__ void shadeFakeMaterial (
         //float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
         //pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
         //pathSegments[idx].color *= u01(rng); // apply some noise because why not
-          glm::vec3 intesect = getPointOnRay(pathSegments[idx].ray, intersection.t);
-          glm::vec3 normal = intersection.surfaceNormal;
-          scatterRay(pathSegments[idx], intesect,  normal, material, rng);
-          pathSegments[idx].remainingBounces--;
+          if (depth == traceDepth || pathSegments[idx].remainingBounces == 0) {
+              pathSegments[idx].color = glm::vec3(0.0f);
+              pathSegments[idx].remainingBounces--;
+          }
+          else {
+              glm::vec3 intesect = getPointOnRay(pathSegments[idx].ray, intersection.t);
+              glm::vec3 normal = intersection.surfaceNormal;
+              scatterRay(pathSegments[idx], intesect, normal, material, rng);
+              pathSegments[idx].remainingBounces--;
+          }
+
       }
     // If there was no intersection, color the ray black.
     // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
@@ -330,7 +341,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
-    printf("trace depth: %d   ", traceDepth);
+    
+    printf("\n\niter: %d   \n", iter);
 
 	// 2D block for generating ray from camera
     const dim3 blockSize2d(8, 8);
@@ -372,18 +384,17 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     // TODO: perform one iteration of path tracing
 
-    if (iter == 1) {
-        generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
-        checkCUDAError("generate camera ray");
-    }
 
+    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+    checkCUDAError("generate camera ray");
 
-	int depth = 0;
+	int depth = 1;
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
+    printf("depth: %d  nums_path:  %d\n", depth - 1, num_paths);
 
   bool iterationComplete = false;
 	while (!iterationComplete) {
@@ -391,8 +402,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	// clean shading chunks
 	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
     dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-    
-    if (iter == 1 && depth == 0) {
+
+#if CACHE
+    if (iter == 1 && depth == 1) {
         computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
             depth
             , num_paths
@@ -403,11 +415,11 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             );
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
-        cudaMemcpy(dev_paths_cache, dev_paths, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
+        //cudaMemcpy(dev_paths_cache, dev_paths, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_intersections_cache, dev_intersections, num_paths * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
     }
-    else if (iter != 1 && depth == 0) {
-        cudaMemcpy(dev_paths, dev_paths_cache, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
+    else if (iter != 1 && depth == 1) {
+        //cudaMemcpy(dev_paths, dev_paths_cache, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_intersections, dev_intersections_cache, num_paths * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
     }
     else {
@@ -422,11 +434,20 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
     }
+#else
+    computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+        depth
+        , num_paths
+        , dev_paths
+        , dev_geoms
+        , hst_scene->geoms.size()
+        , dev_intersections
+        );
+    checkCUDAError("trace one bounce");
+    cudaDeviceSynchronize();
+#endif // CACHE
 
 
-	// tracing
-
-	depth++;
 
 	// TODO:
 	// --- Shading Stage ---
@@ -452,24 +473,26 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         num_paths,
         dev_intersections,
         dev_paths,
-        dev_materials
+        dev_materials,
+        depth,
+        traceDepth
         );
 
-    #if STREAMCOMPACTION
-        PathSegment *new_end =  thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, is_terminate());
-        num_paths = new_end - dev_paths;
-        if (num_paths <= 0) {
-            depth = traceDepth;
-            printf("no bounces!");
-        }
-    #endif
+    PathSegment *new_end =  thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, is_terminate());
+    num_paths = new_end - dev_paths;
+    printf("depth: %d  nums_path:  %d\n", depth, num_paths);
+    if (num_paths <= 0) {
+        depth = traceDepth;
+        //printf("no bounces!\n");
+    }
+        // tracing
 
+        depth++;
   if (depth > traceDepth) {
       iterationComplete = true; // TODO: should be based off stream compaction results.
   }
-  depth++;
 	}
-    printf("%d :  %d\n", iter, num_paths);
+    //printf("%d :  %d\n", iter, num_paths);
     num_paths = dev_path_end - dev_paths;
   // Assemble this iteration and apply it to the image
   dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
