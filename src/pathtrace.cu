@@ -4,6 +4,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
 #include <thrust/remove.h>
+#include <thrust/partition.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -269,7 +270,6 @@ __global__ void shadeFakeMaterial (
 
 #pragma region myMaterial
 __global__ void shadeTrueMaterial(
-    int depth, 
     int iter
     , int num_paths
     , ShadeableIntersection* shadeableIntersections
@@ -302,7 +302,7 @@ __global__ void shadeTrueMaterial(
                 //cur_pathSegment.color = glm::vec3(1.0, 1.0, 1.0);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
-                dev_image[cur_pathSegment.pixelIndex] += cur_pathSegment.color;
+                //dev_image[cur_pathSegment.pixelIndex] += cur_pathSegment.color;
             }
             // Otherwise, do some pseudo-lighting computation. This is actually more
             // like what you would expect from shading in a rasterizer like OpenGL.
@@ -348,12 +348,12 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 
 
 // ref:https://thrust.github.io/doc/group__stream__compaction_ga5fa8f86717696de88ab484410b43829b.html
-struct remove_if_remain_0_bounce
+struct parition_not_end
 {
     __host__ __device__
         bool operator()(const PathSegment ps)
     {
-        return ps.remainingBounces == 0;
+        return ps.remainingBounces > 0;
     }
 };
 
@@ -449,7 +449,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // path segments that have been reshuffled to be contiguous in memory.
 
         shadeTrueMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
-        depth,
         iter,
         num_paths,
         dev_intersections,
@@ -462,22 +461,21 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
 
          // TODO: should be based off stream compaction results.
-        PathSegment* end_of_bounce_nonzero = thrust::remove_if(thrust::device, dev_paths, dev_paths + num_paths, remove_if_remain_0_bounce());
-        if (end_of_bounce_nonzero == dev_paths) {
+        dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_paths + num_paths, parition_not_end());
+        if (dev_path_end == dev_paths) {
             iterationComplete = true;
         }
         else {
-            num_paths = end_of_bounce_nonzero - dev_paths;
+            num_paths = dev_path_end - dev_paths;
         }
-        dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
-        //finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image, dev_paths);
+
 
 	}
 
   // Assemble this iteration and apply it to the image
-    
+    dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
 	//finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
-    //finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
+    finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
 
     ///////////////////////////////////////////////////////////////////////////
 
