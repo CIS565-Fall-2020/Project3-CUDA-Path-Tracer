@@ -212,6 +212,19 @@ __global__ void computeIntersections(
 	}
 }
 
+
+__device__ void BxDF(
+	int idx
+	, ShadeableIntersection isect
+	, PathSegment* pathSegments
+	, Material mat
+	, thrust::default_random_engine* rng
+	, thrust::uniform_real_distribution<float>* u01) {
+	if (mat.hasReflective) {
+
+	}
+}
+
 // LOOK: "fake" shader demonstrating what you might do with the info in
 // a ShadeableIntersection, as well as how to use thrust's random number
 // generator. Observe that since the thrust random number generator basically

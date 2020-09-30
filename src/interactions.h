@@ -50,7 +50,7 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  * 
  * The visual effect you want is to straight-up add the diffuse and specular
  * components. You can do this in a few ways. This logic also applies to
- * combining other types of materias (such as refractive).
+ * combining other types of materials (such as refractive).
  * 
  * - Always take an even (50/50) split between a each effect (a diffuse bounce
  *   and a specular bounce), but divide the resulting color of either branch
@@ -76,4 +76,12 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+    glm::vec3 rayBounce(0.f);
+    glm::vec3 color;
+    if (m.hasReflective > 0.f) {
+
+    }
+    else {
+
+    }
 }
