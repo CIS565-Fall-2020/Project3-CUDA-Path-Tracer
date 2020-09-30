@@ -130,8 +130,8 @@ void runCuda() {
         pathtraceFree();
         pathtraceInit(scene);
     }
-    PerformanceTimer* m_timer = new PerformanceTimer;
-    m_timer -> startGpuTimer();
+    PerformanceTimer m_timer;
+    m_timer.startSysTimer();
     if (iteration < renderState->iterations) {
         uchar4 *pbo_dptr = NULL;
         iteration++;
@@ -145,10 +145,10 @@ void runCuda() {
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
-        m_timer -> endCpuTimer();
-        time_passed = m_timer -> getGpuElapsedTimeForPreviousOperation();
-        std::cout << "average iteration time " << time_passed / iteration << std::endl;
-        delete m_timer;
+        m_timer.endSysTimer();
+        time_passed = m_timer.getSysElapsedTimeForPreviousOperation();
+        std::cout << "Average iteration time " << time_passed  << std::endl;
+        
 
         saveImage();
         pathtraceFree();

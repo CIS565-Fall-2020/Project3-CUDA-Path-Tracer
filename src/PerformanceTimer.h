@@ -75,7 +75,8 @@ public:
         system_timer_started = false;
         time_end_system = std::chrono::system_clock::now();
 
-        prev_elapsed_time_sys_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_end_system - time_start_system).count();
+        std::cout <<(time_end_system - time_start_system).count()  << std::endl;
+        prev_elapsed_time_sys_milliseconds = std::chrono::duration_cast<std::chrono::microseconds>(time_end_system - time_start_system).count();
     }
 
     float getCpuElapsedTimeForPreviousOperation() //noexcept //(damn I need VS 2015
@@ -90,7 +91,7 @@ public:
 
     float getSysElapsedTimeForPreviousOperation() //noexcept
     {
-        return prev_elapsed_time_gpu_milliseconds;
+        return prev_elapsed_time_sys_milliseconds;
     }
 
     // remove copy and move functions
