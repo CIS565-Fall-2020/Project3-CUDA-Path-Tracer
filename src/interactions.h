@@ -56,8 +56,8 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  *   and a specular bounce), but divide the resulting color of either branch
  *   by its probability (0.5), to counteract the chance (0.5) of the branch
  *   being taken.
- *   - This way is inefficient, but serves as a good starting point - it
- *     converges slowly, especially for pure-diffuse or pure-specular.
+ * - This way is inefficient, but serves as a good starting point - it
+ *   converges slowly, especially for pure-diffuse or pure-specular.
  * - Pick the split based on the intensity of each material color, and divide
  *   branch result by that branch's probability (whatever probability you use).
  *
@@ -76,4 +76,32 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+
+    glm::vec3 newDir = glm::vec3(0.f, 0.f, 0.f);
+
+    if (m.hasReflective == 0.f && m.hasRefractive == 0.f)  // ideal diffuse 
+    {
+        newDir = calculateRandomDirectionInHemisphere(normal, rng);
+		float pdf = glm::abs(glm::dot(normal, newDir)) / PI;
+		glm::vec3 f = m.color / PI;
+		if (pdf == 0.f)
+		{
+			pathSegment.remainingBounces = -1;
+			pathSegment.color = glm::vec3(0.f, 0.f, 0.f);
+		}
+		else
+		{
+			pathSegment.color *= (f * glm::abs(glm::dot(normal, newDir)) / pdf);
+            pathSegment.remainingBounces--;
+		}
+    }
+    else if (m.hasReflective == 1.f && m.hasRefractive == 0.f) // perfectly specular-reflective
+    {
+        newDir = glm::reflect(pathSegment.ray.direction, normal);
+        pathSegment.color *= m.specular.color;
+        pathSegment.remainingBounces--;
+    }
+
+	pathSegment.ray.direction = newDir;
+	pathSegment.ray.origin = intersect + newDir * EPSILON;  // to make the intersection point outside of the primitive
 }
