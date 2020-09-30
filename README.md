@@ -3,11 +3,44 @@ CUDA Path Tracer
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Qiaosen Chen
+  * [LinkedIn](https://www.linkedin.com/in/qiaosen-chen-725699141/), etc.
+* Tested on: Windows 10, i5-9400 @ 2.90GHz 16GB, GeForce RTX 2060 6GB (personal computer).
 
-### (TODO: Your README)
+## Mid-project Summary
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+![pathtracing first demo gif](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/pathtracing_first_demo.gif)
 
+### Features
+
+- Ray sorting by material
+- Ideal Diffuse Shading & Bounce
+- Perfect Specular Reflection
+- Stream Compaction
+- Cache first bounce  
+
+### Rendered Images
+
+- Cornell Box with a Specular Sphere
+
+  ![Cornell Box with a Specular Sphere Pic](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/cornell.2020-09-30_19-21-14z.5000samp.png)
+
+- Cornell Box with a Diffuse Sphere
+
+  ![Cornell Box with a Diffuse Sphere Pic](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/cornell.2020-09-30_19-28-44z.5000samp.png)
+
+### Performance Analysis
+
+I used the [scene](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/scenes/cornell.txt), a Cornell box with a specular sphere, to do the following test. 
+
+- Not Sort VS Sort Based on Materials
+
+  
+
+- Not Cache VS First Bounce Cache
+
+  With the function ```cudaEventElapsedTime()``` provided by *cuda_runtime_api.h*, I could compute how long GPU takes to do pathtracing iterations by creating two ```cudaEvent_t``` variables, ```iter_event_start``` and ```iter_event_start```, one to record the start time of an iteration and the other to record the end time. After each iteration, I added the running time of this iteration to a variable ```gpu_time_accumulator```, to accumulate the total time of all the iterations. Finally, I could get the average time of each iteration.
+
+  ![Cache VS Not Cache](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/performance_inset_%20cache_comp.png)  
+
+  As we can see, caching the data computed in the first bounce for later iterations achieves a better performance, although it only takes a very few milliseconds less than the one which doesn't store the first bounce. Besides, it's obvious that the running time of each iteration increases as the depth increases.

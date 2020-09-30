@@ -1,10 +1,12 @@
 ﻿#include <cstdio>
 #include <cuda.h>
 #include <cmath>
+#include <iostream>
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
 #include <thrust/partition.h>
 #include <thrust/sort.h>
+
 #include "sceneStructs.h"
 #include "scene.h"
 #include "glm/glm.hpp"
@@ -15,8 +17,8 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define CACHEFIRSTBOUNCE true
-#define USEMATERIALSORT true
+#define RECORDEDITERATION 100
+#define CACHEFIRSTBOUNCE false
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -73,16 +75,21 @@ __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
 	}
 }
 
-static Scene* hst_scene = NULL;
-static glm::vec3* dev_image = NULL;
-static Geom* dev_geoms = NULL;
-static Material* dev_materials = NULL;
-static PathSegment* dev_paths = NULL;
-static ShadeableIntersection* dev_intersections = NULL;
+static float gpu_time_accumulator = 0.0f;
+
+static Scene* hst_scene = nullptr;
+static glm::vec3* dev_image = nullptr;
+static Geom* dev_geoms = nullptr;
+static Material* dev_materials = nullptr;
+static PathSegment* dev_paths = nullptr;
+static ShadeableIntersection* dev_intersections = nullptr;
 
 // Extra static variables for device memory, declared here by me 
-static PathSegment* dev_first_paths = NULL;
-static ShadeableIntersection* dev_first_intersections = NULL;
+static PathSegment* dev_first_paths = nullptr;
+static ShadeableIntersection* dev_first_intersections = nullptr;
+
+cudaEvent_t iter_event_start = nullptr;
+cudaEvent_t iter_event_end = nullptr;
 
 void pathtraceInit(Scene* scene) 
 {
@@ -109,6 +116,9 @@ void pathtraceInit(Scene* scene)
 
 	cudaMalloc(&dev_first_intersections, pixelcount * sizeof(ShadeableIntersection));
 	cudaMemset(dev_first_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
+
+	cudaEventCreate(&iter_event_start);
+	cudaEventCreate(&iter_event_end);
 
 	checkCUDAError("pathtraceInit");
 }
@@ -219,7 +229,7 @@ __global__ void computeIntersections(int depth,
 		}
 		else
 		{
-			//The ray hits something
+			// The ray hits something
 			intersections[path_index].t = t_min;
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
@@ -288,13 +298,14 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 
 	// 2D block for generating ray from camera
 	const dim3 blockSize2d(8, 8);
-	const dim3 blocksPerGrid2d(
-		(cam.resolution.x + blockSize2d.x - 1) / blockSize2d.x,
-		(cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
+	const dim3 blocksPerGrid2d((cam.resolution.x + blockSize2d.x - 1) / blockSize2d.x,
+							   (cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
 
 	// 1D block for path tracing
 	const int blockSize1d = 128;
 
+	float iter_time = 0.f;
+	cudaEventRecord(iter_event_start);
 #if CACHEFIRSTBOUNCE
 	if (iter == 1)
 	{
@@ -369,12 +380,7 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 
 		// --- Shading Stage ---
 		// Before shading, sort the  pathSegments so that pathSegments with the same material are contiguous in memory 
-#if USEMATERIALSORT
 		thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + cur_num_paths, dev_paths, material_comp());
-#endif // USEMATERIALSORT
-
-
-		
 
 		// Shade path segments based on intersections and generate new rays by evaluating the BSDF.
 		shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
@@ -393,10 +399,20 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 	dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
 	finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
 
-	///////////////////////////////////////////////////////////////////////////
-
 	// Send results to OpenGL buffer for rendering
 	sendImageToPBO<<<blocksPerGrid2d, blockSize2d>>>(pbo, cam.resolution, iter, dev_image);
+
+	// Calculate how long to finish this iteration
+	cudaEventRecord(iter_event_end);
+	cudaEventSynchronize(iter_event_end);
+	cudaEventElapsedTime(&iter_time, iter_event_start, iter_event_end);
+	gpu_time_accumulator += iter_time;
+
+	if (iter == RECORDEDITERATION)
+	{
+		std::cout << "Elapsed time to finish " << RECORDEDITERATION << " iterations: " << gpu_time_accumulator << "ms" << endl;
+		std::cout << "Average time to run a single iteration: " << gpu_time_accumulator / RECORDEDITERATION << "ms" << endl;
+	}
 
 	// Retrieve image from GPU
 	cudaMemcpy(hst_scene->state.image.data(), dev_image, pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
