@@ -18,8 +18,9 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define CACHE_FIRST 1
+#define CACHE_FIRST 0
 #define MATERIAL_SORT 0
+#define ANTIALIASING 10
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -150,10 +151,25 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.ray.origin = cam.position;
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-		// TODO: implement antialiasing by jittering the ray
+		// Antialiasing by jittering the ray
+        float rightAAOffset = 0.f;
+        float upAAOffset = 0.f;
+
+        if (ANTIALIASING != 0) {
+            thrust::default_random_engine rng = makeSeededRandomEngine(iter, x, y);
+            thrust::uniform_real_distribution<float> u01(0, 1);
+            float antiLength = 1.f / ANTIALIASING;
+            int anti = iter % (ANTIALIASING * ANTIALIASING);
+            rightAAOffset = (anti % ANTIALIASING + u01(rng)) * antiLength;
+            upAAOffset = (anti / ANTIALIASING + u01(rng)) * antiLength;
+        }
+
+        float rightOffset = (float)x - (float)cam.resolution.x * 0.5f + rightAAOffset;
+        float upOffset = (float)y - (float)cam.resolution.y * 0.5f + upAAOffset;
+
 		segment.ray.direction = glm::normalize(cam.view
-			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+			- cam.right * cam.pixelLength.x * rightOffset
+			- cam.up * cam.pixelLength.y * upOffset
 			);
 
 		segment.pixelIndex = index;
@@ -306,6 +322,7 @@ __global__ void shadeMaterial(
             if (material.emittance > 0.0f) {
                 pathSegments[idx].color *= (materialColor * material.emittance);
                 pathSegments[idx].remainingBounces = 0;
+                image[pathSegments[idx].pixelIndex] += pathSegments[idx].color;
             }
             else {
                 scatterRay(
@@ -392,7 +409,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     // Perform one iteration of path tracing
 
-#if CACHE_FIRST == 1
+#if CACHE_FIRST == 1 && ANTIALIASING == 0
     if (iter == 1) {
         generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> >
             (cam, iter, traceDepth, dev_paths);
@@ -423,7 +440,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	while (!iterationComplete) {
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
-        if (CACHE_FIRST == 0 || (iter == 1 || depth > 0)) {
+        if (CACHE_FIRST == 0 || ANTIALIASING != 0 || (iter == 1 || depth > 0)) {
             // clean shading chunks
             cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
@@ -438,7 +455,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                 );
             checkCUDAError("trace one bounce");
 
-            if (CACHE_FIRST == 1 && iter == 1 && depth == 0) {
+            if (CACHE_FIRST == 1 && ANTIALIASING == 0 && iter == 1 && depth == 0) {
                 cudaMemcpy(dev_first_intersections, dev_intersections,
                     pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
             }
@@ -471,9 +488,11 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             dev_image
         );
 
-        // Stream compaction
-        dev_path_end = thrust::partition(thrust::device, dev_paths,
-            dev_paths + num_paths, path_continue());
+        //dev_path_end = thrust::partition(thrust::device, dev_paths,
+        //    dev_paths + num_paths, path_continue());
+
+        dev_path_end = thrust::remove_if(thrust::device,
+            dev_paths, dev_paths + num_paths, path_terminated());
         num_paths = dev_path_end - dev_paths;
 
         if (num_paths <= 0) { // Stop based on stream compaction
@@ -481,9 +500,15 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
 	}
 
+    // WATCH OUT
+    // If we use thrust::remove_if it would be faster than thrust::partition,
+    // but the elements with pred is true will be undefined. So we cannot gather
+    // the iteration here. Instead, we add it directly in shadeMaterial when we
+    // encounter a light source.
+
     // Assemble this iteration and apply it to the image
-    dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
-	finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image, dev_paths);
+    //dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
+	//finalGather<<<numBlocksPixels, blockSize1d>>>(pixelcount, dev_image, dev_paths);
     
     ///////////////////////////////////////////////////////////////////////////
 

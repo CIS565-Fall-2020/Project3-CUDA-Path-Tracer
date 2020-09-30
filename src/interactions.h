@@ -4,6 +4,38 @@
 #include <thrust/remove.h>
 #include <thrust/execution_policy.h>
 
+// Evaluate fresnel coefficient for reflection and refraction
+__host__ __device__ float fresnelEvaluate(
+    float etaI, float etaT,
+    float cosThetaI) {
+    cosThetaI = glm::clamp(cosThetaI, -1.f, 1.f);
+
+    float eI = etaI;
+    float eT = etaT;
+
+    if (cosThetaI <= 0.f) { // Leaving the medium
+        eI = etaT;
+        eT = etaI;
+        cosThetaI = -cosThetaI;
+    }
+
+    float sinThetaI = glm::sqrt(glm::max(0.f, 1.f - cosThetaI * cosThetaI));
+    float sinThetaT = eI / eT * sinThetaI;
+
+    if (sinThetaT >= 1.f) {
+        return 1.f;
+    }
+
+    float cosThetaT = glm::sqrt(glm::max(0.f, 1.f - sinThetaT * sinThetaT));
+
+    float parl = ((eT * cosThetaI) - (eI * cosThetaT)) /
+        ((eT * cosThetaI) + (eI * cosThetaT));
+    float perp = ((eI * cosThetaI) - (eT * cosThetaT)) /
+        ((eI * cosThetaI) + (eT * cosThetaT));
+
+    return (parl * parl + perp * perp) / 2.f;
+}
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -125,16 +157,38 @@ void scatterRay(
     }
     else if (bxdf == 1) { // Reflection
         newDir = glm::reflect(pathSegment.ray.direction, normal);
-        float z = glm::abs(glm::dot(normal, newDir));
-        pdf = 1 / matCt;
+        float z = glm::dot(normal, newDir);
+        pdf = 1.f / matCt;
         f = m.specular.color;
-        pathSegment.color *= f * z / pdf;
+
+        float fresnel;
+        if (m.indexOfRefraction == 0) {
+            fresnel = 1.f;
+        }
+        else {
+            fresnel = fresnelEvaluate(1.f, m.indexOfRefraction, z);
+        }
+
+        pathSegment.color *= f * fresnel / pdf; // Fresnel take care of lambert
         pathSegment.remainingBounces--;
     }
     else { // Refraction
-        // TODO
-        pathSegment.color = glm::vec3(0.f);
-        pathSegment.remainingBounces = 0;
+        float z = -glm::dot(normal, pathSegment.ray.direction);
+        float eta = z > 0 ? 1.f / m.indexOfRefraction : m.indexOfRefraction;
+        
+        newDir = glm::refract(pathSegment.ray.direction, normal, eta);
+        if (isnan(newDir.x) || isnan(newDir.y) || isnan(newDir.z)) {
+            pathSegment.color = glm::vec3(0.f);
+            pathSegment.remainingBounces = 0;
+        }
+        else {
+            float cosT = glm::dot(newDir, normal);
+            float fresnel = 1.f - fresnelEvaluate(1.f, m.indexOfRefraction, cosT);
+            pdf = 1.f / matCt;
+            f = m.color;
+            pathSegment.color *= f * fresnel / pdf;
+            pathSegment.remainingBounces--;
+        }
     }
     
     pathSegment.ray.origin = intersect;

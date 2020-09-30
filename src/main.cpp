@@ -147,7 +147,7 @@ void runCuda() {
         cudaEventSynchronize(stop);
         float milliseconds = 0;
         cudaEventElapsedTime(&milliseconds, start, stop);
-        //std::cout << milliseconds << std::endl;
+        std::cout << milliseconds << std::endl;
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
