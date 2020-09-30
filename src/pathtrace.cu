@@ -80,6 +80,9 @@ static ShadeableIntersection* dev_intersections = NULL;
 static bool cache_first_intersections = false;
 static ShadeableIntersection* dev_first_intersections = NULL;
 
+
+static bool sort_by_material = false;
+
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -290,6 +293,15 @@ struct should_terminate
     }
 };
 
+struct compareIntersections
+{
+    __host__ __device__
+        bool operator()(const ShadeableIntersection& a, const ShadeableIntersection& b)
+    {
+        return a.materialId > b.materialId;
+    }
+};
+
 
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
@@ -357,6 +369,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
         if (cache_first_intersections && depth == 0 && iter != 1) {
+            // if it is the firts bounce of the noot first intersection, get the saved intersections
             thrust::copy(thrust::device, dev_first_intersections, dev_first_intersections + num_paths_start, dev_intersections);
         }
         else {
@@ -368,6 +381,16 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
                 , hst_scene->geoms.size(), dev_intersections);
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
+
+            // sort intersections with similar materials together
+            if (sort_by_material) {
+                thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
+            }
+
+            // if it is the first bounce of the first iteration, store the intersections
+            if (cache_first_intersections && depth == 1 && iter == 1) {
+                thrust::copy(thrust::device, dev_intersections, dev_intersections + num_paths_start, dev_first_intersections);
+            }
         }
         depth++;
 
@@ -376,9 +399,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         PathSegment* dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_paths + num_paths, should_terminate());
         num_paths = dev_path_end - dev_paths;
 
-        if (cache_first_intersections && depth == 1 && iter == 1) {
-            thrust::copy(thrust::device, dev_intersections, dev_intersections + num_paths_start, dev_first_intersections);
-        }
 
         if (num_paths == 0) {
             iterationComplete = true;
