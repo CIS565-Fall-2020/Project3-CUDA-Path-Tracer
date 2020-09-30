@@ -16,6 +16,13 @@
 #include "pathtrace.h"
 #include "intersections.h"
 #include "interactions.h"
+#include "timer.h"
+
+PerformanceTimer& timer()
+{
+    static PerformanceTimer timer;
+    return timer;
+}
 
 #define ERRORCHECK 1
 
@@ -77,11 +84,11 @@ static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 
-static bool cache_first_intersections = false;
+static bool cache_first_intersections = true;
 static ShadeableIntersection* dev_first_intersections = NULL;
 
 
-static bool sort_by_material = false;
+static bool sort_by_material = true;
 
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
@@ -365,12 +372,19 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     // Shoot ray into scene, bounce between objects, push shading chunks
     dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
     bool iterationComplete = false;
+
+    timer().startGpuTimer();
     while (!iterationComplete) {
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
         if (cache_first_intersections && depth == 0 && iter != 1) {
             // if it is the firts bounce of the noot first intersection, get the saved intersections
             thrust::copy(thrust::device, dev_first_intersections, dev_first_intersections + num_paths_start, dev_intersections);
+            
+            // sort intersections with similar materials together
+            if (sort_by_material) {
+                thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
+            }
         }
         else {
             // clean shading chunks
@@ -382,14 +396,15 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
 
-            // sort intersections with similar materials together
-            if (sort_by_material) {
-                thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
-            }
+            
 
             // if it is the first bounce of the first iteration, store the intersections
-            if (cache_first_intersections && depth == 1 && iter == 1) {
+            if (cache_first_intersections && depth == 0 && iter == 1) {
                 thrust::copy(thrust::device, dev_intersections, dev_intersections + num_paths_start, dev_first_intersections);
+            }
+            else if (sort_by_material) {
+                // sort intersections with similar materials together
+                thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
             }
         }
         depth++;
@@ -404,6 +419,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             iterationComplete = true;
         }
     }
+    timer().endGpuTimer();
 
     // Assemble this iteration and apply it to the image
     //dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
