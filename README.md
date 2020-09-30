@@ -29,7 +29,7 @@ CUDA Path Tracer
 
   ![Cornell Box with a Diffuse Sphere Pic](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/cornell.2020-09-30_19-28-44z.5000samp.png)
 
-### Performance Analysis
+## Performance Analysis
 
 I used the [scene](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/scenes/cornell.txt), a Cornell box with a specular sphere, to do the following test. With the function ```cudaEventElapsedTime()``` provided by *cuda_runtime_api.h*, I could compute how long GPU takes to do pathtracing iterations by creating two ```cudaEvent_t``` variables, ```iter_event_start``` and ```iter_event_start```, one to record the start time of an iteration and the other to record the end time. After each iteration, I added the running time of this iteration to a variable ```gpu_time_accumulator```, to accumulate the total time of all the iterations. Finally, I could get the average time of each iteration.
 
