@@ -24,7 +24,7 @@ Add
 
 In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's still under construction and more features will come soon.
 
-#### Current feature
+### Current feature
 
 - [x] A basic BSDF 
   - [x]  Diffuse
@@ -36,21 +36,23 @@ In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's
 
 ##### [BSDF]()
 
-![alt text](https://github.com/Jack12xl/Project1-CUDA-Flocking/blob/master/images/demo_2.gif)
+<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell.2020-09-30_03-21-12z.5000samp.png" height="512px"></a> 
+
+<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="512px"></a> 
 
 Basic kernel to represent the physical lighting attribute of each material.
 
-##### First bounce cache
+### First bounce cache
 
 Basically, first bounce cache is a time-space trade-off that use memory to store the first intersection results for further use  instead of calculating intersections at each iterations.
 
 Here shows the results based on my implementation.
 
-![alt text](https://github.com/Jack12xl/Project1-CUDA-Flocking/blob/master/images/demo_2.gif)
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
 
 Well, obviously cache can trigger more performance with same results.
 
-**Material Sort**
+### **Material Sort**
 
 Material sort tries to sort the shader working sequence on material ID, which can makes threads do the same job as much as possible. 
 
