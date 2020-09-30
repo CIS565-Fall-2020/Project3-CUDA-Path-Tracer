@@ -16,11 +16,8 @@ Contents
   - [Compute Intersections](#Compute-Intersections)
   - [Scatter Rays](#Scatter-Rays)
   - [Shade Rays](#Shade-rays)
-  - [Gather Colors](#Gather-Colors)
-- [Performance Analysis](#Performance-Analysis)
+- [Improvement and Performance Analysis](#Improvement-and-Performance-Analysis)
 - [Debug](#Debug)
-- [Questions](#Questions)
-- [Extra Credit](#Extra-Credit)
 - [Reference](#Reference)
 
 ## Introduction
@@ -90,9 +87,10 @@ Remaining rays            |  Duration of path tracning
 ![](img/remaning-rays-with-stream-compaction.png) | ![](img/duration-of-each-bounce-with-sc.png)
 
 ### Sorting by materials
-
+Because different materials/BSDF evaluations will  take different amounts of time to complete, some threads may have to wait until other threads terminate. It is inefficient. So I sort the rays/path segments so that rays/path interacting with the same material are contiguous in memory before shading.  It looks like this method doesn't improve much right now because there are few types of materials.(I will modify this part afterwards) 
 
 ### Cache the first bounce
+As long as the camera doesn't move, the first ray casting from the camera to the screen doesn't change. So we can cache the first bounce into a buffer and re-use it in the sequential iterations. Likewise, the # of the objects is small, it is hard to see the improvement.(I will modify this part afterwards)
 
 ## Debug
 1. remove_if vs partition
