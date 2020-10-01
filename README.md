@@ -3,11 +3,22 @@ CUDA Path Tracer
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Dayu Li
+* Tested on: Windows 10, i7-10700K @ 3.80GHz 16GB, GTX 2070 8150MB (Personal laptop)
 
-### (TODO: Your README)
+## Features
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+##### Mid-Submission: 
 
+* A shading kernel with BSDF evaluation for:
+  * Ideal Diffuse surfaces.
+  * Perfectly reflective (mirrored) surfaces.
+* Path continuation/termination using Stream Compaction.
+* A toggleable option to sort by materials (Press M button).
+* A toggleable option to cache the first bounce intersections for re-use across all subsequent iterations. Provide performance benefit analysis across different max ray depths (Press C button).
+
+![](img/1.png)
+
+## Performance Analysis
+### Optimization analysis
+The graph below shows how the average runtime with different opmization methods.
