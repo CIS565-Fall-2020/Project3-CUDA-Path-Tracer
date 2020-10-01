@@ -1,13 +1,18 @@
-CUDA Path Tracer
+CUDA Path Tracer -- Mid Project Submission 
 ================
 
+# ![cornell](img/mid_project_cornell.png)
+
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
+* Haorong Yang
+* [LinkedIn](https://www.linkedin.com/in/haorong-henry-yang/)
+* Tested on: Windows 10 Home, i7-10750H @ 2.60GHz 16GB, GTX 2070 Super Max-Q (Personal)
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+Features implemented:
+* BSDF for: ideal diffuse surfaces, specular surfaces
+* Path termination using stream compaction
+* Sorting pathSegments by material type
+* Cache first bounce
 
-### (TODO: Your README)
-
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+Sorting the ray/path segments by material type will increase performance by making memory access contiguous hence more efficient; when there are a lot of materials, but not so much when there are limited materials, for example, in the conrell box test scene.
 

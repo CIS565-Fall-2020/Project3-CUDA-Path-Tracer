@@ -1,0 +1,2 @@
+http://wwwx.cs.unc.edu/~rademach/xroads-RT/RTarticle.html#:~:text=Its%20color%20is%20given%20by,way%20out%20into%20the%20scene.
+https://learnopengl.com/PBR/Theory
