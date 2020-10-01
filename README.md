@@ -21,4 +21,6 @@ CUDA Path Tracer
 
 ## Performance Analysis
 ### Optimization analysis
-The graph below shows how the average runtime with different opmization methods.
+The graph below shows how the average runtime with different opmization methods. Suprisingly, the naive method provides best performance in terms of processing time per iteration. When the sorting by material method is applied, the cost becomes 10 times as long as the naive method costs. This is because that the scene we used for test is simple and there are only a few meterials. Sorting materials is thus very time consuming.   
+
+![](img/2.png)
