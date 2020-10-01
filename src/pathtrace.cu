@@ -17,7 +17,7 @@
 
 #define ERRORCHECK 1
 #define SORT_BY_MATERIAL 0
-#define CACHE_FIRST_INTER 0
+#define CACHE_FIRST_INTER 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -368,7 +368,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
-
     while (num_paths > 0) {
 
         // clean shading chunks
