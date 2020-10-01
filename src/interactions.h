@@ -113,6 +113,9 @@ void scatterRay(
 
     int BxDFs[3] = { 0, 0, 0 }; // [0]: Diffuse [1]: Reflection [2]: Refraction
     int matCt = 0;
+
+    // debug
+    int deb = pathSegment.pixelIndex;
     
     if (m.hasReflective) {
         BxDFs[1] = 1;
@@ -154,6 +157,7 @@ void scatterRay(
             pathSegment.color *= f * z / pdf;
             pathSegment.remainingBounces--;
         }
+        pathSegment.ray.origin = intersect;
     }
     else if (bxdf == 1) { // Reflection
         newDir = glm::reflect(pathSegment.ray.direction, normal);
@@ -171,6 +175,7 @@ void scatterRay(
 
         pathSegment.color *= f * fresnel / pdf; // Fresnel take care of lambert
         pathSegment.remainingBounces--;
+        pathSegment.ray.origin = intersect;
     }
     else { // Refraction
         float z = -glm::dot(normal, pathSegment.ray.direction);
@@ -189,8 +194,8 @@ void scatterRay(
             pathSegment.color *= f * fresnel / pdf;
             pathSegment.remainingBounces--;
         }
+        pathSegment.ray.origin = intersect + glm::normalize(pathSegment.ray.direction) * 0.0002f;
     }
     
-    pathSegment.ray.origin = intersect;
     pathSegment.ray.direction = newDir;
 }
