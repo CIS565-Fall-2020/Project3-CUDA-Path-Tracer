@@ -5,6 +5,7 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include <thrust/partition.h>
+#include <chrono>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -88,6 +89,7 @@ static Geom* dev_geoms = NULL;
 static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
+float avgerageTime = 0;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 static ShadeableIntersection* dev_intersections_cache = NULL;    // cache first iteration.
@@ -296,19 +298,21 @@ __global__ void shadeMaterial(
     if (idx < num_paths)
     {
         ShadeableIntersection intersection = shadeableIntersections[idx];
+        if (pathSegments[idx].remainingBounces <= 0) {
+            return;
+        }
         if (intersection.t > 0.0f) {// if the intersection exists...
             // Set up the RNG
             // LOOK: this is how you use thrust's RNG! Please look at
             // makeSeededRandomEngine as well.
             thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, depth);
-
             Material material = materials[intersection.materialId];
             glm::vec3 materialColor = material.color;
 
             if (material.emittance > 0.0f) {
                 // Intersect with the light source
                 pathSegments[idx].color *= (materialColor * material.emittance);// Terminate the path
-                pathSegments[idx].remainingBounces = 0;
+                pathSegments[idx].remainingBounces = -1;
             }
             else {  
                 // Normal intersections.
@@ -319,7 +323,7 @@ __global__ void shadeMaterial(
         else {    
             // No Intersection detected
             pathSegments[idx].color = glm::vec3(0.0f);
-            pathSegments[idx].remainingBounces = 0;// Terminate the path
+            pathSegments[idx].remainingBounces = -1;// Terminate the path
         }
     }
 }
@@ -394,7 +398,7 @@ void pathtrace(uchar4* pbo, int frame, int iter, bool sort_by_material, bool cac
 
     // --- PathSegment Tracing Stage ---
     // Shoot ray into scene, bounce between objects, push shading chunks
-
+    std::chrono::high_resolution_clock::time_point timer_start = std::chrono::high_resolution_clock::now();
     bool iterationComplete = false;
     while (!iterationComplete) {
 
@@ -466,11 +470,19 @@ void pathtrace(uchar4* pbo, int frame, int iter, bool sort_by_material, bool cac
         cudaDeviceSynchronize();
 
         // stream compactions
-        dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, rayContinueJudge());
-        num_paths = dev_path_end - dev_paths; // Update the path numbers
-        iterationComplete = (num_paths <= 0)? true : false;
+        //dev_path_end = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, rayContinueJudge());
+        //num_paths = dev_path_end - dev_paths; // Update the path numbers
+        //iterationComplete = (num_paths <= 0)? true : false;
 
+        // Without stream compactions
+        iterationComplete = (depth >= traceDepth)? true : false;
+
+        std::chrono::high_resolution_clock::time_point timer_end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> period = timer_end - timer_start;
+        float prev_cpu_time = static_cast<decltype(prev_cpu_time)>(period.count());
+        avgerageTime = (avgerageTime * (iter - 1) + prev_cpu_time) / (iter);
         //cout << "Iterations:" << iter << ", Depth: " << depth << ", Remaining Rays:" << num_paths << endl;
+        cout << "Iterations:" << iter << ", Time: " << prev_cpu_time << ", Average Time" << avgerageTime << endl;
     }
 
     // Assemble this iteration and apply it to the image
