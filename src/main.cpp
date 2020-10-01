@@ -1,6 +1,7 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#include <chrono>
 
 static std::string startTimeString;
 
@@ -69,9 +70,18 @@ int main(int argc, char** argv) {
     // Initialize CUDA and GL components
     init();
 
+    // Jacky added code for timing purposes
+    // auto startTime = std::chrono::high_resolution_clock::now();
+
     // GLFW main loop
     mainLoop();
 
+    // Jacky added code for timing purposes
+    /*
+    auto endTime = std::chrono::high_resolution_clock::now();
+    std::cout << "Time Duration: " <<
+        std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count() << " microseconds." << std::endl;
+    */
     return 0;
 }
 

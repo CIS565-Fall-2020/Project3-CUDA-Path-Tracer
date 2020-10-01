@@ -63,7 +63,8 @@ struct PathSegment {
 	Ray ray;
 	glm::vec3 color;
 	int pixelIndex;
-	int remainingBounces;
+	int remainingBounces;   // can use this information here to check if ray is terminated
+    // ray is terminated if "remainingBounces" is equal to 0
 };
 
 // Use with a corresponding PathSegment to do:
@@ -73,4 +74,10 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+};
+
+struct ShadeableIntersectionCompare {
+    __host__ __device__ bool operator()	(const ShadeableIntersection& lhs, const ShadeableIntersection& rhs) {
+        return lhs.materialId > rhs.materialId;
+    }
 };

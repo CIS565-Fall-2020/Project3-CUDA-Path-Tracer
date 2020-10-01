@@ -41,6 +41,51 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__
+glm::vec3 squareToDiskConcentric(glm::vec2 sample) {
+    float phi, r, u, v;
+    float a = 2.f * sample[0] - 1;
+    float b = 2.f * sample[1] - 1;
+
+    if (a > -b) {
+        if (a > b) {
+            r = a;
+            phi = (PI / 4.f) * (b / a);
+        }
+        else {
+            r = b;
+            phi = (PI / 4.f) * (2.f - (a / b));
+        }
+    }
+    else {
+        if (a < b) {
+            r = -a;
+            phi = (PI / 4.f) * (4.f + (b / a));
+        }
+        else {
+            r = -b;
+            if (b != 0) {
+                phi = (PI / 4.f) * (6.f - (a / b));
+            }
+            else {
+                phi = 0.f;
+            }
+        }
+    }
+    u = r * glm::cos(phi);
+    v = r * glm::sin(phi);
+    return glm::vec3(u, v, 0.f);
+}
+
+__host__ __device__ 
+glm::vec3 squareToHemisphereCosine(thrust::default_random_engine& rng) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    glm::vec3 sampleDisk = squareToDiskConcentric(glm::vec2(u01(rng), u01(rng)));
+    sampleDisk[2] = glm::sqrt(glm::max(1.f - sampleDisk[0] * sampleDisk[0] - sampleDisk[1] * sampleDisk[1], 0.f));
+    return sampleDisk;
+}
+
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -76,4 +121,53 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+    if (m.hasReflective > 0.f) {
+        // Update "color" parameter in place
+        pathSegment.color *= m.color;
+        // Update "ray" parameter in place
+        pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
+        pathSegment.ray.origin = intersect;
+    }
+    else if (m.hasRefractive > 0.f) {
+
+    }
+    else {
+            // Calculate new ray direction
+        /*
+        glm::vec3 newRayDir = squareToHemisphereCosine(rng);
+        if (-pathSegment.ray.direction.z < 0.f) {
+            newRayDir.z *= -1.f;
+        }
+
+        // Calculate the pdf of the bsdf
+        float pdf;
+        if (-pathSegment.ray.direction.z * newRayDir.z > 0.f) {  // means both the old ray and the new bounce are within the same hemisphere
+            pdf = newRayDir.z / PI;
+        }
+        else {
+            pdf = 0.f;
+        }
+
+        // Update color parameter in place
+        if (pdf != 0.f) {
+            pathSegment.color *= m.color / PI * glm::abs(glm::dot(newRayDir, normal)) / pdf;
+        }
+        else {
+            pathSegment.color = glm::vec3(0.f);
+        }
+
+        // pathSegment.color = (normal + glm::vec3(1.f)) / 2.f;
+
+        // Update "ray" parameter in place
+        pathSegment.ray.direction = newRayDir;
+        pathSegment.ray.origin = intersect;
+        */
+
+        // Update "color" parameter in place
+        pathSegment.color *= m.color;
+        // Update "ray" parameter in place
+        pathSegment.ray.direction = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
+        pathSegment.ray.origin = intersect;
+    }
+    
 }
