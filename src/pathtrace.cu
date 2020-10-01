@@ -378,7 +378,7 @@ struct intersection_comp {
  * of memory management
  */
 
-#define SORT_BY_MATERIAL 1
+#define SORT_BY_MATERIAL 0
 #define CACHE_FIRST_BOUNCE 1
 
 using Common::PerformanceTimer;
@@ -537,7 +537,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     #if SORT_BY_MATERIAL
         thrust::stable_sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, intersection_comp());
     #endif
-
+    
     // STREAM COMPACTION
     dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_path_end, path_alive());
     num_paths = dev_path_end - dev_paths;
