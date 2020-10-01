@@ -33,6 +33,3 @@ GPU : NVIDIA GeForce RTX 2060
 
 ![bloop](img/blooper3.png)
 
-![bloop](img/blooper1.png)
-
-![bloop](img/blooper2.png)
