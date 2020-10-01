@@ -100,7 +100,7 @@ void scatterRay(
         float ambient = 0.2;
         float lux = diffuse + ambient;
         color = mat.color * lux / (1.f - mat.hasReflective);
-        color = mat.color;
+        
         pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
     }
 
