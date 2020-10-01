@@ -1,4 +1,4 @@
-CUDA Path Tracer -- Mid Project Submission 
+CUDA Path Tracer
 ================
 
 # ![cornell](img/mid_project_cornell.png)
