@@ -41,6 +41,39 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__ float fresnel(
+    float eta,
+    float cosThetaI
+    )
+{
+    cosThetaI =cosThetaI;
+    float etaI_ = 1;
+    float etaT_ = eta;
+    // Potentially swap indices of refraction
+    bool entering = cosThetaI > 0.f;
+    if (!entering) {
+        float temp = etaI_;
+        etaI_ = etaT_;
+        etaT_ = temp;
+        cosThetaI = abs(cosThetaI);
+    }
+    // Compute cosThetaT using Snell’s law
+    float sinThetaI =sqrt(max(0.f, 1 - cosThetaI * cosThetaI));
+    float sinThetaT = etaI_ / etaT_ * sinThetaI;
+    // Handle total internal reflection
+    if (sinThetaT >= 1) {
+        return 1;
+    }
+    float cosThetaT = sqrt(max(0.f, 1 - sinThetaT * sinThetaT));
+
+    float Rparl = ((etaT_ * cosThetaI) - (etaI_ * cosThetaT)) /
+        ((etaT_ * cosThetaI) + (etaI_ * cosThetaT));
+    float Rperp = ((etaI_ * cosThetaI) - (etaT_ * cosThetaT)) /
+        ((etaI_ * cosThetaI) + (etaT_ * cosThetaT));
+    return (Rparl * Rparl + Rperp * Rperp) / 2;
+}
+
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -81,15 +114,43 @@ void scatterRay(
 
     // specular
     if (p0 <= m.hasReflective) {
-        pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+        pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
         float scale = m.hasReflective <= 0.0 ? 0.0 : 1.0 / m.hasReflective;
         pathSegment.color *= m.color * scale;
+        pathSegment.ray.origin = intersect + EPSILON * normal;
+    }
+    // specular
+    else if (p0 <= m.hasReflective + m.hasRefractive) {
+        float costheta = glm::dot(-pathSegment.ray.direction, normal);
+        costheta = costheta > 1.0 ? 1.0 : costheta;
+        costheta = costheta < -1.0 ? -1.0 : costheta;
+        // if the ray is entering the surface
+        float eta = costheta > 0 ? (1.0 / m.indexOfRefraction) : m.indexOfRefraction;
+        glm::vec3 _normal = costheta > 0 ? normal : -normal;
+        float scale = m.hasRefractive <= 0.0 ? 0.0 : 1.0 / m.hasRefractive;
+
+        glm::vec3 refract = glm::refract(glm::normalize(pathSegment.ray.direction), glm::normalize(_normal), eta);
+        glm::vec3 reflect = glm::reflect(pathSegment.ray.direction, _normal);
+        if (glm::length(refract) < EPSILON) {
+            pathSegment.color = glm::vec3(0);
+            refract = reflect;
+        }
+        float f = fresnel(m.indexOfRefraction, costheta);
+        // reflect or refract?
+        if (u01(rng) < f) {
+            pathSegment.ray.direction = glm::normalize(reflect);
+        }
+        else {
+            pathSegment.ray.direction = glm::normalize(refract);
+        }
+        pathSegment.color *= m.specular.color * scale;
+        pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.001f);
     }
     // diffuse
     else {
-        pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+        pathSegment.ray.direction = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
         float scale = m.hasReflective >= 1.0 ? 0.0 : 1.0 / (1.0 - m.hasReflective);
         pathSegment.color *= m.color * scale;
+        pathSegment.ray.origin = intersect + EPSILON * normal;
     }
-    pathSegment.ray.origin = intersect + EPSILON * normal;
 }

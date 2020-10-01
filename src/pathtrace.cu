@@ -18,10 +18,12 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define STREAM_COMPACTION 1
+#define STREAM_COMPACTION 0
 #define SORT_BY_MATERIAL 0
 #define CACHE_ENABLE 0
 #define PROFILE_ENABLE 0
+#define DEPTH_OF_FIELD_ENABLE 0
+#define ANTIALIASING 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -155,7 +157,14 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.ray.origin = cam.position;
 		segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-		// TODO: implement antialiasing by jittering the ray
+		// antialiasing
+#if ANTIALIASING
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+		thrust::uniform_real_distribution<float> u01(-0.5, 0.5);
+		// add a small offset
+		x += u01(rng);
+		y += u01(rng);
+#endif
 		segment.ray.direction = glm::normalize(cam.view
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
@@ -163,6 +172,25 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
+
+#if DEPTH_OF_FIELD_ENABLE
+		// depth of field
+		float lensRadius = 0.8f;
+		float focalDistance = 10.0f;
+
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+		thrust::uniform_real_distribution<float> u01(-1, 1);
+		float p0 = u01(rng);
+		float p1 = u01(rng);
+		// sample a point from lens
+		segment.ray.origin = cam.position + p0 * lensRadius * cam.up + p1 * lensRadius * cam.right;
+		float asp = focalDistance / glm::length(cam.view);
+		segment.ray.direction = cam.view
+			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
+			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f);
+		glm::vec3 target = cam.position + segment.ray.direction * asp;
+		segment.ray.direction = glm::normalize(target - segment.ray.origin);
+#endif 
 	}
 }
 
@@ -439,7 +467,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 		dim3 numblocksPathSegmentTracing = (remaining_paths + blockSize1d - 1) / blockSize1d;
-#if CACHE_ENABLE
+#if CACHE_ENABLE && !ANTIALIASING
 		if (depth <= 0) {
 			if (iter > 1) {
 				// tracing
