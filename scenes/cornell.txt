@@ -1,3 +1,4 @@
+
 // Emissive material (light)
 MATERIAL 0
 RGB         1 1 1
@@ -50,7 +51,7 @@ EMITTANCE   0
 
 // Camera
 CAMERA
-RES         800 800
+RES         1200 1200
 FOVY        45
 ITERATIONS  5000
 DEPTH       8
