@@ -17,8 +17,9 @@
 
 #define SORT_MATERIALS
 #define CACHE_FIRST_BOUNCE
+#define RAY_TERMINATION
 
-#define PERF_RAY_TERMINATION
+// #define PERF_RAY_TERMINATION
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -166,6 +167,11 @@ __global__ void computeIntersections(
 	if (path_index < num_paths)
 	{
 		PathSegment pathSegment = pathSegments[path_index];
+#ifndef RAY_TERMINATION
+        if (pathSegment.remainingBounces <= 0) {
+            return;
+        }
+#endif
 
 		float t;
 		glm::vec3 intersect_point;
@@ -282,6 +288,11 @@ __global__ void shadeRealMaterial(
     if (idx < num_paths)
     {
         ShadeableIntersection intersection = shadeableIntersections[idx];
+#ifndef RAY_TERMINATION
+        if (pathSegments[idx].remainingBounces <= 0) {
+            return;
+        }
+#endif
         if (intersection.t > 0.0f) { // if the intersection exists...
           // Set up the RNG
           // LOOK: this is how you use thrust's RNG! Please look at
@@ -461,9 +472,13 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
      cudaDeviceSynchronize();
   
   // Stream compaction
+#ifdef RAY_TERMINATION
      PathSegment *new_end = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, isPathTerminated()); 
      num_paths = new_end - dev_paths;
      iterationComplete = num_paths <= 0;
+#else
+     iterationComplete = depth >= traceDepth;
+#endif
 	}
 
     // Assemble this iteration and apply it to the image
