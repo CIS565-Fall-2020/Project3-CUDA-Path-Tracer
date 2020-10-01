@@ -15,6 +15,8 @@
 #include "intersections.h"
 #include "interactions.h"
 
+#include "device_launch_parameters.h"
+
 #define ERRORCHECK 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -214,19 +216,6 @@ __global__ void computeIntersections(
 	}
 }
 
-
-__device__ void BxDF(
-	int idx
-	, ShadeableIntersection isect
-	, PathSegment* pathSegments
-	, Material mat
-	, thrust::default_random_engine* rng
-	, thrust::uniform_real_distribution<float>* u01) {
-	if (mat.hasReflective) {
-
-	}
-}
-
 // LOOK: "fake" shader demonstrating what you might do with the info in
 // a ShadeableIntersection, as well as how to use thrust's random number
 // generator. Observe that since the thrust random number generator basically
@@ -239,6 +228,7 @@ __device__ void BxDF(
 __global__ void shadeFakeMaterial(
 	int iter
 	, int num_paths
+	, const Camera& cam
 	, ShadeableIntersection* shadeableIntersections
 	, PathSegment* pathSegments
 	, Material* materials
@@ -266,7 +256,7 @@ __global__ void shadeFakeMaterial(
 			// like what you would expect from shading in a rasterizer like OpenGL.
 			// TODO: replace this! you should be able to start with basically a one-liner
 			else {
-				scatterRay(pathSegments[idx], intersection, material, rng);
+				scatterRay(cam, pathSegments[idx], intersection, material, rng);
 				//float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
 				//pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
 				//pathSegments[idx].color *= u01(rng); // apply some noise because why not
@@ -294,6 +284,12 @@ __global__ void finalGather(int nPaths, glm::vec3* image, PathSegment* iteration
 	}
 }
 
+struct is_terminated {
+	__host__ __device__ bool operator()(const PathSegment& ps) {
+		return ps.color == glm::vec3(0.f);
+	}
+};
+
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
@@ -301,7 +297,9 @@ __global__ void finalGather(int nPaths, glm::vec3* image, PathSegment* iteration
 void pathtrace(uchar4* pbo, int frame, int iter) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera& cam = hst_scene->state.camera;
-	const int pixelcount = cam.resolution.x * cam.resolution.y;
+	float2 res = { cam.resolution.x, cam.resolution.y };
+	// const int pixelcount = cam.resolution.x * cam.resolution.y;
+	const int pixelcount = 256;
 
 	// 2D block for generating ray from camera
 	// 8x8-sized block represents 8x8 chunk of image
@@ -352,12 +350,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
 
-	struct is_terminated {
-		__host__ __device__ bool operator()(const PathSegment& ps) {
-			return ps.color == glm::vec3(0.f);
-		}
-	};
-
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 
@@ -369,6 +361,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 		// tracing
 		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
+		float3 dim = { numblocksPathSegmentTracing.x, numblocksPathSegmentTracing.y, numblocksPathSegmentTracing.z };
 		computeIntersections<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			depth
 			, num_paths
@@ -394,16 +387,18 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			iter,
 			num_paths,
+			cam,
 			dev_intersections,
 			dev_paths,
 			dev_materials
 			);
+		checkCUDAError("shading fake material");
 
 		thrust::device_ptr<PathSegment> thrust_dev_paths(dev_paths);
 		thrust::device_ptr<PathSegment> thrust_dev_path_end(dev_path_end);
-		dev_path_end = thrust::remove_if(thrust_dev_paths, thrust_dev_path_end, is_terminated());
+		dev_path_end = thrust::remove_if(thrust::device, dev_paths, dev_path_end, is_terminated());
 		num_paths = dev_path_end - dev_paths;
-		if (num_paths < 0) {
+		if (num_paths <= 0) {
 			iterationComplete = true; // TODO: should be based off stream compaction results.
 		}
 

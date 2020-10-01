@@ -68,35 +68,40 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
+        const Camera& cam,
+		PathSegment& pathSegment,
         ShadeableIntersection& intersection,
         Material& mat,
         thrust::default_random_engine &rng) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
-    glm::vec3 rayBounce(0.f);
     glm::vec3 color;
     glm::vec3 normal = intersection.surfaceNormal;
+    pathSegment.ray.origin = intersection.intersectPos;
 
-    // diffuse
-    float diffuse = glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f));
-    float ambient = 0.2;
-    float lux = diffuse + ambient;
-    color = mat.color * lux;
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float randMat = u01(rng);
 
-    Ray r;
-    r.origin = intersection.intersectPos;
-    r.direction = calculateRandomDirectionInHemisphere(normal, rng);
-    pathSegment.ray = r;
+    // used 2nd suggestion for determining which material to sample
+    if (randMat <= mat.hasReflective) {
+        // specular calculation
+        glm::vec3 R = glm::reflect(pathSegment.ray.direction, normal);
+        glm::vec3 V = glm::normalize(cam.position - intersection.intersectPos);
+        color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(R, V), mat.specular.exponent) / mat.hasReflective;
+
+        pathSegment.ray.direction = R;
+    }
+    else {
+        // diffuse calculation
+        float diffuse = glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f));
+        float ambient = 0.2;
+        float lux = diffuse + ambient;
+        color = mat.color * lux / (1.f - mat.hasReflective);
+
+        pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    }
+
     pathSegment.color *= color;
     pathSegment.remainingBounces--;
-
-
-    //if (m.hasReflective > 0.f) {
-
-    //}
-    //else {
-
-    //}
 }
