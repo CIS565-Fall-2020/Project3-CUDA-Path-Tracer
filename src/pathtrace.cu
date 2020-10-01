@@ -481,8 +481,10 @@ void pathtrace(uchar4* pbo, int frame, int iter, bool sort_by_material, bool cac
         std::chrono::duration<double, std::milli> period = timer_end - timer_start;
         float prev_cpu_time = static_cast<decltype(prev_cpu_time)>(period.count());
         avgerageTime = (avgerageTime * (iter - 1) + prev_cpu_time) / (iter);
+        
+        // Debug messages
         //cout << "Iterations:" << iter << ", Depth: " << depth << ", Remaining Rays:" << num_paths << endl;
-        cout << "Iterations:" << iter << ", Time: " << prev_cpu_time << ", Average Time" << avgerageTime << endl;
+        //cout << "Iterations:" << iter << ", Time: " << prev_cpu_time << ", Average Time" << avgerageTime << endl;
     }
 
     // Assemble this iteration and apply it to the image
