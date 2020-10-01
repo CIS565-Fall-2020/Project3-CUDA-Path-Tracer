@@ -17,8 +17,8 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define SORTMATERIAL 1
-#define CACHEFIRSTBOUNCE 1
+#define SORTMATERIAL 0
+#define CACHEFIRSTBOUNCE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -78,6 +78,7 @@ static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
 static ShadeableIntersection * dev_cache_intersections = NULL;
+//static PerformanceTimer timer;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -423,7 +424,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	  // materials you have in the scenefile.
 	  // TODO: compare between directly shading the path segments and shading
 	  // path segments that have been reshuffled to be contiguous in memory.
-	  
+	 
+	//timer.startGpuTimer(); 
 	  // sort the material
 #if SORTMATERIAL
 	  thrust::device_ptr<ShadeableIntersection> dev_thrust_intersections(dev_intersections);
@@ -444,6 +446,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		  iterationComplete = true; // TODO: should be based off stream compaction results.
 	  }
 	}
+	//timer.endGpuTimer();
 
   // Assemble this iteration and apply it to the image
   dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
