@@ -7,6 +7,40 @@
  * Computes a cosine-weighted random direction in a hemisphere.
  * Used for diffuse lighting.
  */
+
+__host__ __device__
+glm::vec3 alternativeRandomDirectionInHemisphere(
+    glm::vec3 normal, thrust::default_random_engine& rng) {
+    thrust::uniform_real_distribution<float> u(0, 1);
+
+    float r = u(rng);
+    float around = u(rng) * TWO_PI;
+    float up = 1 - r;
+    float over = 2 * sqrt(r * (1 - r));
+
+
+    glm::vec3 directionNotNormal;
+    if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(1, 0, 0);
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(0, 1, 0);
+    }
+    else {
+        directionNotNormal = glm::vec3(0, 0, 1);
+    }
+
+    // Use not-normal direction to generate two perpendicular directions
+    glm::vec3 perpendicularDirection1 =
+        glm::normalize(glm::cross(normal, directionNotNormal));
+    glm::vec3 perpendicularDirection2 =
+        glm::normalize(glm::cross(normal, perpendicularDirection1));
+
+    return up * normal
+        + cos(around) * over * perpendicularDirection1
+        + sin(around) * over * perpendicularDirection2;
+}
+
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
@@ -68,12 +102,32 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
-        glm::vec3 intersect,
-        glm::vec3 normal,
-        const Material &m,
-        thrust::default_random_engine &rng) {
-    // TODO: implement this.
-    // A basic implementation of pure-diffuse shading will just call the
-    // calculateRandomDirectionInHemisphere defined above.
+	PathSegment & pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material &m,
+    thrust::default_random_engine &rng) {
+
+    pathSegment.ray.origin = intersect;
+    
+    pathSegment.remainingBounces -= 1;
+    thrust::uniform_real_distribution<float> u(0, 1);
+    float p = u(rng);
+
+    if (m.hasReflective && p > 0.5) {
+        pathSegment.color *= m.specular.color;
+        pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+    }
+    else {
+        pathSegment.color *= m.color;
+        pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    }
+
 }
+
+struct doneBouncing {
+    __host__ __device__ 
+    bool operator()(const PathSegment& pathSegment) {
+        return pathSegment.remainingBounces != 0;
+    }
+};
