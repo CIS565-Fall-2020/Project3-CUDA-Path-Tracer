@@ -7,6 +7,8 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/li-zheng-1955ba169)
 * Tested on: Windows CUDA10, i5-3600 @ 3.59GHz 16GB, RTX 2060 6GB (personal computer)
 
+![render_cornell](img/part1.PNG)  
+
 ## Part 1 - Core Features
 In this part, I implete
 - A shading kernel with BSDF evaluation for ideal Diffuse surfaces and perfectly specular-reflective surfaces.
