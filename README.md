@@ -28,7 +28,7 @@ These measurements are taken from the pathtracing process on the default Cornell
 
 ![](img/presentable/diffuse.png)
 
-#### Stream Compaction
+### Stream Compaction
 
 Stream compaction is an algorithm that removes elements from an array that meet a certain condition and reorganizes the elements so they are contiguous in place. Here, I use the `stable_partition` function in Thrust's library to target the rays who have no bounces left and need to be terminated, removing them from the rest of the paths to be considered.
 
@@ -42,17 +42,17 @@ It's important to note that this optimization works best with open scenes; these
 
 Using this scene, as opposed to the default one, creates a noticeable difference in performance between the two scene types. This is demonstrated below.
 
-![](img/graphs/stream_compaction2.png)
+![](img/graphs/stream_compaction_2.png)
 
 Indeed, the average iteration time for the open scene was **21.6799ms**, while that of the closed scene was **34.7032ms**.
 
-#### Material Sorting
+### Material Sorting
 
 Each material in the scene has a unique ID that scene intersections reference whenever they collide with a material. Continguous intersections in memory can have different materials between them, thus leading to random memory access in the materials' global memory bank. To improve memory access, intersections who share the same material can be sorted based on material ID, so intersections with the same materials are coalesced in memory.
 
 The chart, pictured later, will actually demonstrate an increase in time when material sorting is used. This is because there are few materials in the default Cornell scene, and not enough to optimize to justify the overhead of sorting repeatedly. It is expected that this will improve when there are much more materials in the scene to manage. Scenes with more materials will experience greater latency with unsorted, random memory access.
 
-#### Caching First Bounce
+### Caching First Bounce
 
 Since the target pixel coordinates don't change with each iteration, the camera shoots the same rays into the scene and hits the same geometry every time, before using random sampling to scatter into different parts of the scene. Thus, the rays' intersections from the first bounce can be stored to improve performance, since they won't be repeatedly calculated with each iteration. A plot of the cache's performance against varying levels of maximum ray depth is shown below.
 
@@ -65,7 +65,7 @@ The performance of all the optimizations combined is shown below.
 ![](img/graphs/optimization_graph.png)
 
 ## Bugs and Bloopers
-#### Stream Compaction-less Issues
+### Stream Compaction-less Issues
 
 My pathtracer cannot render images properly without using stream compaction. Here are two bloopers from when I was trying to debug this issue:
 
