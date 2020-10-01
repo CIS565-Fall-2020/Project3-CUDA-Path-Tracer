@@ -251,6 +251,7 @@ __global__ void shadeFakeMaterial(
 			// If the material indicates that the object was a light, "light" the ray
 			if (material.emittance > 0.0f) {
 				pathSegments[idx].color *= (materialColor * material.emittance);
+				pathSegments[idx].remainingBounces = 0;
 			}
 			// Otherwise, do some pseudo-lighting computation. This is actually more
 			// like what you would expect from shading in a rasterizer like OpenGL.
@@ -286,7 +287,7 @@ __global__ void finalGather(int nPaths, glm::vec3* image, PathSegment* iteration
 
 struct is_terminated {
 	__host__ __device__ bool operator()(const PathSegment& ps) {
-		return ps.color == glm::vec3(0.f);
+		return ps.color == glm::vec3(0.f) || ps.remainingBounces;
 	}
 };
 
@@ -298,8 +299,8 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera& cam = hst_scene->state.camera;
 	float2 res = { cam.resolution.x, cam.resolution.y };
-	// const int pixelcount = cam.resolution.x * cam.resolution.y;
-	const int pixelcount = 256;
+	const int pixelcount = cam.resolution.x * cam.resolution.y;
+	// const int pixelcount = 256;
 
 	// 2D block for generating ray from camera
 	// 8x8-sized block represents 8x8 chunk of image
@@ -384,6 +385,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		// TODO: compare between directly shading the path segments and shading
 		// path segments that have been reshuffled to be contiguous in memory.
 
+		std::cout << depth << std::endl;
 		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			iter,
 			num_paths,
@@ -398,10 +400,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		thrust::device_ptr<PathSegment> thrust_dev_path_end(dev_path_end);
 		dev_path_end = thrust::remove_if(thrust::device, dev_paths, dev_path_end, is_terminated());
 		num_paths = dev_path_end - dev_paths;
-		if (num_paths <= 0) {
+		if (num_paths <= 0 || traceDepth == depth) {
 			iterationComplete = true; // TODO: should be based off stream compaction results.
 		}
-
 		// iterationComplete = true; // TODO: should be based off stream compaction results.
 	}
 

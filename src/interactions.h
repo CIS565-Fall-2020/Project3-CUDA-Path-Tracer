@@ -86,11 +86,13 @@ void scatterRay(
     // used 2nd suggestion for determining which material to sample
     if (randMat <= mat.hasReflective) {
         // specular calculation
-        glm::vec3 R = glm::reflect(pathSegment.ray.direction, normal);
-        glm::vec3 V = glm::normalize(cam.position - intersection.intersectPos);
-        color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(R, V), mat.specular.exponent) / mat.hasReflective;
-
-        pathSegment.ray.direction = R;
+        glm::vec3 r = glm::reflect(pathSegment.ray.direction, normal);
+        glm::vec3 v = glm::normalize(intersection.intersectPos);
+        color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(r, v), mat.specular.exponent) / mat.hasReflective;
+        // glm::vec3 v = glm::normalize(cam.position - intersection.intersectPos);
+        // color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(r, v), mat.specular.exponent) / mat.hasReflective;
+        color = mat.specular.color;
+        pathSegment.ray.direction = r;
     }
     else {
         // diffuse calculation
@@ -98,10 +100,11 @@ void scatterRay(
         float ambient = 0.2;
         float lux = diffuse + ambient;
         color = mat.color * lux / (1.f - mat.hasReflective);
-
+        color = mat.color;
         pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
     }
 
     pathSegment.color *= color;
     pathSegment.remainingBounces--;
+    pathSegment.remainingBounces = 0;
 }
