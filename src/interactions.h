@@ -41,6 +41,33 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__
+glm::vec3 calculateImperfectSpecularDirection(
+    glm::vec3 normal, float spec_exp, thrust::default_random_engine& rng) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float s1 = u01(rng);
+    float s2 = u01(rng);
+    float theta = glm::acos(glm::pow(s1, 1.f / (spec_exp + 1.f)));
+    float phi = TWO_PI * s2;
+    glm::vec3 sample_dir(cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta));
+
+    // Compute tangent space
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
+
+    if (glm::abs(normal.x) > glm::abs(normal.y)) {
+        tangent = glm::vec3(-normal.z, 0.f, normal.x) / glm::sqrt(normal.x * normal.x + normal.z * normal.z);
+    }
+    else {
+        tangent = glm::vec3(0, normal.z, -normal.y) / glm::vec3(normal.y * normal.y + normal.z * normal.z);
+    }
+    bitangent = glm::cross(normal, tangent);
+
+    // Transform sample from specular space to tangent space
+    glm::mat3 transform(tangent, bitangent, normal);
+    return glm::normalize(transform * sample_dir);
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -76,58 +103,45 @@ void scatterRay(
 
     glm::vec3 originOffset = 0.0005f * normal;
     glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng);
-    glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
+    //glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
+    glm::vec3 reflectDir = calculateImperfectSpecularDirection(normal, m.specular.exponent, rng);
+
+    float cosine;
+    float reflect_prob;
+    float idx_ref_other = 1.f; // Replace this later
     bool entering = glm::dot(pathSegment.ray.direction, normal) < 0;
-    float etaI = entering ? 1 : m.indexOfRefraction;
-    float etaT = entering ? m.indexOfRefraction : 1;
+    float etaI = entering ? idx_ref_other : m.indexOfRefraction;
+    float etaT = entering ? m.indexOfRefraction : idx_ref_other;
     float eta = etaI / etaT;
+    cosine = entering ? -glm::dot(pathSegment.ray.direction, normal) / pathSegment.ray.direction.length() :
+        m.indexOfRefraction * glm::dot(pathSegment.ray.direction, normal) / pathSegment.ray.direction.length();
     glm::vec3 refractDir = glm::refract(pathSegment.ray.direction, normal, eta);
     if (glm::length(refractDir) == 0.f) {
-        refractDir = glm::reflect(pathSegment.ray.direction, normal);
+        reflect_prob = 1.f;
     }
-
+    else {
+        float R0 = (etaI - etaT) / (etaI + etaT);
+        R0 *= R0;
+        reflect_prob = R0 + (1.f - R0) * glm::pow(1.f - cosine, 5.f);
+    }
 
     if (m.hasReflective) {
         // reflective
-        thrust::uniform_real_distribution<float> u01(0, 1);
-        float r = u01(rng);
-
-        if (r < 1.f - m.specular.exponent) {
-            // diffuse
-            pathSegment.ray.direction = diffuseDir;
-            pathSegment.color *= (m.color * (1.f - m.specular.exponent));
-            originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
-            pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
-        }
-        else {
-            // specular
-            pathSegment.ray.direction = reflectDir;
-            pathSegment.color *= (m.specular.color * m.specular.exponent);
-            originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
-            pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
-            //float r0 = glm::pow((etaI - etaT) / (etaI + etaT), 2.f);
-            //float schlick_coeff = r0 + (1 - r0) * glm::pow(1.f - glm::dot(pathSegment.ray.direction, normal), 5.f);
-            //pathSegment.color *= (m.specular.color * schlick_coeff * m.specular.exponent);
-        }
+        pathSegment.ray.direction = reflectDir;
+        pathSegment.color *= (m.specular.color);
+        originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+        pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
     }
     else if (m.hasRefractive) {
         // refractive
         thrust::uniform_real_distribution<float> u01(0, 1);
-        float r = u01(rng);
-
-        if (r < 1.f - m.specular.exponent) {
-            // diffuse
-            pathSegment.ray.direction = diffuseDir;
-            pathSegment.color *= (m.color * (1.f - m.specular.exponent));
-            originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
-            pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
+        float prob = u01(rng);
+        if (prob < reflect_prob) {
+            refractDir = glm::reflect(pathSegment.ray.direction, normal);
         }
-        else {
-            // specular
-            pathSegment.ray.direction = refractDir;
-            pathSegment.color *= (m.specular.color * m.specular.exponent);
-            pathSegment.ray.origin = intersect + 0.0005f * refractDir; // avoid shadow acne
-        }
+        pathSegment.ray.direction = refractDir;
+        pathSegment.color *= (m.specular.color);
+        pathSegment.ray.origin = intersect + 0.0005f * refractDir; // avoid shadow acne
     }
     else {
         // uniform diffuse
