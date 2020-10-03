@@ -84,10 +84,12 @@ static ShadeableIntersection* dev_intersections = nullptr;
 static PathSegment* dev_first_paths = nullptr;
 static ShadeableIntersection* dev_first_intersections = nullptr;
 
-// TODO: static variables for device memory, any extra info you need, etc
-static int* dev_sobol_seed = nullptr;//debug
+// Sobol sequence start point for each pixel
+static int* dev_sobol_seed = nullptr;
 
-//debug
+// TODO: static variables for device memory, any extra info you need, etc
+
+// Generate the start point of sobol sequence for each pixel
 __global__ void generateSeed(Camera cam, int* sobolSeed) {
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -124,8 +126,10 @@ void pathtraceInit(Scene *scene) {
     cudaMalloc(&dev_first_intersections, pixelcount * sizeof(ShadeableIntersection));
     cudaMemset(dev_first_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
+    // Sobol sequence start point for each pixel
+    cudaMalloc(&dev_sobol_seed, pixelcount * sizeof(int));
+
     // TODO: initialize any extra device memeory you need
-    cudaMalloc(&dev_sobol_seed, pixelcount * sizeof(int));//debug
 
     const dim3 blockSize2d(8, 8);
     const dim3 blocksPerGrid2d(
@@ -147,8 +151,10 @@ void pathtraceFree() {
     cudaFree(dev_first_paths);
     cudaFree(dev_first_intersections);
 
+    // Sobol sequence start point for each pixel
+    cudaFree(dev_sobol_seed);
+
     // TODO: clean up any extra device memory you created
-    cudaFree(dev_sobol_seed);//debug
 
     checkCUDAError("pathtraceFree");
 }

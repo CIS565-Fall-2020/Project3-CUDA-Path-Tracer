@@ -30,32 +30,7 @@ int height;
 //-------------MAIN--------------
 //-------------------------------
 
-void testModule(int n) {//debug
-
-    int vec[10][2] = {
-        0x8680u, 0x4c80u, 0xf240u, 0x9240u, 0x8220u, 0x0e20u,
-        0x4110u, 0x1610u, 0xa608u, 0x7608u, 0x8a02u, 0x280au,
-        0xe204u, 0x9e04u, 0xa400u, 0x4682u, 0xe300u, 0xa74du,
-        0xb700u, 0x9817u
-    };
-    
-
-    for (int i = 0; i < n; i++) {
-        glm::ivec2 sample(0);
-        int ith = i;
-        for (int k = 0; ith > 0; ith >>= 1, k++) {
-            sample[0] ^= (ith & 1) ? vec[k][0] : 0;
-            sample[1] ^= (ith & 1) ? vec[k][1] : 0;
-        }
-        float inverseRange = 1.0 / 0x10000;
-        float x = (float)sample.x * inverseRange;
-        float y = (float)sample.y * inverseRange;
-        std::cout << x << "     " << y << std::endl;
-    }
-}
-
 int main(int argc, char** argv) {
-    testModule(16);//debug
     startTimeString = currentTimeString();
 
     if (argc < 2) {
