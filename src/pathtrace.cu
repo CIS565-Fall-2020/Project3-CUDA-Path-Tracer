@@ -18,12 +18,10 @@
 #include "intersections.h"
 #include "interactions.h"
 
-// Measure performance
-#define TIMEPATHTRACE 1
-
-// Improve performance
-#define SORTPATHSBYMATERIAL 1
-#define CACHEFIRSTINTERSECTIONS 0
+#define TIMEPATHTRACE 0 // Measure performance
+#define DEPTHOFFIELD 1
+#define SORTPATHSBYMATERIAL 1 // Improve performance
+#define CACHEFIRSTINTERSECTIONS 0 // Improve performance
 
 #define ERRORCHECK 1
 
@@ -86,11 +84,11 @@ static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
-
-// Measure performance
-static std::chrono::steady_clock::time_point timePathTrace;
-
-static ShadeableIntersection* dev_firstIntersections = NULL;
+static ShadeableIntersection* dev_firstIntersections = NULL; // Cache first bounce of first iter to be re-use in other iters
+static std::chrono::steady_clock::time_point timePathTrace; // Measure performance
+// Depth of field
+static float lensRadius = 0.5f;
+static float focalDist = 10.f;
 
 void pathtraceInit(Scene* scene) {
   hst_scene = scene;
@@ -308,6 +306,10 @@ __global__ void finalGather(int nPaths, glm::vec3* image, PathSegment* iteration
   }
 }
 
+// ----------------------------------------------------------------------------------------------
+// ---------------------------- STREAM COMPACTION -----------------------------------------------
+// ----------------------------------------------------------------------------------------------
+
 struct pathIsAlive {
   __host__ __device__ 
     bool operator()(const PathSegment& path) {
@@ -321,6 +323,69 @@ struct compareMaterial {
     return isect1.materialId > isect2.materialId;
   }
 };
+
+// ----------------------------------------------------------------------------------------------
+// ---------------------------- DEPTH OF FIELD --------------------------------------------------
+// ----------------------------------------------------------------------------------------------
+
+// Assume that the input is a vec2 where each component is a uniform random number [-1, 1]
+__host__ __device__ glm::vec2 sampleConcentricDisk(const glm::vec2& u) {
+  // Handle degeneracy at the origin
+  if (u.x == 0 && u.y == 0) {
+    return glm::vec2(0.f);
+  }
+  float theta = 0.f;
+  float r = 0.f;
+  if (glm::abs(u.x) > glm::abs(u.y)) {
+    r = u.x;
+    theta = glm::pi<float>() / 4.f * u.y / u.x;
+  }
+  else {
+    r = u.y;
+    theta = glm::pi<float>() / 2.f - glm::pi<float>() / 4.f * u.x / u.y;
+  }
+  return r * glm::vec2(glm::cos(theta), glm::sin(theta));
+}
+
+// Based on PBRT 6.2.3 
+__global__ void updateRaysForDepthOfField(
+  int iter,
+  int numPaths,
+  float camResX, float camResY,
+  float lensRadius, float focalDist,
+  PathSegment* pathSegments)
+{
+  int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+  int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+  if (x >= camResX || y >= camResY) {
+    return;
+  }
+  int index = x + (y * camResX);
+
+  // Sample point on lens
+  thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+  thrust::uniform_real_distribution<float> urd(-1, 1);
+  float sampleX = urd(rng);
+  float sampleY = urd(rng);
+  glm::vec2 sample = glm::vec2(sampleX, sampleY);
+  glm::vec2 diskSample = sampleConcentricDisk(sample);  // Warp from square to uniform
+  glm::vec3 offset = lensRadius * glm::vec3(diskSample.x, diskSample.y, 0.f);
+
+  //Compute point on plane of focus
+  Ray rayCopy = pathSegments[index].ray;
+  float ft = glm::abs(focalDist / rayCopy.direction.z);
+  glm::vec3 pFocus = rayCopy.origin + rayCopy.direction * ft;
+
+  // Update ray for effect of lens
+   glm::vec3 newOrigin = rayCopy.origin + offset;
+   glm::vec3 newDirection = glm::normalize(pFocus - newOrigin);
+   pathSegments[index].ray.origin = newOrigin;
+   pathSegments[index].ray.direction = newDirection;
+}
+
+// ----------------------------------------------------------------------------------------------
+// ---------------------------- MAIN ------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------
 
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
@@ -378,6 +443,12 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
   generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
   checkCUDAError("generate camera ray");
+
+#if DEPTHOFFIELD
+  updateRaysForDepthOfField << <blocksPerGrid2d, blockSize2d >> > (iter, pixelcount, cam.resolution.x, cam.resolution.y, lensRadius, focalDist, dev_paths);
+  checkCUDAError("depth of field");
+#endif
+
 
   int depth = 0;
   PathSegment* dev_path_end = dev_paths + pixelcount;
