@@ -136,7 +136,7 @@ void refraction(
     glm::vec3 refract_normal;
     glm::vec3& ray_dir = pathSegment.ray.direction;
 
-    bool isEntering =  glm::dot(ray_dir,  normal) > 0.0;
+    bool isEntering =  glm::dot(ray_dir,  normal) < 0.0;
     float eta = isEntering ? etaA / etaB : etaB / etaA;
     refract_normal = isEntering ? normal : - normal;
 

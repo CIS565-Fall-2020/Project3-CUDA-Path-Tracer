@@ -43,9 +43,9 @@ MATERIAL 4
 RGB         .98 .98 .98
 SPECEX      500
 SPECRGB     .98 .98 .98
-REFL        0.5
-REFR        0.5
-REFRIOR     2.0
+REFL        1
+REFR        0
+REFRIOR     0
 EMITTANCE   0
 
 // refract white
@@ -55,15 +55,15 @@ SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
 REFR        1
-REFRIOR     1.5
+REFRIOR     2.0
 EMITTANCE   0
 
 // Camera
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  200
-DEPTH       32
+ITERATIONS  5000
+DEPTH       16
 FILE        cornell
 EYE         0.0 5 10.5
 LOOKAT      0 5 0
@@ -133,4 +133,4 @@ sphere
 material 5
 TRANS       3 4 -1
 ROTAT       0 0 0
-SCALE       2 2 2
+SCALE       4 4 4
