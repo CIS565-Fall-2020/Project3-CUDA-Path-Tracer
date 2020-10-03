@@ -394,7 +394,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
-    //printf("depth: %d  nums_path:  %d\n", depth - 1, num_paths);
+    printf("depth: %d  nums_path:  %d\n", depth - 1, num_paths);
 
   bool iterationComplete = false;
 	while (!iterationComplete) {
@@ -480,7 +480,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     PathSegment *new_end =  thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, is_terminate());
     num_paths = new_end - dev_paths;
-    //printf("depth: %d  nums_path:  %d\n", depth, num_paths);
+    printf("depth: %d  nums_path:  %d\n", depth, num_paths);
     if (num_paths <= 0) {
         depth = traceDepth;
         //printf("no bounces!\n");
