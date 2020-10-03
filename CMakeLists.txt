@@ -73,6 +73,9 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    src/mesh.h 
+    src/json.hpp 
+    src/tiny_gltf.h
     )
 
 set(sources
@@ -84,6 +87,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/mesh.cpp
     )
 
 list(SORT headers)
