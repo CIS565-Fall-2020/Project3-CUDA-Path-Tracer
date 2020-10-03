@@ -48,7 +48,14 @@ __host__ __device__ glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
 __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
         glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
     Ray q;
-    q.origin    =                multiplyMV(box.inverseTransform, glm::vec4(r.origin   , 1.0f));
+    glm::vec3 ro;
+    if (box.moving) {
+        ro = r.origin - r.time * (box.target - box.translation);
+    }
+    else {
+        ro = r.origin;
+    }
+    q.origin = multiplyMV(box.inverseTransform, glm::vec4(ro, 1.0f));
     q.direction = glm::normalize(multiplyMV(box.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     float tmin = -1e38f;
@@ -83,6 +90,9 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
             outside = false;
         }
         intersectionPoint = multiplyMV(box.transform, glm::vec4(getPointOnRay(q, tmin), 1.0f));
+        if (box.moving) {
+            intersectionPoint += r.time * (box.target - box.translation);
+        }
         normal = glm::normalize(multiplyMV(box.invTranspose, glm::vec4(tmin_n, 0.0f)));
         return glm::length(r.origin - intersectionPoint);
     }
@@ -103,7 +113,14 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
         glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
     float radius = .5;
 
-    glm::vec3 ro = multiplyMV(sphere.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 ro;
+    if (sphere.moving) {
+        ro = r.origin - r.time * (sphere.target - sphere.translation);
+        ro = multiplyMV(sphere.inverseTransform, glm::vec4(ro, 1.0f));
+    }
+    else {
+        ro = multiplyMV(sphere.inverseTransform, glm::vec4(r.origin, 1.0f));
+    }
     glm::vec3 rd = glm::normalize(multiplyMV(sphere.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     Ray rt;
@@ -133,8 +150,10 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     }
 
     glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
-
     intersectionPoint = multiplyMV(sphere.transform, glm::vec4(objspaceIntersection, 1.f));
+    if (sphere.moving) {
+        intersectionPoint += r.time * (sphere.target - sphere.translation);
+    }
     normal = glm::normalize(multiplyMV(sphere.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
     if (!outside) {
         normal = -normal;
@@ -142,3 +161,4 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+

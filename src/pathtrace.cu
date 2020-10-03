@@ -23,7 +23,8 @@
 #define CACHE_ENABLE 0
 #define PROFILE_ENABLE 0
 #define DEPTH_OF_FIELD_ENABLE 0
-#define ANTIALIASING 0
+#define ANTIALIASING 1
+#define MOTION_BLUR_ENABLE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -190,7 +191,13 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f);
 		glm::vec3 target = cam.position + segment.ray.direction * asp;
 		segment.ray.direction = glm::normalize(target - segment.ray.origin);
-#endif 
+#endif
+
+#if MOTION_BLUR_ENABLE 
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+		thrust::uniform_real_distribution<float> u02(0.0f, 1.0f);
+		segment.ray.time = u02(rng);
+#endif
 	}
 }
 
