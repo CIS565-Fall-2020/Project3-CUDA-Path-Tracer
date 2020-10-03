@@ -85,6 +85,63 @@ glm::vec3 squareToHemisphereCosine(thrust::default_random_engine& rng) {
     return sampleDisk;
 }
 
+__host__ __device__
+bool refract(const glm::vec3& v, const glm::vec3& n, float ni_over_nt, glm::vec3& refracted) {
+    glm::vec3 vNormalized = glm::normalize(v);
+    float dt = glm::dot(vNormalized, n);
+    float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1.0 - dt * dt);
+    if (discriminant > 0.f) {
+        refracted = ni_over_nt * (vNormalized - n * dt) - n * glm::sqrt(discriminant);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+__host__ __device__
+float schlick(float cosine, float IOR) {
+    float r0 = (1.0 - IOR) / (1.0 + IOR);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * glm::pow(1.0 - cosine, 5);
+}
+__host__ __device__
+void scatterDielectric(float IOR, Ray& rIn, glm::vec3 intersect, glm::vec3 normal, thrust::default_random_engine& rng) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+
+    glm::vec3 normalOut;
+    glm::vec3 reflected = glm::normalize(glm::reflect(rIn.direction, normal));
+    float ni_over_nt;
+    glm::vec3 refracted;
+    float reflectProb;
+    float cosine;
+    if (glm::dot(rIn.direction, normal) > 0.f) {
+        normalOut = -normal;
+        ni_over_nt = IOR;
+        cosine = IOR * glm::dot(rIn.direction, normal) / glm::length(rIn.direction);
+    }
+    else {
+        normalOut = normal;
+        ni_over_nt = 1.0 / IOR;
+        cosine = -glm::dot(rIn.direction, normal) / glm::length(rIn.direction);
+    }
+    if (refract(rIn.direction, normalOut, ni_over_nt, refracted)) {
+        reflectProb = schlick(cosine, IOR);
+    }
+    else {
+        rIn.origin = intersect;
+        rIn.direction = reflected;
+        reflectProb = 1.0;
+    }
+    if (u01(rng) < reflectProb) {
+        rIn.origin = intersect;
+        rIn.direction = reflected;
+    }
+    else {
+        rIn.origin = intersect;
+        rIn.direction = refracted;
+    }
+}
 
 /**
  * Scatter a ray with some probabilities according to the material properties.
@@ -124,12 +181,15 @@ void scatterRay(
     if (m.hasReflective > 0.f) {
         // Update "color" parameter in place
         pathSegment.color *= m.color;
-        // Update "ray" parameter in place
+        // Update "ray" parameters in place
         pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
         pathSegment.ray.origin = intersect;
     }
     else if (m.hasRefractive > 0.f) {
-
+        // Update "color" parameter in place
+        pathSegment.color *= glm::vec3(1.f);
+        // scatterDielectric() modifies/updates "ray" parameters in place
+        scatterDielectric(m.indexOfRefraction, pathSegment.ray, intersect, normal, rng);
     }
     else {
             // Calculate new ray direction
@@ -165,9 +225,14 @@ void scatterRay(
 
         // Update "color" parameter in place
         pathSegment.color *= m.color;
-        // Update "ray" parameter in place
+        // Update "ray" parameters in place
         pathSegment.ray.direction = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
         pathSegment.ray.origin = intersect;
     }
-    
+    // Offset the new ray origin by a tiny amount so that the ray does not intersect
+    // with the area it just hitted. Note that this does not necessarily mean that
+    // the ray cannot hit the same geometry again because in the case of refraction, the
+    // ray can still refract and hit and geometry again, and we just want to make sure that
+    // the ray doesn't hit the place it just hitted.
+    pathSegment.ray.origin += 0.0001f * pathSegment.ray.direction;
 }

@@ -31,7 +31,7 @@
 #define ANTIALIASING true
 
 static float focalDistance = 11.5f;
-static float lensRadius = 1.5f;
+static float lensRadius = 0.0f; // 1.5f
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #if ERRORCHECK
@@ -354,8 +354,8 @@ __global__ void shadeBSDFMaterial(
             // TODO: replace this! you should be able to start with basically a one-liner
             else {
                 if (pathSegments[idx].remainingBounces > 0) {
-                    glm::vec3 intersectPoint = getPointOnRay(pathSegments[idx].ray, intersection.t);
-                    scatterRay(pathSegments[idx], intersectPoint, intersection.surfaceNormal, material, rng);
+                    glm::vec3 intersectPoint = pathSegments[idx].ray.origin + intersection.t * pathSegments[idx].ray.direction;
+                    scatterRay(pathSegments[idx], intersectPoint, intersection.surfaceNormal, material, rng); 
                 }
                 else {
                     // means it's the last bounce (0 remaining bounce) and we still don't hit the light
@@ -369,8 +369,6 @@ __global__ void shadeBSDFMaterial(
         }
         else {
             pathSegments[idx].color = glm::vec3(0.f);
-            // Terminate ray by setting remaining bounces to 0
-            // pathSegments[idx].remainingBounces = 0;
         }
     }
 }
