@@ -45,6 +45,7 @@ int main(int argc, char** argv) {
 
     // Load scene file
     scene = new Scene(sceneFile);
+    scene->buildTree();
 
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
@@ -111,8 +112,7 @@ void runCuda() {
 
         cam.view = -glm::normalize(cameraPosition);
         glm::vec3 v = cam.view;
-        glm::vec3 u = glm::vec3(0, 1, 0);//glm::normalize(cam.up);
-        glm::vec3 r = glm::cross(v, u);
+        glm::vec3 r = glm::normalize(glm::cross(v, glm::vec3(0, 1, 0)));
         cam.up = glm::cross(r, v);
         cam.right = r;
 
@@ -209,4 +209,10 @@ void mousePositionCallback(GLFWwindow* window, double xpos, double ypos) {
   }
   lastX = xpos;
   lastY = ypos;
+}
+
+void scrollCallback(GLFWwindow *window, double x, double y) {
+    zoom -= y * 0.1f;
+    zoom = std::fmax(0.1f, zoom);
+    camchanged = true;
 }

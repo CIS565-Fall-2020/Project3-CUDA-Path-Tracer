@@ -7,9 +7,11 @@
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
-enum GeomType {
+enum class GeomType : unsigned char {
+	INVALID,
 	SPHERE,
 	CUBE,
+	TRIANGLE
 };
 
 struct Ray {
@@ -17,15 +19,28 @@ struct Ray {
 	glm::vec3 direction;
 };
 
+struct GeomTransform {
+	glm::mat4x3 transform;
+	glm::mat4x3 inverseTransform;
+};
 struct Geom {
-	enum GeomType type;
-	int materialid;
-	glm::vec3 translation;
-	glm::vec3 rotation;
-	glm::vec3 scale;
-	glm::mat4 transform;
-	glm::mat4 inverseTransform;
-	glm::mat4 invTranspose;
+	Geom() {
+	}
+	Geom(const Geom &src) {
+		std::memcpy(this, &src, sizeof(Geom));
+	}
+	~Geom() {
+	}
+
+	union {
+		GeomTransform implicit;
+		struct {
+			glm::vec3 vertices[3];
+			glm::vec3 normals[3];
+		} triangle;
+	};
+	int materialid = -1;
+	GeomType type = GeomType::INVALID;
 };
 
 struct Material {
@@ -49,6 +64,7 @@ struct Camera {
 	glm::vec3 right;
 	glm::vec2 fov;
 	glm::vec2 pixelLength;
+	float aperture = 0.0f, focalDistance = 10.0f;
 };
 
 struct RenderState {
@@ -76,6 +92,6 @@ struct ShadeableIntersection {
 };
 
 struct AABBTreeNode {
-	glm::vec3 aabbMin, aabbMax;
+	glm::vec3 leftAABBMin, leftAABBMax, rightAABBMin, rightAABBMax;
 	int leftChild, rightChild;
 };

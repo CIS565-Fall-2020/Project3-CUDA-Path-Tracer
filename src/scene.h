@@ -8,17 +8,23 @@
 #include "utilities.h"
 #include "sceneStructs.h"
 
-using namespace std;
-
 class Scene {
 private:
-    ifstream fp_in;
-    int loadMaterial(string materialid);
-    int loadGeom(string objectid);
+    std::ifstream fp_in;
+    int loadMaterial(std::string materialid);
+    int loadGeom(std::string objectid);
     int loadCamera();
+
+    static std::vector<Geom> loadObj(std::istream&);
+
+    static void aabbForGeom(const Geom &geom, glm::vec3 *min, glm::vec3 *max);
 public:
-    Scene(string filename);
-    ~Scene();
+    Scene(std::string filename);
+
+    void buildTree();
+
+    std::vector<AABBTreeNode> aabbTree;
+    int aabbTreeRoot;
 
     std::vector<Geom> geoms;
     std::vector<Material> materials;

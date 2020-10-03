@@ -42,6 +42,12 @@ __host__ __device__ glm::vec3 calculateRandomDirectionInHemisphere(
 
 }
 
+__host__ __device__ glm::vec2 sampleUnitDiskUniform(thrust::default_random_engine &rng) {
+	thrust::uniform_real_distribution<float> angleDist(0.0f, 2.0f * glm::pi<float>()), radiusDist(0.0f, 1.0f);
+	float angle = angleDist(rng), radius = glm::sqrt(radiusDist(rng));
+	return glm::vec2(glm::cos(angle), glm::sin(angle)) * radius;
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -79,12 +85,34 @@ __host__ __device__ void scatterRay(
 		--path.remainingBounces;
 		if (m.hasReflective) {
 			path.ray.direction = glm::reflect(path.ray.direction, normal);
+		} else if (m.hasRefractive) {
+			float ior = m.indexOfRefraction, cosOut = -glm::dot(normal, path.ray.direction);
+			if (cosOut < 0.0f) {
+				normal = -normal;
+				cosOut = -cosOut;
+			} else {
+				ior = 1.0f / ior;
+			}
+
+			float fresnel = 1.0f;
+			float sinOut = glm::sqrt(1.0f - cosOut * cosOut);
+			float sinIn = sinOut * ior;
+			if (sinIn <= 1.0f) {
+				float cosIn = glm::sqrt(1.0f - sinIn * sinIn);
+				float rParl = (cosOut - ior * cosIn) / (cosOut + ior * cosIn);
+				float rPerp = (ior * cosOut - cosIn) / (ior * cosOut + cosIn);
+				fresnel = 0.5f * (rPerp * rPerp + rParl * rParl);
+			}
+
+			thrust::uniform_real_distribution<float> fresnelDist(0.0f, 1.0f);
+			if (fresnelDist(rng) < fresnel) { // reflect
+				path.ray.direction = glm::reflect(path.ray.direction, normal);
+			} else { // refract
+				path.ray.direction = glm::normalize(glm::refract(path.ray.direction, normal, ior));
+			}
 		} else {
 			path.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
 		}
 		path.ray.origin += 0.01f * path.ray.direction;
 	}
-	// TODO: implement this.
-	// A basic implementation of pure-diffuse shading will just call the
-	// calculateRandomDirectionInHemisphere defined above.
 }
