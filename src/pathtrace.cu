@@ -90,6 +90,19 @@ static ShadeableIntersection * dev_intersections = NULL;
 static ShadeableIntersection* dev_first_intersections_cache = NULL;
 #endif
 
+#if material_sort_ID
+static int * dev_materialIDs = NULL;
+thrust::device_ptr<ShadeableIntersection> dev_thrust_intersections;
+thrust::device_ptr<PathSegment> dev_thrust_paths;
+thrust::device_ptr<int> dev_thrust_ID;
+thrust::zip_iterator<
+    thrust::tuple<
+    thrust::device_ptr<ShadeableIntersection>,
+    thrust::device_ptr<PathSegment>
+    >
+> zip_it;
+#endif
+
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
@@ -115,6 +128,10 @@ void pathtraceInit(Scene *scene) {
     cudaMemset(dev_first_intersections_cache, 0, pixelcount * sizeof(ShadeableIntersection));
 #endif
 
+#if material_sort_ID
+    cudaMalloc(&dev_materialIDs, pixelcount * sizeof(int));
+    cudaMemset(dev_materialIDs, 0,  pixelcount * sizeof(int));
+#endif
     checkCUDAError("pathtraceInit");
 }
 
@@ -127,6 +144,11 @@ void pathtraceFree() {
     // TODO: clean up any extra device memory you created
 #if cache_first_bounce
     cudaFree(dev_first_intersections_cache);
+#endif
+#if material_sort
+#if material_sort_ID
+    cudaFree(dev_materialIDs);
+#endif
 #endif
     checkCUDAError("pathtraceFree");
 }
@@ -395,6 +417,17 @@ struct material_operator_bigger {
 };
 
 
+struct materialID_operator_bigger {
+    __host__ __device__
+        bool operator()(const int& id1, const int& id2)
+    {
+
+        return id1 > id2;
+    }
+};
+
+
+
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
@@ -412,6 +445,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	// 1D block for path tracing
 	const int blockSize1d = 128;
+
+    dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -521,8 +556,36 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         // TODO: compare between directly shading the path segments and shading
         // path segments that have been reshuffled to be contiguous in memory.
 #if material_sort
+#if material_sort_ID
+         // map intersections -> ID(int) to trigger radix sort
+        construct_materialIDs << <numblocksPathSegmentTracing, blockSize1d >> > (num_paths, dev_intersections, dev_materialIDs);
+        // have to sort both intersections and paths by key
+        // ref https://stackoverflow.com/questions/6617066/sorting-3-arrays-by-key-in-cuda-using-thrust-perhaps/42484689#42484689
+        /*
+        thrust::device_vector<ShadeableIntersection> dev_thrust_intersections_vec(dev_intersections, dev_intersections + num_paths);
+        thrust::device_vector<PathSegment> dev_thrust_paths_vec(dev_paths, dev_paths + num_paths);
+        thrust::device_vector<int> dev_thrust_ID_vec(dev_materialIDs, dev_materialIDs + num_paths);
+        thrust::zip_iterator<
+            thrust::tuple<
+                thrust::device_vector<ShadeableIntersection>::iterator, 
+                thrust::device_vector<PathSegment>::iterator>
+            > 
+            zip_it 
+            = thrust::make_zip_iterator(thrust::make_tuple(dev_thrust_intersections_vec.begin(), dev_thrust_paths_vec.begin()));
+        thrust::sort_by_key(dev_thrust_ID_vec.begin(), dev_thrust_ID_vec.end(), zip_it);
+        */
+        dev_thrust_intersections = thrust::device_ptr<ShadeableIntersection>(dev_intersections);
+        dev_thrust_paths = thrust::device_ptr<PathSegment>(dev_paths);
+        dev_thrust_ID = thrust::device_ptr<int>(dev_materialIDs);
+        zip_it = thrust::make_zip_iterator(thrust::make_tuple(dev_thrust_intersections, dev_thrust_paths));
+        thrust::sort_by_key(dev_thrust_ID, dev_thrust_ID + num_paths, zip_it);
+
+#else
         thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, material_operator_bigger());
+
 #endif
+       
+        #endif
         shadeTrueMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
         iter,
         num_paths,
@@ -548,7 +611,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	}
 
   // Assemble this iteration and apply it to the image
-    dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
+    
 	//finalGather<<<numBlocksPixels, blockSize1d>>>(num_paths, dev_image, dev_paths);
     finalGather << <numBlocksPixels, blockSize1d >> > (pixelcount, dev_image, dev_paths);
 

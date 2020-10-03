@@ -41,11 +41,11 @@ EMITTANCE   0
 // Specular white
 MATERIAL 4
 RGB         .98 .98 .98
-SPECEX      500
+SPECEX      0
 SPECRGB     .98 .98 .98
-REFL        0.5
-REFR        0.5
-REFRIOR     2.0
+REFL        1
+REFR        0
+REFRIOR     0
 EMITTANCE   0
 
 // refract white
@@ -55,7 +55,7 @@ SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
 REFR        1
-REFRIOR     3.0
+REFRIOR     1.5
 EMITTANCE   0
 
 // Camera
@@ -126,11 +126,3 @@ material 4
 TRANS       -1 4 -1
 ROTAT       0 0 0
 SCALE       3 3 3
-
-// Sphere
-OBJECT 7
-sphere
-material 5
-TRANS       3 4 -1
-ROTAT       0 0 0
-SCALE       2 2 2

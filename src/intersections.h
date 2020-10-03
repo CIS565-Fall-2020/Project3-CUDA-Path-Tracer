@@ -142,3 +142,13 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+// Jack12 add intersections helper function here
+__global__ void construct_materialIDs(int num_paths, ShadeableIntersection* intersections, int * materialID) {
+
+    int path_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (path_index < num_paths) {
+        materialID[path_index] = intersections[path_index].materialId;
+    }
+}
