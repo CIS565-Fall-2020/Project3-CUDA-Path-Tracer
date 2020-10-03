@@ -70,18 +70,9 @@ int main(int argc, char** argv) {
     // Initialize CUDA and GL components
     init();
 
-    // Jacky added code for timing purposes
-    // auto startTime = std::chrono::high_resolution_clock::now();
-
     // GLFW main loop
     mainLoop();
 
-    // Jacky added code for timing purposes
-    /*
-    auto endTime = std::chrono::high_resolution_clock::now();
-    std::cout << "Time Duration: " <<
-        std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count() << " microseconds." << std::endl;
-    */
     return 0;
 }
 
@@ -132,9 +123,15 @@ void runCuda() {
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
+    // Performance Timing Variables (Jacky added)
+    std::chrono::high_resolution_clock::time_point startTime, endTime;
+
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
+
+        // Jacky added code for timing purposes
+        startTime = std::chrono::high_resolution_clock::now();
     }
 
     if (iteration < renderState->iterations) {
@@ -149,6 +146,11 @@ void runCuda() {
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
+        // Jacky added code for timing purposes
+        endTime = std::chrono::high_resolution_clock::now();
+        std::cout << "Time Duration: " <<
+            std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count() << std::endl;
+
         saveImage();
         pathtraceFree();
         cudaDeviceReset();
