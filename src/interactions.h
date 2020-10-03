@@ -4,6 +4,8 @@
 #include <thrust/remove.h>
 #include <thrust/execution_policy.h>
 
+#define SOBOL_SAMPLE 0
+
 // Evaluate fresnel coefficient for reflection and refraction
 __host__ __device__ float fresnelEvaluate(
     float etaI, float etaT,
@@ -75,6 +77,49 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__device__ __host__ glm::vec3 sampleSobolHemishpere(
+    glm::vec3 normal, int ith) {
+    
+    ith = ith % 1024;
+    int vec[10][2] = {
+        0x8680u, 0x4c80u, 0xf240u, 0x9240u, 0x8220u, 0x0e20u,
+        0x4110u, 0x1610u, 0xa608u, 0x7608u, 0x8a02u, 0x280au,
+        0xe204u, 0x9e04u, 0xa400u, 0x4682u, 0xe300u, 0xa74du,
+        0xb700u, 0x9817u
+    };
+    glm::ivec2 sample(0);
+    for (int k = 0; ith > 0; ith >>= 1, k++) {
+        sample[0] ^= (ith & 1) ? vec[k][0] : 0;
+        sample[1] ^= (ith & 1) ? vec[k][1] : 0;
+    }
+
+    float inverseRange = 1.0 / 0x10000;
+    float up = sqrt((float)sample.x * inverseRange);
+    float over = sqrt(1 - up * up);
+    float around = (float)sample.y * inverseRange * TWO_PI;
+
+    glm::vec3 directionNotNormal;
+    if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(1, 0, 0);
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(0, 1, 0);
+    }
+    else {
+        directionNotNormal = glm::vec3(0, 0, 1);
+    }
+
+    // Use not-normal direction to generate two perpendicular directions
+    glm::vec3 perpendicularDirection1 =
+        glm::normalize(glm::cross(normal, directionNotNormal));
+    glm::vec3 perpendicularDirection2 =
+        glm::normalize(glm::cross(normal, perpendicularDirection1));
+
+    return up * normal
+        + cos(around) * over * perpendicularDirection1
+        + sin(around) * over * perpendicularDirection2;
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -106,95 +151,81 @@ void scatterRay(
         glm::vec3 intersect,
         glm::vec3 normal,
         const Material &m,
-        thrust::default_random_engine &rng) {
+        thrust::default_random_engine &rng,
+        int ith) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
 
-    int BxDFs[3] = { 0, 0, 0 }; // [0]: Diffuse [1]: Reflection [2]: Refraction
-    int matCt = 0;
-
-    // debug
-    int deb = pathSegment.pixelIndex;
-    
-    if (m.hasReflective) {
-        BxDFs[1] = 1;
-        matCt++;
-    }
-    if (m.hasRefractive) {
-        BxDFs[2] = 1;
-        matCt++;
-    }
-    if (matCt == 0) {
-        BxDFs[0] = 1;
-        matCt++;
-    }
-    
-    thrust::uniform_int_distribution<int> uMat(0, matCt - 1);
-    int comp = uMat(rng);
-    int bxdf = 0;
-    while (bxdf < 3) {
-        if (BxDFs[bxdf] == 1 && (comp-- == 0)) {
-            break;
-        }
-        bxdf++;
-    }
     
     glm::vec3 newDir;
     float pdf;
     glm::vec3 f;
+    bool entering = glm::dot(normal, pathSegment.ray.direction) < 0;
 
-    if (bxdf == 0) { // Diffuse
+    if (m.hasReflective == 1 && m.hasRefractive == 1) { // Refraction
+        float eta = entering ? 1.f / m.indexOfRefraction : m.indexOfRefraction;
+        float cosThetaI = glm::dot(normal, pathSegment.ray.direction);
+        if (eta * eta * (1.f - cosThetaI * cosThetaI) > 1.f) { // Total internel reflection
+            newDir = glm::reflect(pathSegment.ray.direction, normal);
+            f = m.specular.color;
+            pdf = 1.f;
+            float fresnel = 1.f;
+            pathSegment.color *= f * fresnel / pdf;
+            pathSegment.remainingBounces--;
+            pathSegment.ray.origin = intersect;
+        }
+        else {
+            newDir = glm::refract(pathSegment.ray.direction, normal, eta);
+            float cosThetaT = glm::dot(newDir, normal);
+            float fresnel = fresnelEvaluate(1.f, m.indexOfRefraction, cosThetaT);
+            thrust::uniform_real_distribution<float> u01(0, 1);
+            if (u01(rng) > fresnel) { // Refract
+                f = m.color;
+                pdf = 1.f - fresnel;
+                pathSegment.color *= f * (1.f - fresnel) / pdf;
+                pathSegment.remainingBounces--;
+                pathSegment.ray.origin = intersect +
+                    glm::normalize(pathSegment.ray.direction) * 0.0002f;
+            }
+            else { // Reflect
+                newDir = glm::reflect(pathSegment.ray.direction, normal);
+                f = m.specular.color;
+                pdf = fresnel;
+                pathSegment.color *= f * fresnel / pdf;
+                pathSegment.remainingBounces--;
+                pathSegment.ray.origin = intersect;
+            }
+        }
+        pathSegment.ray.origin = intersect + glm::normalize(pathSegment.ray.direction) * 0.0002f;
+    }
+    else if (m.hasReflective == 1) { // Reflection
+        newDir = glm::reflect(pathSegment.ray.direction, normal);
+        pdf = 1.f;
+        f = m.specular.color;
+        float fresnel = 1.f; // Perfect Mirror
+        pathSegment.color *= f * fresnel / pdf;
+        pathSegment.remainingBounces--;
+        pathSegment.ray.origin = intersect;
+    }
+    else { // Diffuse
+#if SOBOL_SAMPLE == 1
+        newDir = sampleSobolHemishpere(normal, ith);
+#else
         newDir = calculateRandomDirectionInHemisphere(normal, rng);
-        float z = glm::abs(glm::dot(normal, newDir));
-        pdf = INV_PI * z / matCt;
+#endif
+        float absCosTheta = glm::abs(glm::dot(normal, newDir));
+        pdf = INV_PI * absCosTheta;
         f = m.color * INV_PI;
         if (pdf == 0.f) {
             pathSegment.color = glm::vec3(0.f);
             pathSegment.remainingBounces = 0;
         }
         else {
-            pathSegment.color *= f * z / pdf;
+            pathSegment.color *= f * absCosTheta / pdf;
             pathSegment.remainingBounces--;
         }
         pathSegment.ray.origin = intersect;
-    }
-    else if (bxdf == 1) { // Reflection
-        newDir = glm::reflect(pathSegment.ray.direction, normal);
-        float z = glm::dot(normal, newDir);
-        pdf = 1.f / matCt;
-        f = m.specular.color;
-
-        float fresnel;
-        if (m.indexOfRefraction == 0) {
-            fresnel = 1.f;
-        }
-        else {
-            fresnel = fresnelEvaluate(1.f, m.indexOfRefraction, z);
-        }
-
-        pathSegment.color *= f * fresnel / pdf; // Fresnel take care of lambert
-        pathSegment.remainingBounces--;
-        pathSegment.ray.origin = intersect;
-    }
-    else { // Refraction
-        float z = -glm::dot(normal, pathSegment.ray.direction);
-        float eta = z > 0 ? 1.f / m.indexOfRefraction : m.indexOfRefraction;
-        
-        newDir = glm::refract(pathSegment.ray.direction, normal, eta);
-        if (isnan(newDir.x) || isnan(newDir.y) || isnan(newDir.z)) {
-            pathSegment.color = glm::vec3(0.f);
-            pathSegment.remainingBounces = 0;
-        }
-        else {
-            float cosT = glm::dot(newDir, normal);
-            float fresnel = 1.f - fresnelEvaluate(1.f, m.indexOfRefraction, cosT);
-            pdf = 1.f / matCt;
-            f = m.color;
-            pathSegment.color *= f * fresnel / pdf;
-            pathSegment.remainingBounces--;
-        }
-        pathSegment.ray.origin = intersect + glm::normalize(pathSegment.ray.direction) * 0.0002f;
     }
     
     pathSegment.ray.direction = newDir;

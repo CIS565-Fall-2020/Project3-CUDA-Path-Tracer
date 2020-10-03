@@ -85,6 +85,20 @@ static PathSegment* dev_first_paths = nullptr;
 static ShadeableIntersection* dev_first_intersections = nullptr;
 
 // TODO: static variables for device memory, any extra info you need, etc
+static int* dev_sobol_seed = nullptr;//debug
+
+//debug
+__global__ void generateSeed(Camera cam, int* sobolSeed) {
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+    if (x < cam.resolution.x && y < cam.resolution.y) {
+        int index = x + (y * cam.resolution.x);
+        thrust::default_random_engine rng = makeSeededRandomEngine(0, x, y);
+        thrust::uniform_int_distribution<int> u(0, 1023);
+        sobolSeed[index] = u(rng);
+    }
+}
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
@@ -111,6 +125,13 @@ void pathtraceInit(Scene *scene) {
     cudaMemset(dev_first_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
     // TODO: initialize any extra device memeory you need
+    cudaMalloc(&dev_sobol_seed, pixelcount * sizeof(int));//debug
+
+    const dim3 blockSize2d(8, 8);
+    const dim3 blocksPerGrid2d(
+        (cam.resolution.x + blockSize2d.x - 1) / blockSize2d.x,
+        (cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
+    generateSeed << <blocksPerGrid2d, blockSize2d >> > (cam, dev_sobol_seed);
 
     checkCUDAError("pathtraceInit");
 }
@@ -127,9 +148,12 @@ void pathtraceFree() {
     cudaFree(dev_first_intersections);
 
     // TODO: clean up any extra device memory you created
+    cudaFree(dev_sobol_seed);//debug
 
     checkCUDAError("pathtraceFree");
 }
+
+
 
 /**
 * Generate PathSegments with rays from the camera through the screen into the
@@ -302,6 +326,7 @@ __global__ void shadeFakeMaterial (
 
 __global__ void shadeMaterial(
     int iter
+    , int* sobolSeed
     , int num_paths
     , ShadeableIntersection* shadeableIntersections
     , PathSegment* pathSegments
@@ -330,7 +355,8 @@ __global__ void shadeMaterial(
                     getPointOnRay(pathSegments[idx].ray, intersection.t),
                     intersection.surfaceNormal,
                     material,
-                    rng
+                    rng,
+                    sobolSeed[idx]++
                 );
                 if (pathSegments[idx].remainingBounces <= 0) {
                     pathSegments[idx].color = glm::vec3(0.f);
@@ -481,6 +507,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
         shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
             iter,
+            dev_sobol_seed,
             num_paths,
             dev_intersections,
             dev_paths,
