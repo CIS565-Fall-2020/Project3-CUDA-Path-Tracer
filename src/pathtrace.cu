@@ -18,7 +18,7 @@
 
 #define ERRORCHECK 1
 #define SORTBYMATERIAL 0
-#define CACHE 0
+#define CACHE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -130,12 +130,13 @@ void pathtraceFree() {
 * motion blur - jitter rays "in time"
 * lens effect - jitter ray origin positions based on a lens
 */
-__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
+__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments, float lensRaduis, float focalDistance)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
-	if (x < cam.resolution.x && y < cam.resolution.y) {
+
+    if (x < cam.resolution.x && y < cam.resolution.y) {
 		int index = x + (y * cam.resolution.x);
 
 		PathSegment & segment = pathSegments[index];
@@ -148,7 +149,19 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 			);
+        
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> u01(0, 1);
 
+        glm::vec2 lensPointSph(u01(rng) * 2 * PI, u01(rng) * lensRaduis);
+        glm::vec2 lensPoint(lensPointSph.y * glm::cos(lensPointSph.x), lensPointSph.y * glm::sin(lensPointSph.x));
+        float ft = focalDistance;
+        glm::vec3 pFocus = getPointOnRay(segment.ray, ft);
+
+        segment.ray.origin = cam.position + glm::vec3(lensPoint.x, lensPoint.y, 0);
+
+        segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+        
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}
@@ -341,7 +354,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
-    
+    float lensRadius = 1;
+    float focalDistance = 12;
     printf("\n\niter: %d   \n", iter);
 
 	// 2D block for generating ray from camera
@@ -385,7 +399,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     // TODO: perform one iteration of path tracing
 
 
-    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths, lensRadius, focalDistance);
     checkCUDAError("generate camera ray");
 
 	int depth = 1;
