@@ -148,7 +148,7 @@ void refraction(
 
     if (glm::length(refract_dir) == 0) {
         // internal reflection
-        pathSegment.color = glm::vec3(0.0);
+        //pathSegment.color = glm::vec3(0.0);
         // TODO
         perfectSpecularReflection(pathSegment, intersect, normal, m, rng);
     }
