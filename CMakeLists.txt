@@ -73,6 +73,10 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    external/include/stb_image.h
+    external/include/stb_image_write.h
+    external/include/json.hpp
+    external/include/tiny_gltf.h
     )
 
 set(sources

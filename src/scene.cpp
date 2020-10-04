@@ -4,6 +4,12 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
+
+//#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -30,6 +36,22 @@ Scene::Scene(string filename) {
             }
         }
     }
+}
+
+int Scene::loadGltf(string filename) {
+	
+	tinygltf::Model model;
+	tinygltf::TinyGLTF loader;
+	string err;
+	string warn;
+	
+	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+	if (!ret) {
+		cout << "Enable to load gltf file. " << endl;
+		return -1;
+	}
+	
+	return 0;
 }
 
 int Scene::loadGeom(string objectid) {
