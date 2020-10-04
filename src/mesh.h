@@ -2,13 +2,17 @@
 
 #include <string>
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtx/intersect.hpp>
+#include <vector>
 
-
-class Mesh {
+class MeshLoader {
 public:
-	tinygltf::Model model;
-	bool load(std::string filename);
+	bool load(std::string filename); // Load the file to model
+	void pushTriangles(std::vector<glm::vec3> &triangles);
+
 private:
+	tinygltf::Model model;
 	tinygltf::TinyGLTF loader;
 	std::string err, warn;
 };

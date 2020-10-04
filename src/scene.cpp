@@ -3,6 +3,7 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include "mesh.h"
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -52,6 +53,10 @@ int Scene::loadGeom(string objectid) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
+            else if (strcmp(line.c_str(), "mesh") == 0) {
+                cout << "Creating new mesh..." << endl;
+                newGeom.type = MESH;
+            }
         }
 
         //link material
@@ -60,6 +65,24 @@ int Scene::loadGeom(string objectid) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             newGeom.materialid = atoi(tokens[1].c_str());
             cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+        }
+
+        //load mesh
+        if (newGeom.type == MESH) {
+            newGeom.triangleStart = triangles.size();
+            utilityCore::safeGetline(fp_in, line);
+            if (!line.empty() && fp_in.good()) {
+                vector<string> tokens = utilityCore::tokenizeString(line);
+                MeshLoader mLoader; //tokens[0] = "gltf"
+                string filename = tokens[1].substr(1, tokens[1].length() - 2);
+                mLoader.load(filename);
+                mLoader.pushTriangles(triangles);
+            }
+            newGeom.triangleCount = triangles.size() - newGeom.triangleStart;
+        }
+        else {
+            newGeom.triangleStart = -1;
+            newGeom.triangleCount = -1;
         }
 
         //load transformations

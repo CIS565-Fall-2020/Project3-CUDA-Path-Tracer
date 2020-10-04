@@ -1,7 +1,6 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
-#include "mesh.h"
 
 static std::string startTimeString;
 
@@ -32,8 +31,6 @@ int height;
 //-------------------------------
 
 int main(int argc, char** argv) {
-    Mesh myMesh;
-    cout << myMesh.load("../scenes/Cube.gltf") << endl;
     startTimeString = currentTimeString();
 
     if (argc < 2) {

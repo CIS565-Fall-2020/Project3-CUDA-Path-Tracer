@@ -142,3 +142,47 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+// Naive mesh ray intersection test
+__host__ __device__ float meshIntersectionTest(Geom geom, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside,
+    const glm::vec3 *triangles) {
+    Ray q;
+    q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
+    
+    float tmin = FLT_MAX;
+    int nearest = -1;
+
+    for (int i = geom.triangleStart, ct = 0; ct < geom.triangleCount; ct++, i += 3) {
+        glm::vec3 v0 = triangles[i];
+        glm::vec3 v1 = triangles[i + 1];
+        glm::vec3 v2 = triangles[i + 2];
+        glm::vec3 bary;
+        if (glm::intersectRayTriangle(q.origin, q.direction, v0, v1, v2, bary)) {
+            glm::vec3 p = (1 - bary[0] - bary[1]) * v0 + bary[0] * v1 + bary[1] * v2;
+            float t = glm::distance(p, q.origin);
+            if (t < tmin) {
+                tmin = t;
+                nearest = i;
+            }
+        }
+    }
+    if (nearest == -1) {
+        return -1;
+    }
+
+    glm::vec3 objspaceIntersection = getPointOnRay(q, tmin);
+
+    glm::vec3 e1 = triangles[nearest + 1] - triangles[nearest];
+    glm::vec3 e2 = triangles[nearest + 2] - triangles[nearest];
+    glm::vec3 objspaceNormal = glm::normalize(glm::cross(e1, e2));
+
+    intersectionPoint = multiplyMV(geom.transform, glm::vec4(objspaceIntersection, 1.f));
+    
+    float3 see = make_float3(intersectionPoint.x, intersectionPoint.y, intersectionPoint.z);
+    normal = glm::normalize(multiplyMV(geom.invTranspose, glm::vec4(objspaceNormal, 0.f)));
+    outside = glm::dot(normal, r.direction) < 0;
+    
+    return tmin;
+}

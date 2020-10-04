@@ -197,7 +197,7 @@ void scatterRay(
                 pathSegment.ray.origin = intersect;
             }
         }
-        pathSegment.ray.origin = intersect + glm::normalize(pathSegment.ray.direction) * 0.0002f;
+        pathSegment.ray.origin = intersect + glm::normalize(pathSegment.ray.direction) * 0.0003f;
     }
     else if (m.hasReflective == 1) { // Reflection
         newDir = glm::reflect(pathSegment.ray.direction, normal);

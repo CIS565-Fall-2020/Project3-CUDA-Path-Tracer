@@ -87,6 +87,9 @@ static ShadeableIntersection* dev_first_intersections = nullptr;
 // Sobol sequence start point for each pixel
 static int* dev_sobol_seed = nullptr;
 
+// Triangles of meshes
+static glm::vec3* dev_triangles = nullptr;
+
 // TODO: static variables for device memory, any extra info you need, etc
 
 // Generate the start point of sobol sequence for each pixel
@@ -128,14 +131,17 @@ void pathtraceInit(Scene *scene) {
 
     // Sobol sequence start point for each pixel
     cudaMalloc(&dev_sobol_seed, pixelcount * sizeof(int));
-
-    // TODO: initialize any extra device memeory you need
-
     const dim3 blockSize2d(8, 8);
     const dim3 blocksPerGrid2d(
         (cam.resolution.x + blockSize2d.x - 1) / blockSize2d.x,
         (cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
     generateSeed << <blocksPerGrid2d, blockSize2d >> > (cam, dev_sobol_seed);
+
+    // Copy mesh triangles to device
+    cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(glm::vec3));
+    cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+
+    // TODO: initialize any extra device memeory you need
 
     checkCUDAError("pathtraceInit");
 }
@@ -153,6 +159,9 @@ void pathtraceFree() {
 
     // Sobol sequence start point for each pixel
     cudaFree(dev_sobol_seed);
+
+    // Mesh triangles
+    cudaFree(dev_triangles);
 
     // TODO: clean up any extra device memory you created
 
@@ -218,6 +227,7 @@ __global__ void computeIntersections(
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
+    , glm::vec3 * triangles
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -237,25 +247,23 @@ __global__ void computeIntersections(
 		glm::vec3 tmp_normal;
 
 		// naive parse through global geoms
-
-		for (int i = 0; i < geoms_size; i++)
-		{
+		for (int i = 0; i < geoms_size; i++) {
 			Geom & geom = geoms[i];
 
-			if (geom.type == CUBE)
-			{
+			if (geom.type == CUBE) {
 				t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
-			else if (geom.type == SPHERE)
-			{
+			else if (geom.type == SPHERE) {
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
+            else if (geom.type == MESH) {
+                t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside, triangles);
+            }
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
-			if (t > 0.0f && t_min > t)
-			{
+			if (t > 0.0f && t_min > t) {
 				t_min = t;
 				hit_geom_index = i;
 				intersect_point = tmp_intersect;
@@ -263,12 +271,10 @@ __global__ void computeIntersections(
 			}
 		}
 
-		if (hit_geom_index == -1)
-		{
+		if (hit_geom_index == -1) {
 			intersections[path_index].t = -1.0f;
 		}
-		else
-		{
+		else {
 			//The ray hits something
 			intersections[path_index].t = t_min;
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
@@ -484,6 +490,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                 , dev_geoms
                 , hst_scene->geoms.size()
                 , dev_intersections
+                , dev_triangles
                 );
             checkCUDAError("trace one bounce");
 
@@ -534,9 +541,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	}
 
     // WATCH OUT
-    // If we use thrust::remove_if it would be faster than thrust::partition,
-    // but the elements with pred is true will be undefined. So we cannot gather
-    // the iteration here. Instead, we add it directly in shadeMaterial when we
+    // If we use thrust::remove_if, it would be faster than thrust::partition.
+    // But the elements of which pred is true will be undefined. So we cannot gather
+    // the contribution here. Instead, we add it directly in shadeMaterial when we
     // encounter a light source.
 
     // Assemble this iteration and apply it to the image
