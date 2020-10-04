@@ -19,6 +19,9 @@
 #include "timer.h"
 
 #define BOUNDING_BOX 1
+#define ANTIALIASING 1
+#define SORT_MATERIAL 1
+#define CACHE_FIRST_ISECT 1
 
 PerformanceTimer& timer()
 {
@@ -86,11 +89,8 @@ static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 
-static bool cache_first_intersections = false;
 static ShadeableIntersection* dev_first_intersections = NULL;
 
-
-static bool sort_by_material = false;
 
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
@@ -122,10 +122,10 @@ void pathtraceInit(Scene* scene) {
     cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
     // TODO: initialize any extra device memeory you need
-    if (cache_first_intersections) {
-        cudaMalloc(&dev_first_intersections, pixelcount * sizeof(ShadeableIntersection));
-        cudaMemset(dev_first_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
-    }
+#if SORT_MATERIAL
+    cudaMalloc(&dev_first_intersections, pixelcount * sizeof(ShadeableIntersection));
+    cudaMemset(dev_first_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
+#endif
 
     checkCUDAError("pathtraceInit");
 }
@@ -145,9 +145,9 @@ void pathtraceFree() {
     cudaFree(dev_intersections);
 
     // TODO: clean up any extra device memory you created
-    if (cache_first_intersections) {
-        cudaFree(dev_first_intersections);
-    }
+#if CACHE_FIRST_ISECT
+     cudaFree(dev_first_intersections);
+#endif
 
     checkCUDAError("pathtraceFree");
 }
@@ -172,10 +172,23 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         segment.ray.origin = cam.position;
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
+        float x_antialias = x;
+        float y_antialias = y;
+
+#if ANTIALIASING
+        float offset = 0.5f;
+        thrust::default_random_engine rngX = makeSeededRandomEngine(iter, index, traceDepth);
+        thrust::uniform_real_distribution<float> u01X(-0.5f, 0.5f);
+        thrust::default_random_engine rngY = makeSeededRandomEngine(iter + 3, index, traceDepth);
+        thrust::uniform_real_distribution<float> u01Y(-0.5f, 0.5f);
+        x_antialias += u01X(rngX);
+        y_antialias += u01Y(rngY);
+#endif
+
         // TODO: implement antialiasing by jittering the ray
         segment.ray.direction = glm::normalize(cam.view
-            - cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-            - cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+            - cam.right * cam.pixelLength.x * (x_antialias - (float)cam.resolution.x * 0.5f)
+            - cam.up * cam.pixelLength.y * (y_antialias - (float)cam.resolution.y * 0.5f)
         );
 
         segment.pixelIndex = index;
@@ -358,37 +371,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     // 1D block for path tracing
     const int blockSize1d = 128;
 
-    ///////////////////////////////////////////////////////////////////////////
-
-    // Recap:
-    // * Initialize array of path rays (using rays that come out of the camera)
-    //   * You can pass the Camera object to that kernel.
-    //   * Each path ray must carry at minimum a (ray, color) pair,
-    //   * where color starts as the multiplicative identity, white = (1, 1, 1).
-    //   * This has already been done for you.
-    // * For each depth:
-    //   * Compute an intersection in the scene for each path ray.
-    //     A very naive version of this has been implemented for you, but feel
-    //     free to add more primitives and/or a better algorithm.
-    //     Currently, intersection distance is recorded as a parametric distance,
-    //     t, or a "distance along the ray." t = -1.0 indicates no intersection.
-    //     * Color is attenuated (multiplied) by reflections off of any object
-    //   * TODO: Stream compact away all of the terminated paths.
-    //     You may use either your implementation or `thrust::remove_if` or its
-    //     cousins.
-    //     * Note that you can't really use a 2D kernel launch any more - switch
-    //       to 1D.
-    //   * TODO: Shade the rays that intersected something or didn't bottom out.
-    //     That is, color the ray by performing a color computation according
-    //     to the shader, then generate a new ray to continue the ray path.
-    //     We recommend just updating the ray's PathSegment in place.
-    //     Note that this step may come before or after stream compaction,
-    //     since some shaders you write may also cause a path to terminate.
-    // * Finally, add this iteration's results to the image. This has been done
-    //   for you.
-
-    // TODO: perform one iteration of path tracing
-
     generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
     checkCUDAError("generate camera ray");
 
@@ -406,12 +388,12 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     while (!iterationComplete) {
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
-        if (cache_first_intersections && depth == 0 && iter != 1) {
+        if (CACHE_FIRST_ISECT && !ANTIALIASING && depth == 0 && iter != 1) {
             // if it is the firts bounce of the noot first intersection, get the saved intersections
             thrust::copy(thrust::device, dev_first_intersections, dev_first_intersections + num_paths_start, dev_intersections);
 
             // sort intersections with similar materials together
-            if (sort_by_material) {
+            if (SORT_MATERIAL) {
                 thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
             }
         }
@@ -425,13 +407,11 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
 
-
-
             // if it is the first bounce of the first iteration, store the intersections
-            if (cache_first_intersections && depth == 0 && iter == 1) {
+            if (CACHE_FIRST_ISECT && !ANTIALIASING && depth == 0 && iter == 1) {
                 thrust::copy(thrust::device, dev_intersections, dev_intersections + num_paths_start, dev_first_intersections);
             }
-            else if (sort_by_material) {
+            else if (SORT_MATERIAL) {
                 // sort intersections with similar materials together
                 thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
             }

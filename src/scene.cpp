@@ -265,7 +265,6 @@ int Scene::loadCamera() {
     camera.right = glm::normalize(glm::cross(camera.view, camera.up));
     camera.pixelLength = glm::vec2(2 * xscaled / (float)camera.resolution.x
         , 2 * yscaled / (float)camera.resolution.y);
-
     camera.view = glm::normalize(camera.lookAt - camera.position);
 
     //set up render camera stuff
