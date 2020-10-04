@@ -13,6 +13,7 @@
 #include "scene.h"
 #include "glm/glm.hpp"
 #include "glm/gtx/norm.hpp"
+#include "glm/gtc/random.hpp"
 #include "utilities.h"
 #include "pathtrace.h"
 #include "intersections.h"
@@ -164,9 +165,15 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
     segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		// TODO: implement antialiasing by jittering the ray
-		segment.ray.direction = glm::normalize(cam.view
-			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+	// gaussian sampling for aperture simulation
+	thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+	thrust::random::normal_distribution<float> r_r(0.0f, 5 * cam.pixelLength.x);
+	thrust::random::normal_distribution<float> r_u(0.0f, 5 * cam.pixelLength.y);
+
+	segment.ray.direction = glm::normalize(cam.view
+		- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
+		- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+		- r_r(rng) * cam.right - r_u(rng) * cam.up
 			);
 
 		segment.pixelIndex = index;
