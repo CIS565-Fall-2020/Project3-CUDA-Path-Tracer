@@ -16,6 +16,9 @@ private:
     int loadMaterial(string materialid);
     int loadGeom(string objectid);
     int loadCamera();
+    int loadObj(string filename, int materialid, glm::vec3 translation, glm::vec3 rotation,
+        glm::vec3 scale, glm::mat4 transform, glm::mat4 inverseTransform, glm::mat4 invTranspose);
+
 public:
     Scene(string filename);
     ~Scene();

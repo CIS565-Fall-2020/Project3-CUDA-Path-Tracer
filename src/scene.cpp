@@ -1,8 +1,11 @@
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#include "tiny_obj_loader.h"
 #include <iostream>
 #include "scene.h"
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -32,6 +35,76 @@ Scene::Scene(string filename) {
     }
 }
 
+int Scene::loadObj(string filename, int materialid, glm::vec3 translation, glm::vec3 rotation, 
+    glm::vec3 scale, glm::mat4 transform, glm::mat4 inverseTransform, glm::mat4 invTranspose) {
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+
+    std::string warn;
+    std::string err;
+
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str());
+
+    if (!warn.empty()) {
+        std::cout << warn << std::endl;
+    }
+
+    if (!err.empty()) {
+        return -1;
+        std::cerr << err << std::endl;
+    }
+
+    if (!ret) {
+        return -1;
+        exit(1);
+    }
+
+    // Loop over shapes
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+            int fv = shapes[s].mesh.num_face_vertices[f];
+            Geom newGeom;
+            newGeom.materialid = materialid;
+            newGeom.translation = translation;
+            newGeom.scale = scale;
+            newGeom.rotation = rotation;
+            newGeom.transform = transform;
+            newGeom.inverseTransform = inverseTransform;
+            newGeom.invTranspose = invTranspose;
+
+            // Loop over vertices in the face.
+            for (size_t v = 0; v < fv; v++) {
+                // access to vertex
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+                
+                glm::vec3 vertex = glm::vec3(vx, vy, vz);
+                vertex = glm::round(vertex * 100.f) / 100.f;
+                if (v == 0) { newGeom.v1 = vertex;}
+                else if (v == 1) { newGeom.v2 = vertex; }
+                else if (v == 2) { newGeom.v3 = vertex; }
+            }
+            
+            index_offset += fv;
+
+            newGeom.normal = glm::normalize(glm::cross(newGeom.v2 - newGeom.v1, newGeom.v3 - newGeom.v1));
+            newGeom.normal = glm::round(newGeom.normal * 100.f) / 100.f;
+
+            // per-face material
+            shapes[s].mesh.material_ids[f];
+            newGeom.type = TRIANGLE;
+            geoms.push_back(newGeom);
+        }
+    }
+    return 1;
+}
+
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
@@ -41,6 +114,7 @@ int Scene::loadGeom(string objectid) {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
+        string filename;
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -51,6 +125,17 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
+            }
+            else if (strcmp(line.c_str(), "obj") == 0) {
+                cout << "Creating new obj model..." << endl;
+                newGeom.type = TRIANGLE;
+
+                utilityCore::safeGetline(fp_in, line);
+                if (!line.empty() && fp_in.good()) {
+                    filename = line.c_str();
+                    cout << "Connecting Geom " << objectid << " to File " << filename << "..." << endl;
+                }
+
             }
         }
 
@@ -80,12 +165,18 @@ int Scene::loadGeom(string objectid) {
         }
 
         newGeom.transform = utilityCore::buildTransformationMatrix(
-                newGeom.translation, newGeom.rotation, newGeom.scale);
+            newGeom.translation, newGeom.rotation, newGeom.scale);
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
 
-        geoms.push_back(newGeom);
-        return 1;
+        if (newGeom.type == TRIANGLE) {
+            return loadObj(filename, newGeom.materialid, newGeom.translation, newGeom.rotation, newGeom.scale,
+                   newGeom.transform, newGeom.inverseTransform, newGeom.invTranspose);
+        }
+        else {
+            geoms.push_back(newGeom);
+            return 1;
+        }
     }
 }
 

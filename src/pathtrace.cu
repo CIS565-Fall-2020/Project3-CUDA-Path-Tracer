@@ -167,6 +167,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
     }
 }
 
+
 // TODO:
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
@@ -210,7 +211,35 @@ __global__ void computeIntersections(
             {
                 t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
-            // TODO: add more intersection tests here... triangle? metaball? CSG?
+            else if (geom.type == TRIANGLE) {
+                // to object space
+                glm::vec3 ro = multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.origin, 1.0f));
+                glm::vec3 rd = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.direction, 0.0f)));
+
+                // check if there is an intersection
+                bool did_isect = glm::intersectRayTriangle(ro, rd, geom.v1, geom.v2, geom.v3, tmp_intersect);
+
+                if (did_isect) {
+                    // to world space
+                    tmp_normal = geom.normal;
+                    tmp_intersect = glm::normalize(tmp_intersect);
+
+                    // convert barycentric to local
+                    glm::vec3 v1_obj = multiplyMV(geom.inverseTransform, glm::vec4(geom.v1, 1.0f));
+                    glm::vec3 v2_obj = multiplyMV(geom.inverseTransform, glm::vec4(geom.v2, 1.0f));
+                    glm::vec3 v3_obj = multiplyMV(geom.inverseTransform, glm::vec4(geom.v3, 1.0f));
+                    tmp_intersect = (tmp_intersect.x * v1_obj) + (tmp_intersect.y * v2_obj) + (tmp_intersect.z * v3_obj);
+
+                    // local to world
+                    tmp_intersect = multiplyMV(geom.transform, glm::vec4(tmp_intersect, 1.f));
+                    t = glm::length(pathSegment.ray.origin - tmp_intersect);
+                }
+                else {
+                    t = -1;
+                }
+
+                
+            }
 
             // Compute the minimum t from the intersection tests to determine what
             // scene geometry object was hit first.
