@@ -7,6 +7,7 @@
 #include <thrust/count.h>
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+#include <thrust/partition.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -18,8 +19,8 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define SORTBYMAT 1
-#define CACHE 1
+#define SORTBYMAT 0
+#define CACHE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -312,19 +313,25 @@ __global__ void shadeFakeMaterial (
       // If the material indicates that the object was a light, "light" the ray
       if (material.emittance > 0.0f) {
         pathSegments[idx].color *= (materialColor * material.emittance);
-		pathSegments[idx].remainingBounces = 0;
+		pathSegments[idx].remainingBounces = -1;
       }
       // Otherwise, do some pseudo-lighting computation. This is actually more
       // like what you would expect from shading in a rasterizer like OpenGL.
       // TODO: replace this! you should be able to start with basically a one-liner
-      else {
+	  
+	  else {
 		  /*
 		float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
 		pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
 		pathSegments[idx].color *= u01(rng); // apply some noise because why not
 		*/
-		  scatterRay(pathSegments[idx], intersection.surfaceNormal, intersection.t, material, rng);
-		  pathSegments[idx].remainingBounces--;
+		  if (pathSegments[idx].remainingBounces <= 0) {
+			  pathSegments[idx].color = glm::vec3(0.0f);
+		  }
+		  else {
+			  scatterRay(pathSegments[idx], intersection.surfaceNormal, intersection.t, material, rng);
+		  }
+		  pathSegments[idx].remainingBounces -= 1;
       }
     // If there was no intersection, color the ray black.
     // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
@@ -332,9 +339,9 @@ __global__ void shadeFakeMaterial (
     // This can be useful for post-processing and image compositing.
     } else {
       pathSegments[idx].color = glm::vec3(0.0f);
-	  pathSegments[idx].remainingBounces = 0;
+	  pathSegments[idx].remainingBounces = -1;
     }
-	if (pathSegments[idx].remainingBounces <= 0) {
+	if (pathSegments[idx].remainingBounces < 0) {
 		pathIndexes[index] = -1; // path ends
 	}
   }

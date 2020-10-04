@@ -76,12 +76,45 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+
+	// update ray origin
+	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
+	pathSegment.ray.origin = intersect + 0.001f * normal;
+
 	thrust::uniform_real_distribution<float> u01(0, 1);
 	glm::vec3 dir_spec = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
-	glm::vec3 dir_diff = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
+	glm::vec3 dir_diff = calculateRandomDirectionInHemisphere(normal, rng);
+	
 	float choice = u01(rng);
+	
+	if (m.hasRefractive) {
+		float cos_theta = glm::dot(-pathSegment.ray.direction, normal);
+		float ratio = m.indexOfRefraction;
+		glm::vec3 n = normal;
+		if (cos_theta > 0.0f) {
+			ratio = 1.f / ratio;
+			n *= -1.f;
+			cos_theta *= -1.f; // schlick's approximation, cos_theta < 0
+		}
+		glm::vec3 dir_refr = glm::refract(pathSegment.ray.direction, n, ratio);
+		float r0 = (1.f - ratio) * (1.f - ratio) / (1.f + ratio) / (1.f + ratio);
+		float r = r0 + (1.f - r0) * glm::pow(1.f - cos_theta, 5); // reflectance
+		if (choice > r) {
+			// refract
+			pathSegment.ray.direction = dir_refr;
+			pathSegment.color *= m.color * (1.f - r);
+		}
+		else {
+			// reflect
+			pathSegment.ray.direction = dir_spec;
+			pathSegment.color *= m.specular.color * r;
+		}
+		return;
+	}
+	// specular or diffusive
 	bool spec;
 	float scale;
+	
 	if (m.hasReflective) {
 		spec = choice > 0.2f;
 		scale = 0.8f;
@@ -90,11 +123,9 @@ void scatterRay(
 		spec = choice > 0.8f;
 		scale = 0.2f;
 	}
-	glm::vec3 dir_final = spec ? dir_spec : dir_diff;
-	// update ray
-	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
-	pathSegment.ray.direction = dir_final;
-	pathSegment.ray.origin = intersect;
+
+	// update ray direction
+	pathSegment.ray.direction = spec ? dir_spec : dir_diff;
 	// update color
 	
 	//pathSegment.color *= (m.color * lightTerm) * 0.3f + ((1.0f - t * 0.02f) * m.color) * 0.7f;
@@ -104,7 +135,7 @@ void scatterRay(
 		pathSegment.color *= m.specular.color * scale;
 	}
 	else {
-		pathSegment.color *= m.color * (1 - scale);
+		pathSegment.color *= m.color * ( 1.f - scale);
 	}
 	
 }
