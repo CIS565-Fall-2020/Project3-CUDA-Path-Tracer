@@ -23,7 +23,7 @@
 #define CACHE_ENABLE 0
 #define PROFILE_ENABLE 0
 #define DEPTH_OF_FIELD_ENABLE 0
-#define ANTIALIASING 1
+#define ANTIALIASING 0
 #define MOTION_BLUR_ENABLE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -84,6 +84,7 @@ static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 static ShadeableIntersection* dev_intersections_cache = NULL;
+static Triangle* dev_triangles = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -104,6 +105,9 @@ void pathtraceInit(Scene* scene) {
 
 	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
 	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
+
+	cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
+	cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
 
 	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
 	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
@@ -128,6 +132,7 @@ void pathtraceFree() {
 	cudaFree(dev_image);  // no-op if dev_image is null
 	cudaFree(dev_paths);
 	cudaFree(dev_geoms);
+	cudaFree(dev_triangles);
 	cudaFree(dev_materials);
 	cudaFree(dev_intersections);
 #if CACHE_ENABLE
@@ -212,6 +217,7 @@ __global__ void computeIntersections(
 	, Geom* geoms
 	, int geoms_size
 	, ShadeableIntersection* intersections
+	, Triangle* triangles
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -243,6 +249,10 @@ __global__ void computeIntersections(
 			else if (geom.type == SPHERE)
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+			}
+			else if (geom.type == MESH)
+			{
+				t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside, triangles);
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
@@ -488,6 +498,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 					, dev_geoms
 					, hst_scene->geoms.size()
 					, dev_intersections
+					, dev_triangles
 					);
 				checkCUDAError("trace one bounce");
 				cudaMemcpy(dev_intersections_cache, dev_intersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
@@ -502,6 +513,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 				, dev_geoms
 				, hst_scene->geoms.size()
 				, dev_intersections
+				, dev_triangles
 				);
 			checkCUDAError("trace one bounce");
 		}
@@ -514,6 +526,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			, dev_geoms
 			, hst_scene->geoms.size()
 			, dev_intersections
+			, dev_triangles
 			);
 		checkCUDAError("trace one bounce");
 #endif // CACHE_ENABLE

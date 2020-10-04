@@ -42,13 +42,11 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 }
 
 __host__ __device__ float fresnel(
-    float eta,
-    float cosThetaI
+    double cosThetaI, double ref_idx
     )
 {
-    cosThetaI =cosThetaI;
     float etaI_ = 1;
-    float etaT_ = eta;
+    float etaT_ = ref_idx;
     // Potentially swap indices of refraction
     bool entering = cosThetaI > 0.f;
     if (!entering) {
@@ -71,6 +69,12 @@ __host__ __device__ float fresnel(
     float Rperp = ((etaI_ * cosThetaI) - (etaT_ * cosThetaT)) /
         ((etaI_ * cosThetaI) + (etaT_ * cosThetaT));
     return (Rparl * Rparl + Rperp * Rperp) / 2;
+}
+
+__host__ __device__ double schlick(double cosine, double ref_idx) {
+    double r0 = (1 - ref_idx) / (1 + ref_idx);
+    r0 = r0 * r0;
+    return r0 + (1 - r0) * pow((1 - cosine), 5);
 }
 
 
@@ -114,7 +118,14 @@ void scatterRay(
 
     // specular
     if (p0 <= m.hasReflective) {
-        pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
+        if (m.specular.exponent > 0.0f) {
+            float p1 = u01(rng);
+            float p2 = u01(rng);
+            pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal) + m.specular.exponent * glm::vec3(p0, p1, p2));
+        }
+        else {
+            pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
+        }
         float scale = m.hasReflective <= 0.0 ? 0.0 : 1.0 / m.hasReflective;
         pathSegment.color *= m.color * scale;
         pathSegment.ray.origin = intersect + EPSILON * normal;
@@ -132,18 +143,22 @@ void scatterRay(
         glm::vec3 refract = glm::refract(glm::normalize(pathSegment.ray.direction), glm::normalize(_normal), eta);
         glm::vec3 reflect = glm::reflect(pathSegment.ray.direction, _normal);
         if (glm::length(refract) < EPSILON) {
-            pathSegment.color = glm::vec3(0);
-            refract = reflect;
+            pathSegment.ray.direction = glm::normalize(reflect);
+            pathSegment.color *= m.specular.color * scale;
+            pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.001f);
+            return;
         }
-        float f = fresnel(m.indexOfRefraction, costheta);
+        float f = fresnel(costheta, m.indexOfRefraction);
         // reflect or refract?
         if (u01(rng) < f) {
             pathSegment.ray.direction = glm::normalize(reflect);
+            pathSegment.color *= m.specular.color * scale;
         }
         else {
             pathSegment.ray.direction = glm::normalize(refract);
+            pathSegment.color *= m.color * scale;
         }
-        pathSegment.color *= m.specular.color * scale;
+
         pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.001f);
     }
     // diffuse
