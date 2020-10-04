@@ -3,6 +3,10 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#include "tinyobj/tiny_obj_loader.h"
+
+
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -51,6 +55,13 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
+            } else if (strcmp(line.c_str(), "mesh") == 0) {
+                cout << "Creating new mesh..." << endl;
+                newGeom.type = MESH;
+                utilityCore::safeGetline(fp_in, line);
+                if (!line.empty() && fp_in.good()) {
+                    loadObj(line, newGeom);
+                }
             }
         }
 
@@ -64,6 +75,7 @@ int Scene::loadGeom(string objectid) {
 
         //load transformations
         utilityCore::safeGetline(fp_in, line);
+        newGeom.moving = false;
         while (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
 
@@ -74,8 +86,10 @@ int Scene::loadGeom(string objectid) {
                 newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+            } else if (strcmp(tokens[0].c_str(), "MOTION") == 0) {
+                newGeom.moving = true;
+                newGeom.target = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
-
             utilityCore::safeGetline(fp_in, line);
         }
 
@@ -87,6 +101,107 @@ int Scene::loadGeom(string objectid) {
         geoms.push_back(newGeom);
         return 1;
     }
+}
+
+static void CalcNormal(glm::vec3& N, glm::vec3& v0, glm::vec3& v1, glm::vec3& v2) {
+    glm::vec3 v10;
+    v10[0] = v1[0] - v0[0];
+    v10[1] = v1[1] - v0[1];
+    v10[2] = v1[2] - v0[2];
+
+    glm::vec3 v20;
+    v20[0] = v2[0] - v0[0];
+    v20[1] = v2[1] - v0[1];
+    v20[2] = v2[2] - v0[2];
+
+    N[0] = v10[1] * v20[2] - v10[2] * v20[1];
+    N[1] = v10[2] * v20[0] - v10[0] * v20[2];
+    N[2] = v10[0] * v20[1] - v10[1] * v20[0];
+
+    float len2 = N[0] * N[0] + N[1] * N[1] + N[2] * N[2];
+    if (len2 > 0.0f) {
+        float len = sqrtf(len2);
+
+        N[0] /= len;
+        N[1] /= len;
+        N[2] /= len;
+    }
+}
+
+
+bool Scene::loadObj(string filename, Geom& geom) {
+    tinyobj::attrib_t attrib;
+    vector<tinyobj::shape_t> shapes;
+    vector<tinyobj::material_t> materials;
+
+    string warn;
+    string err;
+
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str());
+    
+    if (!warn.empty()) {
+        std::cout << warn << std::endl;
+    }
+
+    if (!err.empty()) {
+        std::cerr << err << std::endl;
+    }
+
+    if (!ret) {
+        exit(1);
+    }
+
+    geom.startIndex = triangles.size();
+
+    // Loop over shapes
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+            Triangle t;
+
+            int fv = shapes[s].mesh.num_face_vertices[f];
+            tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + 0];
+            glm::vec3 p1(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
+            t.p1 = p1;
+            if (attrib.normals.size() > 0) {
+                t.n1 = glm::vec3(attrib.normals[3 * idx.normal_index + 0], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2]);
+            }
+            geom.leftBottom = glm::min(geom.leftBottom, p1);
+            geom.rightTop = glm::max(geom.rightTop, p1);
+
+            idx = shapes[s].mesh.indices[index_offset + 1];
+            glm::vec3 p2(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
+            t.p2 = p2;
+            if (attrib.normals.size() > 0) {
+                t.n2 = glm::vec3(attrib.normals[3 * idx.normal_index + 0], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2]);
+            }
+            geom.leftBottom = glm::min(geom.leftBottom, p2);
+            geom.rightTop = glm::max(geom.rightTop, p2);
+
+            idx = shapes[s].mesh.indices[index_offset + 2];
+            glm::vec3 p3(attrib.vertices[3 * idx.vertex_index + 0], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2]);
+            t.p3 = p3;
+            if (attrib.normals.size() > 0) {
+                t.n3 = glm::vec3(attrib.normals[3 * idx.normal_index + 0], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2]);
+            }
+            geom.leftBottom = glm::min(geom.leftBottom, p3);
+            geom.rightTop = glm::max(geom.rightTop, p3);
+
+            if (attrib.normals.size() <= 0) {
+                glm::vec3 n1;
+                CalcNormal(n1, t.p1, t.p2, t.p3);
+                t.n1 = n1;
+                t.n2 = n1;
+                t.n3 = n1;
+            }
+
+            index_offset += fv;
+
+            triangles.push_back(t);
+        }
+    }
+    geom.endIndex = triangles.size() - 1;
 }
 
 int Scene::loadCamera() {

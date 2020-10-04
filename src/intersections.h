@@ -6,6 +6,8 @@
 #include "sceneStructs.h"
 #include "utilities.h"
 
+#define BOUNDING_BOX_ENABLE 1
+
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
  */
@@ -161,4 +163,91 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+__host__ __device__ bool boundingIntersectionTest(Ray r, glm::vec3 leftBottom, glm::vec3 rightTop) {
+
+    float tmin = -1e38f;
+    float tmax = 1e38f;
+    for (int xyz = 0; xyz < 3; ++xyz) {
+        float qdxyz = r.direction[xyz];
+        /*if (glm::abs(qdxyz) > 0.00001f)*/ {
+            float t1 = (leftBottom[xyz] - r.origin[xyz]) / qdxyz;
+            float t2 = (rightTop[xyz] - r.origin[xyz]) / qdxyz;
+            float ta = glm::min(t1, t2);
+            float tb = glm::max(t1, t2);
+
+            if (ta > 0 && ta > tmin) {
+                tmin = ta;
+            }
+            if (tb < tmax) {
+                tmax = tb;
+            }
+        }
+    }
+
+    if (tmax >= tmin && tmax > 0) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Test intersection between a ray and a transformed mesh. 
+ *
+ * @param intersectionPoint  Output parameter for point of intersection.
+ * @param normal             Output parameter for surface normal.
+ * @param outside            Output param for whether the ray came from outside.
+ * @return                   Ray parameter `t` value. -1 if no intersection.
+ */
+__host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside, Triangle* triangles) {
+
+    Ray rt;
+    
+    if (mesh.moving) {
+        rt.origin = r.origin - r.time * (mesh.target - mesh.translation);
+        rt.origin = multiplyMV(mesh.inverseTransform, glm::vec4(rt.origin, 1.0f));
+    }
+    else {
+        rt.origin = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+    }
+    rt.direction = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+#if BOUNDING_BOX_ENABLE
+    if (!boundingIntersectionTest(rt, mesh.leftBottom, mesh.rightTop)) {
+        return -1;
+    }
+#endif
+
+    float t_min = FLT_MAX;
+    bool isFound = false;
+    glm::vec3 objspaceIntersection;
+    glm::vec3 nnormal;
+    for (int i = mesh.startIndex; i < mesh.endIndex; i++) {
+        glm::vec3 tmp_intersect;
+        if (glm::intersectRayTriangle(rt.origin, rt.direction, triangles[i].p1, triangles[i].p2, triangles[i].p3, tmp_intersect)) {
+            float t = glm::distance(tmp_intersect, rt.origin);
+            if (t_min > t)
+            {
+                t_min = t;
+                objspaceIntersection = tmp_intersect;
+                nnormal = (triangles[i].n1 + triangles[i].n2 + triangles[i].n3) / 3.0f;
+                isFound = true;
+            }
+        }
+    }
+
+    if (!isFound) {
+        return -1;
+    }
+
+    intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+    if (mesh.moving) {
+        intersectionPoint += r.time * (mesh.target - mesh.translation);
+    }
+    normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(nnormal, 0.f)));
+
+    return glm::length(r.origin - intersectionPoint);
+}
+
 
