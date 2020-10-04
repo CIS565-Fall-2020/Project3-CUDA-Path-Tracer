@@ -1,0 +1,109 @@
+// Camera
+CAMERA
+RES         800 800
+FOVY        45
+ITERATIONS  5000
+DEPTH       8
+FILE        forest
+EYE         21 5 -4
+LOOKAT      0 5 0
+UP          0 1 0
+
+
+// Emissive material (light)
+MATERIAL 0
+RGB         1 1 1
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   1
+
+// Environment light
+OBJECT 0
+sphere
+MATERIAL 0
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       1000 1000 1000
+
+
+// ground_dirt1
+MATERIAL aiStandardSurface16SG
+RGB         0.6 0.3 0.0
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// ground_grass
+MATERIAL aiStandardSurface5SG
+RGB         0.1 1.0 0.2
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// glass2
+MATERIAL aiStandardSurface17SG
+RGB         1.0 1.0 1.0
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        1
+REFRIOR     1.52
+EMITTANCE   0
+
+// grass_mat
+MATERIAL aiStandardSurface18SG
+RGB         0.2 0.35 0.0
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// water_mat
+MATERIAL aiStandardSurface6SG
+RGB         1.0 1.0 1.0
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        1
+REFRIOR     1.333
+EMITTANCE   0
+
+// mushroom_cap
+MATERIAL aiStandardSurface7SG
+RGB         0.36 0.02 0.02
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// lambert1
+MATERIAL initialShadingGroup
+RGB         0.5 0.5 0.5
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Mesh
+OBJECT 1
+mesh
+scenes/models/ani.obj
+MATERIAL initialShadingGroup
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       1 1 1

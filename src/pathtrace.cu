@@ -15,6 +15,12 @@
 #include "intersections.h"
 #include "interactions.h"
 
+
+constexpr bool
+	sortByMaterial = false,
+	cacheFirstBounce = false;
+
+
 #define ERRORCHECK 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -77,9 +83,8 @@ static AABBTreeNode *dev_aabbTree = nullptr;
 static int aabbTreeRoot;
 
 // static variables for device memory, any extra info you need, etc
-static bool sortByMaterial = false;
 
-static bool cacheFirstBounce = false, firstBounceCached = false;
+static bool firstBounceCached = false;
 static ShadeableIntersection *dev_firstBounceIntersections = nullptr;
 
 void pathtraceInit(Scene *scene) {
@@ -102,7 +107,9 @@ void pathtraceInit(Scene *scene) {
 	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 	// initialize any extra device memeory you need
-	cudaMalloc(&dev_firstBounceIntersections, pixelcount * sizeof(ShadeableIntersection));
+	if (cacheFirstBounce) {
+		cudaMalloc(&dev_firstBounceIntersections, pixelcount * sizeof(ShadeableIntersection));
+	}
 	firstBounceCached = false;
 
 	cudaMalloc(&dev_aabbTree, scene->aabbTree.size() * sizeof(AABBTreeNode));
@@ -121,7 +128,9 @@ void pathtraceFree() {
 	cudaFree(dev_intersections);
 
 	// clean up any extra device memory you created
-	cudaFree(dev_firstBounceIntersections);
+	if (cacheFirstBounce) {
+		cudaFree(dev_firstBounceIntersections);
+	}
 	cudaFree(dev_aabbTree);
 
 	checkCUDAError("pathtraceFree");
@@ -180,7 +189,7 @@ __device__ bool rayBoxIntersection(const Ray &ray, glm::vec3 min, glm::vec3 max,
 	min = (min - ray.origin) / ray.direction;
 	max = (max - ray.origin) / ray.direction;
 	float rmin = max3(glm::min(min, max)), rmax = min3(glm::max(min, max));
-	return rmin < far && rmax > rmin && rmax > 0.0f;
+	return rmin < far && rmax >= rmin && rmax > 0.0f;
 }
 
 __device__ bool rayGeomIntersection(const Ray &ray, const Geom &geom, float *dist, glm::vec3 *normal) {
@@ -191,13 +200,9 @@ __device__ bool rayGeomIntersection(const Ray &ray, const Geom &geom, float *dis
 	} else if (geom.type == GeomType::SPHERE) {
 		t = sphereIntersectionTest(geom.implicit, ray, norm);
 	} else if (geom.type == GeomType::TRIANGLE) {
-		glm::vec3 bary;
-		bool intersect = glm::intersectRayTriangle(
-			ray.origin, ray.direction,
-			geom.triangle.vertices[0], geom.triangle.vertices[1], geom.triangle.vertices[2], bary
-		);
-		if (intersect) {
-			t = bary.z;
+		glm::vec2 bary;
+		t = triangleIntersectionTest(geom.triangle, ray, &bary);
+		if (t >= 0.0f) {
 			norm =
 				geom.triangle.normals[0] * (1.0f - bary.x - bary.y) +
 				geom.triangle.normals[1] * bary.x + geom.triangle.normals[2] * bary.y;
@@ -317,8 +322,6 @@ __global__ void shade(
 			materials[intersection.materialId], rng
 		);
 	} else {
-		/*path.color = (path.ray.direction + 1.0f) * 0.5f;
-		path.remainingBounces = -1;*/
 		path.color = glm::vec3(0.0f);
 		path.remainingBounces = 0;
 	}

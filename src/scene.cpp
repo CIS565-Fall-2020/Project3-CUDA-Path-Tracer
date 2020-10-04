@@ -36,7 +36,7 @@ Scene::Scene(std::string filename) {
     }
 }
 
-int Scene::loadGeom() {
+void Scene::loadGeom() {
     std::cout << "Loading Geom..." << std::endl;
     glm::vec3 translation, rotation, scale;
     std::string line;
@@ -63,8 +63,19 @@ int Scene::loadGeom() {
     utilityCore::safeGetline(fp_in, line);
     if (!line.empty() && fp_in.good()) {
         std::vector<std::string> tokens = utilityCore::tokenizeString(line);
-        materialId = atoi(tokens[1].c_str());
-        std::cout << "Connecting Geom to Material " << materialId << "..." << std::endl;
+        if (tokens.size() >= 2) {
+            if (tokens.size() != 2 || tokens[0] != "MATERIAL") {
+                std::cout << "  Invalid material specification\n";
+            } else {
+                auto iter = materialIdMapping.find(tokens[1]);
+                if (iter != materialIdMapping.end()) {
+                    materialId = iter->second;
+                    std::cout << "Connecting Geom to Material " << tokens[1] << " (" << materialId << ")...\n";
+                } else {
+                    std::cout << "Material not found: " << tokens[1] << "\n";
+                }
+            }
+        }
     }
 
     //load transformations
@@ -88,12 +99,26 @@ int Scene::loadGeom() {
 
     if (type == GeomType::TRIANGLE) { // load mesh
         std::ifstream fin(meshPath);
-        std::vector<GeomTriangle> tris = loadObj(fin, trans);
-        for (const GeomTriangle &tri : tris) {
+        ObjFile tris = loadObj(fin, trans);
+        std::cout << "  Num triangles: " << tris.triangles.size() << "\n";
+        int curMaterialId = materialId;
+        auto matIter = tris.materials.begin();
+        for (std::size_t i = 0; i < tris.triangles.size(); ++i) {
+            if (matIter != tris.materials.end() && matIter->first == i) {
+                auto it = materialIdMapping.find(matIter->second);
+                if (it != materialIdMapping.end()) {
+                    curMaterialId = it->second;
+                } else {
+                    std::cout << "  Material not found: " << matIter->second << ", using default material\n";
+                    curMaterialId = materialId;
+                }
+                ++matIter;
+            }
+
             Geom geom;
             geom.type = GeomType::TRIANGLE;
-            geom.materialid = materialId;
-            geom.triangle = tri;
+            geom.materialid = curMaterialId;
+            geom.triangle = tris.triangles[i];
             geoms.push_back(geom);
         }
     } else {
@@ -108,7 +133,6 @@ int Scene::loadGeom() {
 
         geoms.push_back(newGeom);
     }
-    return 1;
 }
 
 void Scene::computeCameraParameters(Camera &cam) {
@@ -172,41 +196,35 @@ int Scene::loadCamera() {
     return 1;
 }
 
-int Scene::loadMaterial(std::string materialid) {
-    int id = atoi(materialid.c_str());
-    if (id != materials.size()) {
-        std::cout << "ERROR: MATERIAL ID does not match expected number of materials" << std::endl;
-        return -1;
-    } else {
-        std::cout << "Loading Material " << id << "..." << std::endl;
-        Material newMaterial;
+void Scene::loadMaterial(std::string materialid) {
+    std::cout << "Loading Material " << materialid << "..." << std::endl;
+    Material newMaterial;
 
-        //load static properties
-        for (int i = 0; i < 7; i++) {
-            std::string line;
-            utilityCore::safeGetline(fp_in, line);
-            std::vector<std::string> tokens = utilityCore::tokenizeString(line);
-            if (strcmp(tokens[0].c_str(), "RGB") == 0) {
-                glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
-                newMaterial.color = color;
-            } else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
-                newMaterial.specular.exponent = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "SPECRGB") == 0) {
-                glm::vec3 specColor(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-                newMaterial.specular.color = specColor;
-            } else if (strcmp(tokens[0].c_str(), "REFL") == 0) {
-                newMaterial.hasReflective = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "REFR") == 0) {
-                newMaterial.hasRefractive = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "REFRIOR") == 0) {
-                newMaterial.indexOfRefraction = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
-                newMaterial.emittance = atof(tokens[1].c_str());
-            }
+    //load static properties
+    for (int i = 0; i < 7; i++) {
+        std::string line;
+        utilityCore::safeGetline(fp_in, line);
+        std::vector<std::string> tokens = utilityCore::tokenizeString(line);
+        if (strcmp(tokens[0].c_str(), "RGB") == 0) {
+            glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
+            newMaterial.color = color;
+        } else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
+            newMaterial.specular.exponent = atof(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "SPECRGB") == 0) {
+            glm::vec3 specColor(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+            newMaterial.specular.color = specColor;
+        } else if (strcmp(tokens[0].c_str(), "REFL") == 0) {
+            newMaterial.hasReflective = atof(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "REFR") == 0) {
+            newMaterial.hasRefractive = atof(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "REFRIOR") == 0) {
+            newMaterial.indexOfRefraction = atof(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
+            newMaterial.emittance = atof(tokens[1].c_str());
         }
-        materials.push_back(newMaterial);
-        return 1;
     }
+    materialIdMapping[materialid] = materials.size();
+    materials.push_back(newMaterial);
 }
 
 bool skipSeparator(std::istream &in) {
@@ -233,15 +251,17 @@ glm::ivec3 readVertex(std::istream &in) {
     }
     return res - 1;
 }
-std::vector<GeomTriangle> Scene::loadObj(std::istream &in, glm::mat4 trans) {
+ObjFile Scene::loadObj(std::istream &in, glm::mat4 trans) {
     struct _face {
         glm::ivec3 id[3];
     };
 
+    ObjFile result;
+
     std::vector<glm::vec3> verts;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
-    std::vector< _face> faces;
+    std::vector<_face> faces;
     for (std::string line; std::getline(in, line); ) {
         std::istringstream ss(line);
         std::string cmd;
@@ -264,6 +284,10 @@ std::vector<GeomTriangle> Scene::loadObj(std::istream &in, glm::mat4 trans) {
                 face.id[i] = readVertex(ss);
             }
             faces.emplace_back(face);
+        } else if (cmd == "usemtl") {
+            std::string mtlName;
+            ss >> mtlName;
+            result.materials.try_emplace(faces.size(), mtlName);
         }
     }
 
@@ -276,10 +300,9 @@ std::vector<GeomTriangle> Scene::loadObj(std::istream &in, glm::mat4 trans) {
         norm = glm::vec3(invTrans * glm::vec4(norm, 0.0f));
     }
 
-    std::vector<GeomTriangle> results;
     for (const auto &face : faces) {
-        results.emplace_back();
-        GeomTriangle &tri = results.back();
+        result.triangles.emplace_back();
+        GeomTriangle &tri = result.triangles.back();
         for (std::size_t i = 0; i < 3; ++i) {
             tri.vertices[i] = verts[face.id[i].x];
         }
@@ -291,7 +314,7 @@ std::vector<GeomTriangle> Scene::loadObj(std::istream &in, glm::mat4 trans) {
             tri.normals[i] = face.id[i].z < 0 ? flatNormal : normals[face.id[i].z];
         }
     }
-    return results;
+    return result;
 }
 
 struct _buildStep {

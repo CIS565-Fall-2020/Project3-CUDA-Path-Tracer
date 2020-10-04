@@ -113,3 +113,27 @@ __host__ __device__ float sphereIntersectionTest(const GeomTransform &sphere, Ra
 
     return t1;
 }
+
+// glm intersectRayTriangle ignores back-facing triangles, it's copied here and slightly modified to overcome that
+__host__ __device__ float triangleIntersectionTest(const GeomTriangle &tri, Ray r, glm::vec2 *bary) {
+    glm::vec3 e1 = tri.vertices[1] - tri.vertices[0];
+    glm::vec3 e2 = tri.vertices[2] - tri.vertices[0];
+
+    glm::vec3 p = glm::cross(r.direction, e2);
+
+    float f = 1.0f / glm::dot(e1, p);
+
+    glm::vec3 s = r.origin - tri.vertices[0];
+    bary->x = f * glm::dot(s, p);
+    if (bary->x < 0.0f || bary->x > 1.0f) {
+        return -1.0f;
+    }
+
+    glm::vec3 q = glm::cross(s, e1);
+    bary->y = f * glm::dot(r.direction, q);
+    if (bary->y < 0.0f || bary->y + bary->x > 1.0f) {
+        return -1.0f;
+    }
+
+    return f * glm::dot(e2, q);
+}
