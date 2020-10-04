@@ -125,6 +125,13 @@ int Scene::loadCamera() {
         } else if (strcmp(tokens[0].c_str(), "UP") == 0) {
             camera.up = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
         }
+        // Jack12 add camera aperture radius and focusDistance
+        else if (strcmp(tokens[0].c_str(), "ApRds") == 0) {
+            camera.apertureRadius = atof(tokens[1].c_str());
+        }
+        else if (strcmp(tokens[0].c_str(), "FD") == 0) {
+            camera.focusDist = atof(tokens[1].c_str());
+        }
 
         utilityCore::safeGetline(fp_in, line);
     }
