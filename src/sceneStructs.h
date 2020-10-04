@@ -10,12 +10,19 @@
 enum GeomType {
     SPHERE,
     CUBE,
-    TRIANGLE
+    OBJ
 };
 
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
+};
+
+struct Triangle {
+    glm::vec3 v1;
+    glm::vec3 v2;
+    glm::vec3 v3;
+    glm::vec3 normal;
 };
 
 struct Geom {
@@ -27,11 +34,12 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
-    glm::vec3 v1;
-    glm::vec3 v2;
-    glm::vec3 v3;
-    glm::vec3 normal;
+    glm::vec3 min;
+    glm::vec3 max;
+    Triangle* dev_triangles;
+    int triangles_size;
 };
+
 
 struct Material {
     glm::vec3 color;
@@ -65,17 +73,17 @@ struct RenderState {
 };
 
 struct PathSegment {
-	Ray ray;
-	glm::vec3 color;
-	int pixelIndex;
-	int remainingBounces;
+    Ray ray;
+    glm::vec3 color;
+    int pixelIndex;
+    int remainingBounces;
 };
 
 // Use with a corresponding PathSegment to do:
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
 struct ShadeableIntersection {
-  float t;
-  glm::vec3 surfaceNormal;
-  int materialId;
+    float t;
+    glm::vec3 surfaceNormal;
+    int materialId;
 };

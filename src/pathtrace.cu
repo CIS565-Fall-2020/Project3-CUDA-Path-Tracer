@@ -102,6 +102,13 @@ void pathtraceInit(Scene* scene) {
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
 
     cudaMalloc(&dev_paths, pixelcount * sizeof(PathSegment));
+    for (int i = 0; i < scene->geoms.size(); i++)
+    {
+        
+        Geom& geom = scene->geoms[i];
+        cudaMalloc(&geom.dev_triangles, geom.triangles_size * sizeof(Triangle));
+        cudaMemcpy(geom.dev_triangles, (scene->triangles[i]).data(), geom.triangles_size * sizeof(Triangle), cudaMemcpyHostToDevice);
+    }
 
     cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
     cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
@@ -124,6 +131,13 @@ void pathtraceInit(Scene* scene) {
 void pathtraceFree() {
     cudaFree(dev_image);  // no-op if dev_image is null
     cudaFree(dev_paths);
+    if (hst_scene != NULL) {
+        for (int i = 0; i < hst_scene->geoms.size(); i++)
+        {
+            Geom& geom = hst_scene->geoms[i];
+            cudaFree(geom.dev_triangles);
+        }
+    }
     cudaFree(dev_geoms);
     cudaFree(dev_materials);
     cudaFree(dev_intersections);
@@ -211,34 +225,52 @@ __global__ void computeIntersections(
             {
                 t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
-            else if (geom.type == TRIANGLE) {
-                // to object space
-                glm::vec3 ro = multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.origin, 1.0f));
-                glm::vec3 rd = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.direction, 0.0f)));
+            else if (geom.type == OBJ) {
+                float min_tri_t = FLT_MAX;
+                glm::vec3 tmp_tri_intersect;
+                glm::vec3 tmp_tri_normal;
+                glm::vec3 min_tri_intersect;
+                glm::vec3 min_tri_normal;
 
-                // check if there is an intersection
-                bool did_isect = glm::intersectRayTriangle(ro, rd, geom.v1, geom.v2, geom.v3, tmp_intersect);
+                for (int j = 0; j < geom.triangles_size; j++) {
+                    Triangle& tri = geom.dev_triangles[j];
 
-                if (did_isect) {
-                    // to world space
-                    tmp_normal = geom.normal;
-                    tmp_intersect = glm::normalize(tmp_intersect);
+                    // to object space
+                    glm::vec3 ro = multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.origin, 1.0f));
+                    glm::vec3 rd = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.direction, 0.0f)));
 
-                    // convert barycentric to local
-                    glm::vec3 v1_obj = multiplyMV(geom.inverseTransform, glm::vec4(geom.v1, 1.0f));
-                    glm::vec3 v2_obj = multiplyMV(geom.inverseTransform, glm::vec4(geom.v2, 1.0f));
-                    glm::vec3 v3_obj = multiplyMV(geom.inverseTransform, glm::vec4(geom.v3, 1.0f));
-                    tmp_intersect = (tmp_intersect.x * v1_obj) + (tmp_intersect.y * v2_obj) + (tmp_intersect.z * v3_obj);
+                    // check if there is an intersection
+                    bool did_isect = glm::intersectRayTriangle(ro, rd, tri.v1, tri.v2, tri.v3, tmp_tri_intersect);
 
-                    // local to world
-                    tmp_intersect = multiplyMV(geom.transform, glm::vec4(tmp_intersect, 1.f));
-                    t = glm::length(pathSegment.ray.origin - tmp_intersect);
+                    if (did_isect) {
+                        // to world space
+                        tmp_tri_normal = tri.normal;
+                        tmp_tri_intersect = glm::normalize(tmp_tri_intersect);
+
+                        // convert barycentric to local
+                        glm::vec3 v1_obj = multiplyMV(geom.inverseTransform, glm::vec4(tri.v1, 1.0f));
+                        glm::vec3 v2_obj = multiplyMV(geom.inverseTransform, glm::vec4(tri.v2, 1.0f));
+                        glm::vec3 v3_obj = multiplyMV(geom.inverseTransform, glm::vec4(tri.v3, 1.0f));
+                        tmp_tri_intersect = (tmp_tri_intersect.x * v1_obj) + (tmp_tri_intersect.y * v2_obj) + (tmp_tri_intersect.z * v3_obj);
+
+                        // local to world
+                        tmp_tri_intersect = multiplyMV(geom.transform, glm::vec4(tmp_tri_intersect, 1.f));
+                        float tmp_tri_t = glm::length(pathSegment.ray.origin - tmp_tri_intersect);
+                        if (tmp_tri_t < min_tri_t) {
+                            min_tri_intersect = tmp_tri_intersect;
+                            min_tri_normal = tmp_tri_normal;
+                            min_tri_t = tmp_tri_t;
+                        }
+                    }
+                }
+                if (min_tri_t > 0.0f) {
+                    tmp_intersect = min_tri_intersect;
+                    tmp_normal = min_tri_normal;
+                    t = min_tri_t;
                 }
                 else {
                     t = -1;
                 }
-
-                
             }
 
             // Compute the minimum t from the intersection tests to determine what
@@ -409,7 +441,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         if (cache_first_intersections && depth == 0 && iter != 1) {
             // if it is the firts bounce of the noot first intersection, get the saved intersections
             thrust::copy(thrust::device, dev_first_intersections, dev_first_intersections + num_paths_start, dev_intersections);
-            
+
             // sort intersections with similar materials together
             if (sort_by_material) {
                 thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareIntersections());
@@ -425,7 +457,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
 
-            
+
 
             // if it is the first bounce of the first iteration, store the intersections
             if (cache_first_intersections && depth == 0 && iter == 1) {
