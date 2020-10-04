@@ -18,6 +18,8 @@
 #include "interactions.h"
 #include "timer.h"
 
+#define BOUNDING_BOX 1
+
 PerformanceTimer& timer()
 {
     static PerformanceTimer timer;
@@ -84,11 +86,11 @@ static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 
-static bool cache_first_intersections = true;
+static bool cache_first_intersections = false;
 static ShadeableIntersection* dev_first_intersections = NULL;
 
 
-static bool sort_by_material = true;
+static bool sort_by_material = false;
 
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
@@ -226,51 +228,17 @@ __global__ void computeIntersections(
                 t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
             else if (geom.type == OBJ) {
-                float min_tri_t = FLT_MAX;
-                glm::vec3 tmp_tri_intersect;
-                glm::vec3 tmp_tri_normal;
-                glm::vec3 min_tri_intersect;
-                glm::vec3 min_tri_normal;
 
-                for (int j = 0; j < geom.triangles_size; j++) {
-                    Triangle& tri = geom.dev_triangles[j];
-
-                    // to object space
-                    glm::vec3 ro = multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.origin, 1.0f));
-                    glm::vec3 rd = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(pathSegment.ray.direction, 0.0f)));
-
-                    // check if there is an intersection
-                    bool did_isect = glm::intersectRayTriangle(ro, rd, tri.v1, tri.v2, tri.v3, tmp_tri_intersect);
-
-                    if (did_isect) {
-                        // to world space
-                        tmp_tri_normal = tri.normal;
-                        tmp_tri_intersect = glm::normalize(tmp_tri_intersect);
-
-                        // convert barycentric to local
-                        glm::vec3 v1_obj = multiplyMV(geom.inverseTransform, glm::vec4(tri.v1, 1.0f));
-                        glm::vec3 v2_obj = multiplyMV(geom.inverseTransform, glm::vec4(tri.v2, 1.0f));
-                        glm::vec3 v3_obj = multiplyMV(geom.inverseTransform, glm::vec4(tri.v3, 1.0f));
-                        tmp_tri_intersect = (tmp_tri_intersect.x * v1_obj) + (tmp_tri_intersect.y * v2_obj) + (tmp_tri_intersect.z * v3_obj);
-
-                        // local to world
-                        tmp_tri_intersect = multiplyMV(geom.transform, glm::vec4(tmp_tri_intersect, 1.f));
-                        float tmp_tri_t = glm::length(pathSegment.ray.origin - tmp_tri_intersect);
-                        if (tmp_tri_t < min_tri_t) {
-                            min_tri_intersect = tmp_tri_intersect;
-                            min_tri_normal = tmp_tri_normal;
-                            min_tri_t = tmp_tri_t;
-                        }
-                    }
-                }
-                if (min_tri_t > 0.0f) {
-                    tmp_intersect = min_tri_intersect;
-                    tmp_normal = min_tri_normal;
-                    t = min_tri_t;
+#if BOUNDING_BOX
+                if (rectangleIntersectionTest(pathSegment.ray, geom)) {
+                    t = meshTriangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal);
                 }
                 else {
                     t = -1;
                 }
+#else
+                t = meshTriangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal);
+#endif
             }
 
             // Compute the minimum t from the intersection tests to determine what

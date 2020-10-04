@@ -86,7 +86,106 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
         normal = glm::normalize(multiplyMV(box.invTranspose, glm::vec4(tmin_n, 0.0f)));
         return glm::length(r.origin - intersectionPoint);
     }
-    return -1;
+    return -1.f;
+}
+
+__host__ __device__ float meshTriangleIntersectionTest(Geom obj, Ray r, glm::vec3& intersectionPoint, glm::vec3& normal) {
+    float min_tri_t = FLT_MAX;
+    glm::vec3 tmp_tri_intersect;
+    glm::vec3 tmp_tri_normal;
+    glm::vec3 min_tri_intersect;
+    glm::vec3 min_tri_normal;
+
+    // to object space
+    glm::vec3 ro = multiplyMV(obj.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(obj.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    for (int j = 0; j < obj.triangles_size; j++) {
+        Triangle& tri = obj.dev_triangles[j];
+
+        // check if there is an intersection
+        bool did_isect = glm::intersectRayTriangle(ro, rd, tri.v1, tri.v2, tri.v3, tmp_tri_intersect);
+
+        if (did_isect) {
+            // to world space
+            tmp_tri_normal = tri.normal;
+            tmp_tri_intersect = glm::normalize(tmp_tri_intersect);
+
+            // convert barycentric to local
+            glm::vec3 v1_obj = multiplyMV(obj.inverseTransform, glm::vec4(tri.v1, 1.0f));
+            glm::vec3 v2_obj = multiplyMV(obj.inverseTransform, glm::vec4(tri.v2, 1.0f));
+            glm::vec3 v3_obj = multiplyMV(obj.inverseTransform, glm::vec4(tri.v3, 1.0f));
+            tmp_tri_intersect = (tmp_tri_intersect.x * v1_obj) + (tmp_tri_intersect.y * v2_obj) + (tmp_tri_intersect.z * v3_obj);
+
+            // local to world
+            tmp_tri_intersect = multiplyMV(obj.transform, glm::vec4(tmp_tri_intersect, 1.f));
+            float tmp_tri_t = glm::length(r.origin - tmp_tri_intersect);
+            if (tmp_tri_t < min_tri_t) {
+                min_tri_intersect = tmp_tri_intersect;
+                min_tri_normal = tmp_tri_normal;
+                min_tri_t = tmp_tri_t;
+            }
+        }
+    }
+    if (min_tri_t > 0.0f) {
+        intersectionPoint = min_tri_intersect;
+        normal = min_tri_normal;
+        return min_tri_t;
+    }
+    else {
+        return -1.f;
+    }
+}
+__host__ __device__ bool rectangleIntersectionTest(const Ray r, Geom obj) {
+    glm::vec3 min = multiplyMV(obj.transform, glm::vec4(obj.min, 1.0f));
+    glm::vec3 max = multiplyMV(obj.transform, glm::vec4(obj.max, 1.0f));
+
+    float tmin = (min.x - r.origin.x) / r.direction.x;
+    float tmax = (max.x - r.origin.x) / r.direction.x;
+
+    if (tmin > tmax) {
+        float temp = tmin;
+        tmin = tmax;
+        tmax = temp;
+    }
+
+    float tymin = (min.y - r.origin.y) / r.direction.y;
+    float tymax = (max.y - r.origin.y) / r.direction.y;
+
+    if (tymin > tymax) {
+        float temp = tymin;
+        tymin = tymax;
+        tymax = temp;
+    }
+
+    if ((tmin > tymax) || (tymin > tmax))
+        return false;
+
+    if (tymin > tmin)
+        tmin = tymin;
+
+    if (tymax < tmax)
+        tmax = tymax;
+
+    float tzmin = (min.z - r.origin.z) / r.direction.z;
+    float tzmax = (max.z - r.origin.z) / r.direction.z;
+
+    if (tzmin > tzmax) {
+        float temp = tzmin;
+        tzmin = tzmax;
+        tzmax = temp;
+    }
+
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return false;
+
+    if (tzmin > tmin)
+        tmin = tzmin;
+
+    if (tzmax < tmax)
+        tmax = tzmax;
+
+    return true;
 }
 
 // CHECKITOUT

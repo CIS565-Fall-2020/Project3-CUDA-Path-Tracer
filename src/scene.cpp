@@ -98,7 +98,6 @@ int Scene::loadObj(string filename, int materialid, glm::vec3 translation, glm::
                 tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
 
                 glm::vec3 vertex = glm::vec3(vx, vy, vz);
-                vertex = glm::round(vertex * 100.f) / 100.f;
                 if (v == 0) { newTri.v1 = vertex; }
                 else if (v == 1) { newTri.v2 = vertex; }
                 else if (v == 2) { newTri.v3 = vertex; }
@@ -115,7 +114,6 @@ int Scene::loadObj(string filename, int materialid, glm::vec3 translation, glm::
             index_offset += fv;
 
             newTri.normal = glm::normalize(glm::cross(newTri.v2 - newTri.v1, newTri.v3 - newTri.v1));
-            newTri.normal = glm::round(newTri.normal * 100.f) / 100.f;
 
             // per-face material
             shapes[s].mesh.material_ids[f];
@@ -125,7 +123,6 @@ int Scene::loadObj(string filename, int materialid, glm::vec3 translation, glm::
     newGeom.min = glm::vec3(minX, minY, minZ);
     newGeom.max = glm::vec3(maxX, maxY, maxZ);
     newGeom.triangles_size = tris.size();
-   // std::cout << "triangle size: " << tris.size() << std::endl;
     triangles.push_back(tris);
     geoms.push_back(newGeom);
     return 1;
