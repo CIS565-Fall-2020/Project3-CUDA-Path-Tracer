@@ -91,10 +91,10 @@ void scatterRay(
 		float cos_theta = glm::dot(-pathSegment.ray.direction, normal);
 		float ratio = m.indexOfRefraction;
 		glm::vec3 n = normal;
-		if (cos_theta > 0.0f) {
+		if (cos_theta < 0.0f) {
 			ratio = 1.f / ratio;
 			n *= -1.f;
-			cos_theta *= -1.f; // schlick's approximation, cos_theta < 0
+			cos_theta *= -1.f; // schlick's approximation, cos_theta > 0
 		}
 		glm::vec3 dir_refr = glm::refract(pathSegment.ray.direction, n, ratio);
 		float r0 = (1.f - ratio) * (1.f - ratio) / (1.f + ratio) / (1.f + ratio);
