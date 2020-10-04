@@ -18,6 +18,7 @@
 #define ERRORCHECK 1
 #define SORT_BY_MATERIAL 0
 #define CACHE_FIRST_INTER 1
+#define ANTIALIASING 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -139,12 +140,26 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		// TODO: implement antialiasing by jittering the ray
-		segment.ray.direction = glm::normalize(cam.view
-			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+        float x_value = x;
+        float y_value = y;
+#if ANTIALIASING
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> u01(0, 1);
+
+        float aa_factor = 1.0f;
+        // get it in range from -aa_factor to aa_factor
+        float x_rand = (u01(rng) * aa_factor * 2) - aa_factor;
+        x_value += x_rand;
+
+        float y_rand = (u01(rng) * aa_factor * 2) - aa_factor;
+        y_value += y_rand;
+#endif  
+        segment.ray.direction = glm::normalize(cam.view
+			- cam.right * cam.pixelLength.x * (x_value - (float)cam.resolution.x * 0.5f)
+			- cam.up * cam.pixelLength.y * (y_value - (float)cam.resolution.y * 0.5f)
 			);
 
 		segment.pixelIndex = index;
@@ -189,11 +204,11 @@ __global__ void computeIntersections(
 
 			if (geom.type == CUBE)
 			{
-				t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				t = boxIntersection(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
 			else if (geom.type == SPHERE)
 			{
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				t = sphereIntersection(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
@@ -304,11 +319,13 @@ struct is_path_terminated
      }
 };
 
+#if SORT_BY_MATERIAL
 struct compare_materials {
     __host__ __device__ bool operator()(const ShadeableIntersection& intersect1, const ShadeableIntersection& intersect2) {
         return intersect1.materialId > intersect2.materialId;
     }
 };
+#endif
 
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
@@ -378,7 +395,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
         // here we want to cache the first intersection
         bool intersections_computed = false;
-#if CACHE_FIRST_INTER
+#if CACHE_FIRST_INTER && !ANTIALIASING
         if (depth == 0) {
             intersections_computed = true;
             if (iter <= 1) {

@@ -45,7 +45,7 @@ __host__ __device__ glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float boxIntersectionTest(Geom box, Ray r,
+__host__ __device__ float boxIntersection(Geom box, Ray r,
         glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
     Ray q;
     q.origin    =                multiplyMV(box.inverseTransform, glm::vec4(r.origin   , 1.0f));
@@ -99,7 +99,7 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
-__host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
+__host__ __device__ float sphereIntersection(Geom sphere, Ray r,
         glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
     float radius = .5;
 

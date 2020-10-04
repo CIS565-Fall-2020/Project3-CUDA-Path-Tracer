@@ -16,6 +16,7 @@ private:
     int loadMaterial(string materialid);
     int loadGeom(string objectid);
     int loadCamera();
+    void loadOBJ(string filename, int material_id);
 public:
     Scene(string filename);
     ~Scene();

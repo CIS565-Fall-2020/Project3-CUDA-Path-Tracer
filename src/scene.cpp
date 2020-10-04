@@ -3,6 +3,122 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include "tiny_obj_loader.h"
+
+#define DEBUG 1
+
+/*
+ * Case Sensitive Implementation of endsWith()
+ * It checks if the string 'mainStr' ends with given string 'toMatch'
+ * Helper Function from https://thispointer.com/c-how-to-check-if-a-string-ends-with-an-another-given-string/#:~:text=To%20check%20if%20a%20main,%E2%80%93%20size%20of%20given%20string).
+ */
+bool endsWith(const std::string& mainStr, const std::string& toMatch)
+{
+    if (mainStr.size() >= toMatch.size() &&
+        mainStr.compare(mainStr.size() - toMatch.size(), toMatch.size(), toMatch) == 0)
+        return true;
+    else
+        return false;
+}
+
+// This function is modified from the one we were given in CIS 460
+void Scene::loadOBJ(string filename, int material_id)
+{
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string error;
+    std::string base_dir = "";
+    if (filename.find_last_of("/\\") != std::string::npos) {
+        base_dir = filename.substr(0, filename.find_last_of("/\\"));
+    }
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &error, filename.c_str(), base_dir.c_str());
+    // if no errors, we continue...
+    if (error.empty()) {
+
+        // initialize bounding box with default values
+        BoundingBox bounding_box;
+        bounding_box.min = glm::vec3(std::numeric_limits<float>::max());
+        bounding_box.max = glm::vec3(std::numeric_limits<float>::min());
+
+        for (size_t s = 0; s < shapes.size(); s++) {
+
+            // for debugging
+            int triangle_count = 0;
+            // loop over every triangle
+            int triangle_index = 3;
+            size_t index_offset = 0; // this is the current count. We are counting in 3s
+            for (size_t i = 0; i < shapes[s].mesh.num_face_vertices.size(); i++) {
+
+                triangle_count++;
+#if DEBUG
+                cout << "Generating Triangle #" << triangle_count << endl;
+#endif
+
+                Geom new_geom;
+                new_geom.type = TRIANGLE;
+                new_geom.materialid = material_id;
+
+                // loop through the three vertices of each triangle
+                for (size_t j = 0; j < triangle_index; j++) {
+                    // get vertex index
+                    tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + j];
+
+                    // vertex's position
+                    glm::vec3 idx_pos(attrib.vertices[3 * idx.vertex_index + 0], 
+                                      attrib.vertices[3 * idx.vertex_index + 1], 
+                                      attrib.vertices[3 * idx.vertex_index + 2]);
+                    // vertex's normal
+                    glm::vec3 idx_nor(0, 0, 0);
+                    if (attrib.normals.size() > 0) {
+                        idx_nor = glm::vec3(attrib.normals[3 * idx.normal_index + 0], 
+                                            attrib.normals[3 * idx.normal_index + 1], 
+                                            attrib.normals[3 * idx.normal_index + 2]);
+                    }
+                    // vertex's uv
+                    glm::vec2 idx_uv(0, 0);
+                    if (attrib.texcoords.size() > 0) {
+                        new_geom.t.has_texture = true;
+                        idx_uv = glm::vec2(attrib.texcoords[2 * idx.texcoord_index + 0], 
+                                           attrib.texcoords[2 * idx.texcoord_index + 1]);
+                    }
+
+                    // fill the triangle with this index's info
+                    new_geom.t.pos[j] = idx_pos;
+                    new_geom.t.nor[j] = idx_nor;
+                    new_geom.t.uv[j] = idx_uv;
+
+                    // check for bounding box values
+                    for (int k = 0; k < 3; k++) {
+                        if (idx_pos[k] < bounding_box.min[k]) {
+                            bounding_box.min[k] = idx_pos[k];
+                        }
+                        if (idx_pos[k] > bounding_box.max[k]) {
+                            bounding_box.max[k] = idx_pos[k];
+                        }
+                    }
+
+#if DEBUG
+                    cout << "= index #" << j << endl;
+                    cout << "=== pos: " << idx_pos.x << ", " << idx_pos.y << ", " << idx_pos.z << endl;
+                    cout << "=== nor: " << idx_nor.x << ", " << idx_nor.y << ", " << idx_nor.z << endl;
+                    cout << "=== uv: " << idx_uv.x << ", " << idx_uv.y << endl;
+#endif
+                }
+                index_offset += triangle_index;
+
+                // add this new triangle
+                geoms.push_back(new_geom);
+            }
+        }
+#if DEBUG
+        cout << "FINAL BOUNDING BOX" << endl;
+        cout << "= min pos: " << bounding_box.min.x << ", " << bounding_box.min.y << ", " << bounding_box.min.z << endl;
+        cout << "= max pos: " << bounding_box.max.x << ", " << bounding_box.max.y << ", " << bounding_box.max.z << endl;
+#endif
+    }
+}
+
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -13,20 +129,32 @@ Scene::Scene(string filename) {
         cout << "Error reading from file - aborting!" << endl;
         throw;
     }
-    while (fp_in.good()) {
-        string line;
-        utilityCore::safeGetline(fp_in, line);
-        if (!line.empty()) {
-            vector<string> tokens = utilityCore::tokenizeString(line);
-            if (strcmp(tokens[0].c_str(), "MATERIAL") == 0) {
-                loadMaterial(tokens[1]);
-                cout << " " << endl;
-            } else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
-                loadGeom(tokens[1]);
-                cout << " " << endl;
-            } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
-                loadCamera();
-                cout << " " << endl;
+    if (endsWith(filename.c_str(), ".obj")) {
+        cout << "Loading Obj File" << endl;
+        loadOBJ(filename, 0);
+
+        // to do: make material, make camera
+        // figure out errors
+        // then figure out intersection
+    }
+    else {
+        while (fp_in.good()) {
+            string line;
+            utilityCore::safeGetline(fp_in, line);
+            if (!line.empty()) {
+                vector<string> tokens = utilityCore::tokenizeString(line);
+                if (strcmp(tokens[0].c_str(), "MATERIAL") == 0) {
+                    loadMaterial(tokens[1]);
+                    cout << " " << endl;
+                }
+                else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
+                    loadGeom(tokens[1]);
+                    cout << " " << endl;
+                }
+                else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
+                    loadCamera();
+                    cout << " " << endl;
+                }
             }
         }
     }

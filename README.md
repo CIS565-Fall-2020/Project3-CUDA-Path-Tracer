@@ -9,13 +9,13 @@ CUDA Path Tracer
 
 ### Renders
 
-![](.\img\diffuse_4430samp.png)
+![](img/diffuse_4430samp.png)
 
 Diffuse Cornell Box @4430 Samples
 
 
 
-![](.\img\specular_2071samp.png)
+![](img/specular_2071samp.png)
 
 Specular Cornell Box @2071 Samples
 

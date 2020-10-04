@@ -41,6 +41,89 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__ 
+glm::vec3 calculateRefractionDirection(PathSegment& pathSegment, glm::vec3 intersect, glm::vec3 normal, const Material& m) {
+    
+    // assume we are outside of the sphere
+    float normal_dot = glm::dot(pathSegment.ray.direction, normal);
+    glm::vec3 n = normal;
+    float factor = 1.0f / m.indexOfRefraction;
+
+    // are we inside of the sphere?
+    if (normal_dot > 0.f) {
+        n *= -1.0f;
+        factor = m.indexOfRefraction;
+    }
+    glm::vec3 ray_direction = glm::refract(pathSegment.ray.direction, n, factor);
+
+    // critical angle
+    if (ray_direction == glm::vec3(0.0f)) {
+        ray_direction = glm::reflect(pathSegment.ray.direction, normal);
+        pathSegment.color *= 0.0f;
+    }
+    
+    pathSegment.color *= m.specular.color;
+    pathSegment.ray.direction = ray_direction;
+    pathSegment.ray.origin = intersect + (.001f) * pathSegment.ray.direction;
+
+    return ray_direction;
+}
+
+// based on: http://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission.html#FrDielectric
+__host__ __device__ 
+float fresnel_dielectric(float cosThetaI, float etaI, float etaT)
+{
+    cosThetaI = glm::clamp(cosThetaI, -1.0f, 1.0f);
+
+    // check if we are entering or exiting the sphere
+    bool entering = cosThetaI > 0.f;
+    float etaICopy = etaI;
+    float etaTCopy = etaT;
+    if (!entering) {
+        etaICopy = etaT;
+        etaTCopy = etaI;
+        cosThetaI = glm::abs(cosThetaI);
+    }
+
+    // computer cosThetaT using Snell's Law
+    float sinThetaI = glm::sqrt(glm::max(0.0f, 1 - cosThetaI * cosThetaI));
+    float sinThetaT = etaICopy / etaTCopy * sinThetaI;
+
+    // handle total internal refection
+    float cosThetaT = glm::sqrt(glm::max(0.0f, 1 - sinThetaT * sinThetaT));
+
+    float Rparl = ((etaTCopy * cosThetaI) - (etaICopy * cosThetaT)) /
+        ((etaTCopy * cosThetaI) + (etaICopy * cosThetaT));
+    float Rperp = ((etaICopy * cosThetaI) - (etaTCopy * cosThetaT)) /
+        ((etaICopy * cosThetaI) + (etaTCopy * cosThetaT));
+
+    return (Rparl * Rparl + Rperp * Rperp) / 2.0f;
+}
+
+__host__ __device__
+void calculateFresnelDirection(PathSegment& pathSegment, glm::vec3 intersect, glm::vec3 normal, const Material& m, thrust::default_random_engine& rng) {
+    float normal_dot = glm::dot(-pathSegment.ray.direction, normal);
+    float etaI = m.indexOfRefraction;
+    float etaT = 1.f; 
+    if (normal_dot > 0.f) {
+        etaI = 1.f;
+        etaT = m.indexOfRefraction;
+    }
+    float fresnel_factor = fresnel_dielectric(normal_dot, etaI, etaT) / glm::abs(normal_dot);
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    if (u01(rng) > fresnel_factor) {
+        // refraction
+        calculateRefractionDirection(pathSegment, intersect, normal, m);
+        return;
+    }
+
+    // reflection
+    pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+    pathSegment.color *= m.specular.color;
+    pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.0001f;
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -73,31 +156,32 @@ void scatterRay(
         glm::vec3 normal,
         const Material &m,
         thrust::default_random_engine &rng) {
+
+    // TO DO: Need to figure out specular power later
+
     // change the ray's origin to be at the intersection point
     // make sure to shift it along the normal a bit to avoid intersecting itself (floating point error)
     pathSegment.ray.origin = intersect + normal * 0.001f;
 
-    // change the ray's direction depending on its material type
-    // according to piazza @144, we should take the probably of each of event 
-    // - uniform diffuse, perfect reflection, refraction etc (based on your scene file) and all of these should add exactly to 1.0.
-    // Then you can generate a uniform random number between[0, 1], and then you can do an if - else if on the probability 
-    //to determine the next ray direction
-    thrust::uniform_real_distribution<float> u01(0, 1);
-    float probability = u01(rng);
-
-    if (probability < m.hasReflective) {
+    if (m.hasReflective && m.hasRefractive) {
+        // fresnel material
+        calculateFresnelDirection(pathSegment, intersect, normal, m, rng);
+    }
+    else if (m.hasReflective) {
         // reflective
         pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
-    } 
-    else if (probability < (m.hasReflective + m.hasRefractive)) {
+        pathSegment.color *= m.specular.color;
+        pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.0001f;
+    }
+    else if (m.hasRefractive) {
         // refraction
-        // TO DO: Later
+        calculateRefractionDirection(pathSegment, intersect, normal, m);
     }
     else {
         // default is diffuse
         pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+        pathSegment.color *= m.color;
+        pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.0001f;
     }
 
-    // finally we want to change the ray's color to have the current surface's color
-    pathSegment.color *= m.color;
 }

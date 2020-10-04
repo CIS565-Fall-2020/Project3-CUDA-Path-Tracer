@@ -10,11 +10,25 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    TRIANGLE
 };
 
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
+};
+
+struct BoundingBox {
+    glm::vec3 min; 
+    glm::vec3 max;
+};
+
+// Bug here: If you have a struct of std::vectors, the GPU doesnt like
+struct Triangle {
+    glm::vec3 pos[3];
+    glm::vec3 nor[3];
+    glm::vec2 uv[3];
+    bool has_texture;
 };
 
 struct Geom {
@@ -26,6 +40,7 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    Triangle t;
 };
 
 struct Material {
