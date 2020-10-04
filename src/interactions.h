@@ -2,6 +2,8 @@
 
 #include "intersections.h"
 
+#define RAY_EPSILON 0.0005f
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -41,6 +43,9 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+/*
+* Computes sampled glossy reflection direction.
+*/
 __host__ __device__
 glm::vec3 calculateImperfectSpecularDirection(
     glm::vec3 normal, float spec_exp, thrust::default_random_engine& rng) {
@@ -93,25 +98,74 @@ glm::vec3 calculateImperfectSpecularDirection(
  *
  * You may need to change the parameter list for your purposes!
  */
-__host__ __device__
-void scatterRay(
-		PathSegment & pathSegment,
-        glm::vec3 intersect,
-        glm::vec3 normal,
-        const Material &m,
-        thrust::default_random_engine &rng) {
 
-    glm::vec3 originOffset = 0.0005f * normal;
+__host__ __device__
+void diffuseScatter(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng) {
+
     glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng);
-    //glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
+
+    // uniform diffuse
+    pathSegment.ray.direction = diffuseDir;
+    pathSegment.color *= m.color;
+
+    glm::vec3 originOffset = RAY_EPSILON * normal;
+    originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+    pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
+}
+
+__host__ __device__
+void mirrorScatter(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng) {
+
+    glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
+
+    // perfect specular
+    pathSegment.ray.direction = reflectDir;
+    pathSegment.color *= m.specular.color;
+
+    glm::vec3 originOffset = RAY_EPSILON * normal;
+    originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+    pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
+}
+
+__host__ __device__
+void glossyScatter(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng) {
+
     glm::vec3 reflectDir = calculateImperfectSpecularDirection(normal, m.specular.exponent, rng);
+
+    // imperfect specular
+    pathSegment.ray.direction = reflectDir;
+    pathSegment.color *= m.specular.color;
+
+    glm::vec3 originOffset = RAY_EPSILON * normal;
+    originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
+    pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
+}
+
+__host__ __device__
+void dielectricScatter(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    float ior1, float ior2,
+    thrust::default_random_engine& rng) {
 
     float cosine;
     float reflect_prob;
-    float idx_ref_other = 1.f; // Replace this later
     bool entering = glm::dot(pathSegment.ray.direction, normal) < 0;
-    float etaI = entering ? idx_ref_other : m.indexOfRefraction;
-    float etaT = entering ? m.indexOfRefraction : idx_ref_other;
+    float etaI = entering ? ior1 : ior2;
+    float etaT = entering ? ior2 : ior1;
     float eta = etaI / etaT;
     cosine = entering ? -glm::dot(pathSegment.ray.direction, normal) / pathSegment.ray.direction.length() :
         m.indexOfRefraction * glm::dot(pathSegment.ray.direction, normal) / pathSegment.ray.direction.length();
@@ -125,29 +179,35 @@ void scatterRay(
         reflect_prob = R0 + (1.f - R0) * glm::pow(1.f - cosine, 5.f);
     }
 
-    if (m.hasReflective) {
-        // reflective
-        pathSegment.ray.direction = reflectDir;
-        pathSegment.color *= (m.specular.color);
-        originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
-        pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float prob = u01(rng);
+    if (prob < reflect_prob) {
+        refractDir = glm::reflect(pathSegment.ray.direction, normal);
     }
-    else if (m.hasRefractive) {
-        // refractive
-        thrust::uniform_real_distribution<float> u01(0, 1);
-        float prob = u01(rng);
-        if (prob < reflect_prob) {
-            refractDir = glm::reflect(pathSegment.ray.direction, normal);
-        }
-        pathSegment.ray.direction = refractDir;
-        pathSegment.color *= (m.specular.color);
-        pathSegment.ray.origin = intersect + 0.0005f * refractDir; // avoid shadow acne
-    }
-    else {
-        // uniform diffuse
-        pathSegment.ray.direction = diffuseDir;
-        pathSegment.color *= m.color;
-        originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
-        pathSegment.ray.origin = intersect + originOffset; // avoid shadow acne
-    }
+    pathSegment.ray.direction = refractDir;
+    pathSegment.color *= m.specular.color;
+    pathSegment.ray.origin = intersect + RAY_EPSILON * refractDir;
 }
+
+__host__ __device__
+void glassScatter(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    float ior1, float ior2,
+    thrust::default_random_engine& rng) {
+
+    bool entering = glm::dot(-pathSegment.ray.direction, normal) > 0;
+    float etaI = entering ? ior1 : ior2;
+    float etaT = entering ? ior2 : ior1;
+    float eta = etaI / etaT;
+    glm::vec3 refractDir = glm::refract(pathSegment.ray.direction, normal, eta);
+    if (glm::length(refractDir) == 0.f) {
+        refractDir = glm::reflect(pathSegment.ray.direction, normal);
+    }
+
+    pathSegment.ray.direction = glm::normalize(refractDir);
+    pathSegment.color *= m.specular.color;
+    pathSegment.ray.origin = intersect + RAY_EPSILON * refractDir; // avoid shadow acne
+}
+

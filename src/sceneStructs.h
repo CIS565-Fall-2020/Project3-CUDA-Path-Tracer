@@ -12,6 +12,15 @@ enum GeomType {
     CUBE,
 };
 
+enum MaterialType {
+    DIFFUSE,
+    MIRROR,
+    GLOSSY,
+    DIELECTRIC,
+    GLASS,
+    EMISSIVE,
+};
+
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
@@ -29,6 +38,7 @@ struct Geom {
 };
 
 struct Material {
+    enum MaterialType type;
     glm::vec3 color;
     struct {
         float exponent;
@@ -49,6 +59,8 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    float lensRadius;
+    float focalDist;
 };
 
 struct RenderState {

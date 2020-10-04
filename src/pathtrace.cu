@@ -163,11 +163,19 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 			- (cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f) - s[1])
 			);
 
+        if (cam.lensRadius > 0) {
+            glm::vec3 focalP = segment.ray.direction * cam.focalDist + segment.ray.origin;
+            thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+            thrust::uniform_real_distribution<float> u01(-0.5f, 0.5f);
+            glm::vec3 sample(u01(rng), u01(rng), 0.f);
+            segment.ray.origin += (sample * cam.lensRadius);
+            segment.ray.direction = glm::normalize(focalP - segment.ray.origin);
+        }
+
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}
 }
-
 // TODO:
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
@@ -274,10 +282,29 @@ __global__ void shadeFakeMaterial (
         pathSegments[idx].color *= (materialColor * material.emittance);
         pathSegments[idx].remainingBounces = 0; // terminate this path
       }
-      // Otherwise, do some pseudo-lighting computation. This is actually more
-      // like what you would expect from shading in a rasterizer like OpenGL.
+      // Otherwise, compute BSDF
       else {
-        scatterRay(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+          float ior1 = 1.f;
+          float ior2 = material.indexOfRefraction;
+          switch (material.type) {
+            case DIFFUSE:
+                diffuseScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+                break;
+            case MIRROR:
+                mirrorScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+                break;
+            case GLOSSY:
+                glossyScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+                break;
+            case DIELECTRIC:
+                dielectricScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, ior1, ior2, rng);
+                break;
+            case GLASS:
+                glassScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, ior1, ior2, rng);
+                break;
+            default:
+                break;
+          }
         pathSegments[idx].remainingBounces -= 1;
         if (pathSegments[idx].remainingBounces == 0) {
             // This was the last bounce, since a non-emissive material was hit set the ray color to black

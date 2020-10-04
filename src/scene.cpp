@@ -96,7 +96,7 @@ int Scene::loadCamera() {
     float fovy;
 
     //load static properties
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 7; i++) {
         string line;
         utilityCore::safeGetline(fp_in, line);
         vector<string> tokens = utilityCore::tokenizeString(line);
@@ -111,6 +111,10 @@ int Scene::loadCamera() {
             state.traceDepth = atoi(tokens[1].c_str());
         } else if (strcmp(tokens[0].c_str(), "FILE") == 0) {
             state.imageName = tokens[1];
+        } else if (strcmp(tokens[0].c_str(), "LENS") == 0) {
+            camera.lensRadius = atof(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "FOCAL") == 0) {
+            camera.focalDist = atof(tokens[1].c_str());
         }
     }
 
@@ -160,10 +164,25 @@ int Scene::loadMaterial(string materialid) {
         Material newMaterial;
 
         //load static properties
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < 8; i++) {
             string line;
             utilityCore::safeGetline(fp_in, line);
             vector<string> tokens = utilityCore::tokenizeString(line);
+            if (strcmp(tokens[0].c_str(), "TYPE") == 0) {
+                if (strcmp(tokens[1].c_str(), "DIFFUSE") == 0) {
+                    newMaterial.type = (MaterialType)0;
+                } else if (strcmp(tokens[1].c_str(), "MIRROR") == 0) {
+                    newMaterial.type = (MaterialType)1;
+                } else if (strcmp(tokens[1].c_str(), "GLOSSY") == 0) {
+                    newMaterial.type = (MaterialType)2;
+                } else if (strcmp(tokens[1].c_str(), "DIELECTRIC") == 0) {
+                    newMaterial.type = (MaterialType)3;
+                } else if (strcmp(tokens[1].c_str(), "GLASS") == 0) {
+                    newMaterial.type = (MaterialType)4;
+                } else if (strcmp(tokens[1].c_str(), "EMISSIVE") == 0) {
+                    newMaterial.type = (MaterialType)5;
+                }
+            }
             if (strcmp(tokens[0].c_str(), "RGB") == 0) {
                 glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
                 newMaterial.color = color;
