@@ -111,6 +111,9 @@ __host__ __device__ void scatterRay(
 				path.ray.direction = glm::normalize(glm::refract(path.ray.direction, normal, ior));
 			}
 		} else {
+			if (glm::dot(normal, path.ray.direction) >= 0.0f) {
+				normal = -normal;
+			}
 			path.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
 		}
 		path.ray.origin += 0.01f * path.ray.direction;

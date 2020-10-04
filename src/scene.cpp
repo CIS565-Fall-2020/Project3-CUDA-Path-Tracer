@@ -26,7 +26,7 @@ Scene::Scene(std::string filename) {
                 loadMaterial(tokens[1]);
                 std::cout << " " << std::endl;
             } else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
-                loadGeom(tokens[1]);
+                loadGeom();
                 std::cout << " " << std::endl;
             } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
                 loadCamera();
@@ -36,70 +36,95 @@ Scene::Scene(std::string filename) {
     }
 }
 
-int Scene::loadGeom(std::string objectid) {
-    int id = atoi(objectid.c_str());
-    if (id != geoms.size()) {
-        std::cout << "ERROR: OBJECT ID does not match expected number of geoms" << std::endl;
-        return -1;
+int Scene::loadGeom() {
+    std::cout << "Loading Geom..." << std::endl;
+    glm::vec3 translation, rotation, scale;
+    std::string line;
+    std::string meshPath;
+    int materialId = -1;
+    GeomType type = GeomType::INVALID;
+
+    //load object type
+    utilityCore::safeGetline(fp_in, line);
+    if (!line.empty() && fp_in.good()) {
+        if (line == "sphere") {
+            std::cout << "Creating new sphere..." << std::endl;
+            type = GeomType::SPHERE;
+        } else if (line == "cube") {
+            std::cout << "Creating new cube..." << std::endl;
+            type = GeomType::CUBE;
+        } else if (line == "mesh") {
+            type = GeomType::TRIANGLE;
+            utilityCore::safeGetline(fp_in, meshPath);
+        }
+    }
+
+    //link material
+    utilityCore::safeGetline(fp_in, line);
+    if (!line.empty() && fp_in.good()) {
+        std::vector<std::string> tokens = utilityCore::tokenizeString(line);
+        materialId = atoi(tokens[1].c_str());
+        std::cout << "Connecting Geom to Material " << materialId << "..." << std::endl;
+    }
+
+    //load transformations
+    utilityCore::safeGetline(fp_in, line);
+    while (!line.empty() && fp_in.good()) {
+        std::vector<std::string> tokens = utilityCore::tokenizeString(line);
+
+        //load tranformations
+        if (tokens[0] == "TRANS") {
+            translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        } else if (tokens[0] == "ROTAT") {
+            rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        } else if (tokens[0] == "SCALE") {
+            scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        }
+
+        utilityCore::safeGetline(fp_in, line);
+    }
+
+    glm::mat4 trans = utilityCore::buildTransformationMatrix(translation, rotation, scale);
+
+    if (type == GeomType::TRIANGLE) { // load mesh
+        std::ifstream fin(meshPath);
+        std::vector<GeomTriangle> tris = loadObj(fin, trans);
+        for (const GeomTriangle &tri : tris) {
+            Geom geom;
+            geom.type = GeomType::TRIANGLE;
+            geom.materialid = materialId;
+            geom.triangle = tri;
+            geoms.push_back(geom);
+        }
     } else {
-        std::cout << "Loading Geom " << id << "..." << std::endl;
         Geom newGeom;
-        glm::vec3 translation, rotation, scale;
-        std::string line;
+        
+        newGeom.type = type;
+        newGeom.materialid = materialId;
 
-        //load object type
-        utilityCore::safeGetline(fp_in, line);
-        if (!line.empty() && fp_in.good()) {
-            if (strcmp(line.c_str(), "sphere") == 0) {
-                std::cout << "Creating new sphere..." << std::endl;
-                newGeom.type = GeomType::SPHERE;
-            } else if (strcmp(line.c_str(), "cube") == 0) {
-                std::cout << "Creating new cube..." << std::endl;
-                newGeom.type = GeomType::CUBE;
-            }
-        }
-
-        //link material
-        utilityCore::safeGetline(fp_in, line);
-        if (!line.empty() && fp_in.good()) {
-            std::vector<std::string> tokens = utilityCore::tokenizeString(line);
-            newGeom.materialid = atoi(tokens[1].c_str());
-            std::cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << std::endl;
-        }
-
-        //load transformations
-        utilityCore::safeGetline(fp_in, line);
-        while (!line.empty() && fp_in.good()) {
-            std::vector<std::string> tokens = utilityCore::tokenizeString(line);
-
-            //load tranformations
-            if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
-                translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            } else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
-                rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
-                scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            }
-
-            utilityCore::safeGetline(fp_in, line);
-        }
-
-        glm::mat4 trans = utilityCore::buildTransformationMatrix(translation, rotation, scale);
         glm::mat4 invTrans = glm::inverse(trans);
-
         newGeom.implicit.transform = glm::mat4x3(trans);
         newGeom.implicit.inverseTransform = glm::mat4x3(invTrans);
 
         geoms.push_back(newGeom);
-        return 1;
     }
+    return 1;
+}
+
+void Scene::computeCameraParameters(Camera &cam) {
+    float yscaled = tan(cam.fovy * (PI / 180)); // should divide by 360 here, but I'm leaving it this way for consistency
+    float xscaled = (yscaled * cam.resolution.x) / cam.resolution.y;
+
+    cam.right = glm::normalize(glm::cross(cam.view, cam.up));
+    cam.pixelLength = 2.0f * glm::vec2(xscaled, yscaled);
+
+    cam.view = glm::normalize(cam.lookAt - cam.position);
 }
 
 int Scene::loadCamera() {
     std::cout << "Loading Camera ..." << std::endl;
     RenderState &state = this->state;
     Camera &camera = state.camera;
-    float fovy;
 
     //load static properties
     for (int i = 0; i < 5; i++) {
@@ -110,7 +135,7 @@ int Scene::loadCamera() {
             camera.resolution.x = atoi(tokens[1].c_str());
             camera.resolution.y = atoi(tokens[2].c_str());
         } else if (strcmp(tokens[0].c_str(), "FOVY") == 0) {
-            fovy = atof(tokens[1].c_str());
+            camera.fovy = atof(tokens[1].c_str());
         } else if (strcmp(tokens[0].c_str(), "ITERATIONS") == 0) {
             state.iterations = atoi(tokens[1].c_str());
         } else if (strcmp(tokens[0].c_str(), "DEPTH") == 0) {
@@ -136,16 +161,7 @@ int Scene::loadCamera() {
     }
 
     //calculate fov based on resolution
-    float yscaled = tan(fovy * (PI / 180));
-    float xscaled = (yscaled * camera.resolution.x) / camera.resolution.y;
-    float fovx = (atan(xscaled) * 180) / PI;
-    camera.fov = glm::vec2(fovx, fovy);
-
-	camera.right = glm::normalize(glm::cross(camera.view, camera.up));
-	camera.pixelLength = glm::vec2(2 * xscaled / (float)camera.resolution.x
-							, 2 * yscaled / (float)camera.resolution.y);
-
-    camera.view = glm::normalize(camera.lookAt - camera.position);
+    computeCameraParameters(camera);
 
     //set up render camera stuff
     int arraylen = camera.resolution.x * camera.resolution.y;
@@ -196,7 +212,6 @@ int Scene::loadMaterial(std::string materialid) {
 bool skipSeparator(std::istream &in) {
     int c;
     while ((c = in.get()) != std::char_traits<char>::eof()) {
-        int c = in.get();
         if (c == '/') {
             return true;
         }
@@ -218,10 +233,15 @@ glm::ivec3 readVertex(std::istream &in) {
     }
     return res - 1;
 }
-std::vector<Geom> Scene::loadObj(std::istream &in) {
+std::vector<GeomTriangle> Scene::loadObj(std::istream &in, glm::mat4 trans) {
+    struct _face {
+        glm::ivec3 id[3];
+    };
+
     std::vector<glm::vec3> verts;
     std::vector<glm::vec3> normals;
-    std::vector<Geom> results;
+    std::vector<glm::vec2> uvs;
+    std::vector< _face> faces;
     for (std::string line; std::getline(in, line); ) {
         std::istringstream ss(line);
         std::string cmd;
@@ -234,10 +254,44 @@ std::vector<Geom> Scene::loadObj(std::istream &in) {
             glm::vec3 norm;
             ss >> norm.x >> norm.y >> norm.z;
             normals.emplace_back(norm);
+        } else if (cmd == "vt") {
+            glm::vec2 uv;
+            ss >> uv.x >> uv.y;
+            uvs.emplace_back(uv);
         } else if (cmd == "f") {
-            glm::ivec3 face = readVertex(ss);
+            _face face;
+            for (std::size_t i = 0; i < 3; ++i) {
+                face.id[i] = readVertex(ss);
+            }
+            faces.emplace_back(face);
         }
     }
+
+    // apply transform
+    for (glm::vec3 &pos : verts) {
+        pos = glm::vec3(trans * glm::vec4(pos, 1.0f));
+    }
+    glm::mat4 invTrans = glm::inverseTranspose(trans);
+    for (glm::vec3 &norm : normals) {
+        norm = glm::vec3(invTrans * glm::vec4(norm, 0.0f));
+    }
+
+    std::vector<GeomTriangle> results;
+    for (const auto &face : faces) {
+        results.emplace_back();
+        GeomTriangle &tri = results.back();
+        for (std::size_t i = 0; i < 3; ++i) {
+            tri.vertices[i] = verts[face.id[i].x];
+        }
+        glm::vec3 flatNormal = glm::normalize(glm::cross(
+            tri.vertices[1] - tri.vertices[0], tri.vertices[2] - tri.vertices[0]
+        ));
+        for (std::size_t i = 0; i < 3; ++i) {
+            tri.uvs[i] = face.id[i].y < 0 ? glm::vec2(0.0f) : uvs[face.id[i].y];
+            tri.normals[i] = face.id[i].z < 0 ? flatNormal : normals[face.id[i].z];
+        }
+    }
+    return results;
 }
 
 struct _buildStep {
@@ -396,6 +450,10 @@ void Scene::buildTree() {
                 n.leftAABBMax = leftMax;
                 n.rightAABBMin = rightMin;
                 n.rightAABBMax = rightMax;
+                // handle duplicate triangles
+                if (pivot == step.rangeBeg || pivot == step.rangeEnd) {
+                    pivot = (step.rangeBeg + step.rangeEnd) / 2;
+                }
                 q.emplace_back(&n.leftChild, step.rangeBeg, pivot);
                 q.emplace_back(&n.rightChild, pivot, step.rangeEnd);
             }

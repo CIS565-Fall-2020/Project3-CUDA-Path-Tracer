@@ -47,6 +47,25 @@ int main(int argc, char** argv) {
     scene = new Scene(sceneFile);
     scene->buildTree();
 
+    std::vector<std::pair<int, int>> stk;
+    stk.emplace_back(scene->aabbTreeRoot, 0);
+    int max = 0;
+    while (!stk.empty()) {
+        int node = stk.back().first;
+        int depth = stk.back().second;
+        stk.pop_back();
+
+        max = std::max(max, depth);
+
+        if (scene->aabbTree[node].leftChild >= 0) {
+            stk.emplace_back(scene->aabbTree[node].leftChild, depth + 1);
+        }
+        if (scene->aabbTree[node].rightChild >= 0) {
+            stk.emplace_back(scene->aabbTree[node].rightChild, depth + 1);
+        }
+    }
+    std::cout << max << "\n";
+
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
     renderState = &scene->state;
@@ -189,22 +208,22 @@ void mousePositionCallback(GLFWwindow* window, double xpos, double ypos) {
     camchanged = true;
   }
   else if (rightMousePressed) {
-    zoom += (ypos - lastY) / height;
-    zoom = std::fmax(0.1f, zoom);
+    Camera &cam = renderState->camera;
+    cam.fovy += 10.0f * (ypos - lastY) / height;
+    cam.fovy = std::max(cam.fovy, 5.0f);
+    Scene::computeCameraParameters(cam);
     camchanged = true;
   }
   else if (middleMousePressed) {
     renderState = &scene->state;
     Camera &cam = renderState->camera;
-    glm::vec3 forward = cam.view;
-    forward.y = 0.0f;
-    forward = glm::normalize(forward);
+    glm::vec3 up = cam.up;
     glm::vec3 right = cam.right;
     right.y = 0.0f;
     right = glm::normalize(right);
 
     cam.lookAt -= (float) (xpos - lastX) * right * 0.01f;
-    cam.lookAt += (float) (ypos - lastY) * forward * 0.01f;
+    cam.lookAt += (float) (ypos - lastY) * up * 0.01f;
     camchanged = true;
   }
   lastX = xpos;

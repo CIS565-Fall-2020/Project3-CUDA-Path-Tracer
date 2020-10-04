@@ -155,8 +155,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	// implement antialiasing by jittering the ray
 	glm::vec3 dir =
 		cam.view -
-		cam.right * (cam.pixelLength.x * (static_cast<float>(x) + dist(rand)) - 1.0f) -
-		cam.up * (cam.pixelLength.y * (static_cast<float>(y) + dist(rand)) - 1.0f);
+		cam.right * (cam.pixelLength.x * ((static_cast<float>(x) + dist(rand)) / cam.resolution.x - 0.5f)) -
+		cam.up * (cam.pixelLength.y * ((static_cast<float>(y) + dist(rand)) / cam.resolution.x - 0.5f));
 
 	// depth of field
 	dir *= cam.focalDistance;
@@ -184,12 +184,25 @@ __device__ bool rayBoxIntersection(const Ray &ray, glm::vec3 min, glm::vec3 max,
 }
 
 __device__ bool rayGeomIntersection(const Ray &ray, const Geom &geom, float *dist, glm::vec3 *normal) {
-	float t;
+	float t = -1.0f;
 	glm::vec3 norm;
 	if (geom.type == GeomType::CUBE) {
 		t = boxIntersectionTest(geom.implicit, ray, norm);
 	} else if (geom.type == GeomType::SPHERE) {
 		t = sphereIntersectionTest(geom.implicit, ray, norm);
+	} else if (geom.type == GeomType::TRIANGLE) {
+		glm::vec3 bary;
+		bool intersect = glm::intersectRayTriangle(
+			ray.origin, ray.direction,
+			geom.triangle.vertices[0], geom.triangle.vertices[1], geom.triangle.vertices[2], bary
+		);
+		if (intersect) {
+			t = bary.z;
+			norm =
+				geom.triangle.normals[0] * (1.0f - bary.x - bary.y) +
+				geom.triangle.normals[1] * bary.x + geom.triangle.normals[2] * bary.y;
+			norm = glm::normalize(norm);
+		}
 	}
 	if (t > 0.0f && t < *dist) {
 		*dist = t;
@@ -246,7 +259,6 @@ __device__ int traverseAABBTree(
 	return resIndex;
 }
 
-// TODO:
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
@@ -294,9 +306,12 @@ __global__ void shade(
 
 	ShadeableIntersection intersection = intersections[iSelf];
 	PathSegment path = paths[iSelf];
-	if (intersection.materialId != -1) {
-		thrust::default_random_engine rng = makeSeededRandomEngine(iter, iSelf, depth);
 
+	if (intersection.materialId != -1) {
+		/*path.color = (intersection.surfaceNormal + 1.0f) * 0.5f;
+		path.remainingBounces = -1;*/
+
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, iSelf, depth);
 		scatterRay(
 			path, path.ray.origin + path.ray.direction * intersection.t, intersection.surfaceNormal,
 			materials[intersection.materialId], rng

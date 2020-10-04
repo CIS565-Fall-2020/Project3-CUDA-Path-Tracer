@@ -23,6 +23,11 @@ struct GeomTransform {
 	glm::mat4x3 transform;
 	glm::mat4x3 inverseTransform;
 };
+struct GeomTriangle {
+	glm::vec3 vertices[3];
+	glm::vec3 normals[3];
+	glm::vec2 uvs[3];
+};
 struct Geom {
 	Geom() {
 	}
@@ -34,10 +39,7 @@ struct Geom {
 
 	union {
 		GeomTransform implicit;
-		struct {
-			glm::vec3 vertices[3];
-			glm::vec3 normals[3];
-		} triangle;
+		GeomTriangle triangle;
 	};
 	int materialid = -1;
 	GeomType type = GeomType::INVALID;
@@ -62,8 +64,8 @@ struct Camera {
 	glm::vec3 view;
 	glm::vec3 up;
 	glm::vec3 right;
-	glm::vec2 fov;
 	glm::vec2 pixelLength;
+	float fovy;
 	float aperture = 0.0f, focalDistance = 10.0f;
 };
 
