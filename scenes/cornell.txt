@@ -1,5 +1,6 @@
 // Emissive material (light)
 MATERIAL 0
+TYPE	    EMISSIVE
 RGB         1 1 1
 SPECEX      0
 SPECRGB     0 0 0
@@ -10,6 +11,7 @@ EMITTANCE   5
 
 // Diffuse white
 MATERIAL 1
+TYPE	    DIFFUSE
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     0 0 0
@@ -20,6 +22,7 @@ EMITTANCE   0
 
 // Diffuse red
 MATERIAL 2
+TYPE	    DIFFUSE
 RGB         .85 .35 .35
 SPECEX      0
 SPECRGB     0 0 0
@@ -30,6 +33,7 @@ EMITTANCE   0
 
 // Diffuse green
 MATERIAL 3
+TYPE	    DIFFUSE
 RGB         .35 .85 .35
 SPECEX      0
 SPECRGB     0 0 0
@@ -40,19 +44,21 @@ EMITTANCE   0
 
 // Glass
 MATERIAL 4
+TYPE	    DIELECTRIC
 RGB         .98 .98 .98
 SPECEX      1
 SPECRGB     .98 .98 .98
 REFL        0
 REFR        1
-REFRIOR     1.3
+REFRIOR     1.2
 EMITTANCE   0
 
 // Mirror
 MATERIAL 5
+TYPE	    MIRROR
 RGB         .98 .98 .98
 SPECEX      1
-SPECRGB     .98 .98 .98
+SPECRGB     .68 .68 .98
 REFL        1
 REFR        0
 REFRIOR     0
@@ -60,8 +66,9 @@ EMITTANCE   0
 
 // Blurry specular
 MATERIAL 6
+TYPE	    GLOSSY
 RGB         .65 .98 .98
-SPECEX      0.2
+SPECEX      7.5
 SPECRGB     .65 .98 .98
 REFL        1
 REFR        0
@@ -75,6 +82,8 @@ FOVY        45
 ITERATIONS  5000
 DEPTH       8
 FILE        cornell
+LENS        0
+FOCAL       8.7
 EYE         0.0 5 10.5
 LOOKAT      0 5 0
 UP          0 1 0
@@ -86,15 +95,15 @@ cube
 material 0
 TRANS       0 10 0
 ROTAT       0 0 0
-SCALE       3 .3 3
+SCALE       4 .4 4
 
 // Floor
 OBJECT 1
 cube
 material 1
 TRANS       0 0 0
-ROTAT       0 0 0
-SCALE       10 .01 10
+ROTAT       0 0 90
+SCALE       .01 10 10
 
 // Ceiling
 OBJECT 2
@@ -128,27 +137,35 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Sphere
+// Reflective cube
 OBJECT 6
-sphere
+cube
 material 5
-TRANS       0.5 3 1
-ROTAT       0 0 0
-SCALE       3 3 3
-
-// Cube
-OBJECT 7
-cube
-material 4
-TRANS       1.5 6 -1.5
+TRANS       3.2 6 -1.75
 ROTAT       30 45 0
-SCALE       3 3 3
+SCALE       2 2 2
 
-// Rectangular box
-OBJECT 8
-cube
-material 6
+// dielectric sphere
+OBJECT 7
+sphere
+material 4
 TRANS       -2 4 -2
-ROTAT       25 60 42
-SCALE       2.9 0.75 0.75
+ROTAT       25 90 42
+SCALE       2 2 2
 
+// Mesh duck glossy
+OBJECT 8
+mesh
+../scenes/duck/Duck.gltf
+material 6
+TRANS       0 0.35 1
+ROTAT       0 -45 0
+SCALE       0.03 0.03 0.03
+
+// Wall
+OBJECT 9
+cube
+material 1
+TRANS    0 0 10.8
+ROTAT    0 90 0
+SCALE    .01 10 10

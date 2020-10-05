@@ -167,8 +167,8 @@ void dielectricScatter(PathSegment& pathSegment,
     float etaI = entering ? ior1 : ior2;
     float etaT = entering ? ior2 : ior1;
     float eta = etaI / etaT;
-    cosine = entering ? -glm::dot(pathSegment.ray.direction, normal) / pathSegment.ray.direction.length() :
-        m.indexOfRefraction * glm::dot(pathSegment.ray.direction, normal) / pathSegment.ray.direction.length();
+    cosine = entering ? -glm::dot(pathSegment.ray.direction, normal) / glm::length(pathSegment.ray.direction) :
+        m.indexOfRefraction * glm::dot(pathSegment.ray.direction, normal) / glm::length(pathSegment.ray.direction);
     glm::vec3 refractDir = glm::refract(pathSegment.ray.direction, normal, eta);
     if (glm::length(refractDir) == 0.f) {
         reflect_prob = 1.f;

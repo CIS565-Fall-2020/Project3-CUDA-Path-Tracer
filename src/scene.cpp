@@ -4,6 +4,12 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#define TINYGLTF_IMPLEMENTATION
+#include "tiny_gltf.h"
+
+static int num_triangles = 0;
+static int num_meshes = 0;
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -33,14 +39,18 @@ Scene::Scene(string filename) {
 }
 
 int Scene::loadGeom(string objectid) {
-    int id = atoi(objectid.c_str());
+    int id = atoi(objectid.c_str()) + num_triangles - num_meshes;
     if (id != geoms.size()) {
+        cout << "Id: " << id << endl;
+        cout << "Geoms: " << geoms.size() << endl;
+        cout << "Triangles: " << num_triangles << endl;
         cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
         return -1;
     } else {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
+        std::vector<Geom> triangles; // for arbitrary mesh only
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -51,6 +61,77 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
+            } else if (strcmp(line.c_str(), "mesh") == 0) {
+                cout << "Creating new mesh..." << endl;
+                newGeom.type = TRIANGLE;
+                // read GLTF file
+                string filename;
+                utilityCore::safeGetline(fp_in, line);
+                if (!line.empty() && fp_in.good()) {
+                    tinygltf::Model model;
+                    tinygltf::TinyGLTF loader;
+                    std::string err;
+                    std::string warn;
+                    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, line.c_str());
+                    if (!warn.empty()) {
+                        printf("Warn: %s\n", warn.c_str());
+                        return -1;
+                    }
+                    if (!err.empty()) {
+                        printf("Err: %s\n", err.c_str());
+                        return -1;
+                    }
+                    if (!ret) {
+                        printf("Failed to parse glTF\n");
+                        return -1;
+                    }
+                    for (tinygltf::Mesh mesh : model.meshes) {
+                        for (tinygltf::Primitive prim : mesh.primitives) {
+                            // Get the accessors and buffer views
+                            const tinygltf::Accessor& accessorPos = model.accessors[prim.attributes["POSITION"]];
+                            const tinygltf::BufferView& bufferViewPos = model.bufferViews[accessorPos.bufferView];
+
+                            const tinygltf::Accessor& accessorNorm = model.accessors[prim.attributes["NORMAL"]];
+                            const tinygltf::BufferView& bufferViewNorm = model.bufferViews[accessorNorm.bufferView];
+
+                            const tinygltf::Buffer& bufferPos = model.buffers[bufferViewPos.buffer];
+                            const tinygltf::Buffer& bufferNorm = model.buffers[bufferViewNorm.buffer];
+
+                            const float* positions = reinterpret_cast<const float*>(&bufferPos.data[bufferViewPos.byteOffset + accessorPos.byteOffset]);
+                            const float* normals = reinterpret_cast<const float*>(&bufferNorm.data[bufferViewNorm.byteOffset + accessorNorm.byteOffset]);
+
+                            // Get indices
+                            const tinygltf::Accessor& accessorIdx = model.accessors[0];
+                            const tinygltf::BufferView& bufferViewIdx = model.bufferViews[accessorIdx.bufferView];
+                            const tinygltf::Buffer& bufferIdx = model.buffers[bufferViewIdx.buffer];
+                            const unsigned short* indices = reinterpret_cast<const unsigned short*>(&bufferIdx.data[bufferViewIdx.byteOffset + accessorIdx.byteOffset]);
+
+                            for (size_t i = 0; i < accessorIdx.count; i += 3) {
+                                int idx0 = indices[i];
+                                int idx1 = indices[i + 1];
+                                int idx2 = indices[i + 2];
+                                // Get triangle vertices and surface normal
+                                glm::vec3 v0(positions[idx0 * 3], positions[idx0 * 3 + 1], positions[idx0 * 3 + 2]);
+                                glm::vec3 v1(positions[idx1 * 3], positions[idx1 * 3 + 1], positions[idx1 * 3 + 2]);
+                                glm::vec3 v2(positions[idx2 * 3], positions[idx2 * 3 + 1], positions[idx2 * 3 + 2]);
+                                glm::vec3 n(normals[idx0 * 3], normals[idx0 * 3 + 1], normals[idx0 * 3 + 2]);
+                                /*cout << "NORMAL" << endl;
+                                cout << "(" << n[0] << ", " << n[1] << ", " << n[2] << ")" << endl;
+                                cout << "POSITIONS" << endl;
+                                cout << "(" << v0[0] << ", " << v0[1] << ", " << v0[2] << ")" << endl;
+                                cout << "(" << v1[0] << ", " << v1[1] << ", " << v1[2] << ")" << endl;
+                                cout << "(" << v2[0] << ", " << v2[1] << ", " << v2[2] << ")" << endl;*/
+                                Geom triangle;
+                                triangle.type = TRIANGLE;
+                                triangle.normal = n;
+                                triangle.v0 = v0;
+                                triangle.v1 = v1;
+                                triangle.v2 = v2;
+                                triangles.push_back(triangle);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -59,7 +140,9 @@ int Scene::loadGeom(string objectid) {
         if (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             newGeom.materialid = atoi(tokens[1].c_str());
-            cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+            if (newGeom.type != TRIANGLE) {
+                cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+            }
         }
 
         //load transformations
@@ -84,7 +167,24 @@ int Scene::loadGeom(string objectid) {
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
 
-        geoms.push_back(newGeom);
+        if (newGeom.type == TRIANGLE) {
+            // iterate over all triangles
+            for (Geom triangle : triangles) {
+                triangle.materialid = newGeom.materialid;
+                triangle.translation = newGeom.translation;
+                triangle.rotation = newGeom.rotation;
+                triangle.scale = newGeom.scale;
+                triangle.transform = newGeom.transform;
+                triangle.inverseTransform = newGeom.inverseTransform;
+                triangle.invTranspose = newGeom.invTranspose;
+                geoms.push_back(triangle);
+                num_triangles++;
+            }
+            num_meshes++;
+        }
+        else {
+            geoms.push_back(newGeom);
+        }
         return 1;
     }
 }
