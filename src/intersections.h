@@ -152,7 +152,7 @@ __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, 
 	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
 	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
-	float t_min = 0;
+	float t_min = INFINITY;
 	for (int i = mesh.triangleIdxStart; i <= mesh.triangleIdxEnd; i++) {
 		Triangle tri = tris[i];
 		glm::vec3 baryPosition;

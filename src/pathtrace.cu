@@ -85,7 +85,9 @@ static ShadeableIntersection* dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 static ShadeableIntersection* dev_firstIntersections = NULL; // Cache first bounce of first iter to be re-use in other iters
+static Triangle* dev_tris = NULL; // Store triangle information for meshes
 static std::chrono::steady_clock::time_point timePathTrace; // Measure performance
+
 // Depth of field
 static float lensRadius = 0.5f;
 static float focalDist = 10.f;
@@ -102,6 +104,9 @@ void pathtraceInit(Scene* scene) {
 
   cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
   cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
+
+  cudaMalloc(&dev_tris, scene->triangles.size() * sizeof(Triangle));
+  cudaMemcpy(dev_tris, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
 
   cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
@@ -123,6 +128,7 @@ void pathtraceFree() {
   cudaFree(dev_materials);
   cudaFree(dev_intersections);
   // TODO: clean up any extra device memory you created
+  cudaFree(dev_tris);
   cudaFree(dev_firstIntersections);
 
   checkCUDAError("pathtraceFree");
@@ -168,6 +174,7 @@ __global__ void computeIntersections(
   , int num_paths
   , PathSegment* pathSegments
   , Geom* geoms
+  , Triangle* tris
   , int geoms_size
   , ShadeableIntersection* intersections
 )
@@ -477,6 +484,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
           , num_paths
           , dev_paths
           , dev_geoms
+          , dev_tris
           , hst_scene->geoms.size()
           , dev_firstIntersections
           );
@@ -491,6 +499,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         , num_paths
         , dev_paths
         , dev_geoms
+        , dev_tris
         , hst_scene->geoms.size()
         , dev_intersections
         );
@@ -502,6 +511,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         , num_paths
         , dev_paths
         , dev_geoms
+        , dev_tris
         , hst_scene->geoms.size()
         , dev_intersections
         );
