@@ -165,7 +165,9 @@ __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, 
 			}
 		}
 	}
-
+	if (t_min == INFINITY) {
+		return -1;
+	}
 	intersectionPoint = multiplyMV(mesh.transform, glm::vec4(intersectionPoint, 1.f));
 	normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(normal, 0.0f)));
 	return glm::length(r.origin - intersectionPoint);

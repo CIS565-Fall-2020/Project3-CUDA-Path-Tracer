@@ -71,7 +71,7 @@ SCALE       3 .3 3
 // Floor
 OBJECT 1
 cube
-material 1
+material 2
 TRANS       0 0 0
 ROTAT       0 0 0
 SCALE       10 .01 10
@@ -87,7 +87,7 @@ SCALE       .01 10 10
 // Back wall
 OBJECT 3
 cube
-material 1
+material 3
 TRANS       0 5 -5
 ROTAT       0 90 0
 SCALE       .01 10 10
@@ -95,7 +95,7 @@ SCALE       .01 10 10
 // Left wall
 OBJECT 4
 cube
-material 2
+material 1
 TRANS       -5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
@@ -103,14 +103,14 @@ SCALE       .01 10 10
 // Right wall
 OBJECT 5
 cube
-material 3
+material 1
 TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
 // Object
 OBJECT 6
-obj cube.obj
+obj sphere.obj
 material 1
 TRANS       0 3 0
 ROTAT       0 0 0

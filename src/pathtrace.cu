@@ -19,7 +19,7 @@
 #include "interactions.h"
 
 #define TIMEPATHTRACE 0 // Measure performance
-#define DEPTHOFFIELD 1
+#define DEPTHOFFIELD 0
 #define SORTPATHSBYMATERIAL 1 // Improve performance
 #define CACHEFIRSTINTERSECTIONS 0 // Improve performance
 
