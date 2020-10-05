@@ -114,7 +114,9 @@ int Scene::loadGeom(string objectid) {
                                 glm::vec3 v0(positions[idx0 * 3], positions[idx0 * 3 + 1], positions[idx0 * 3 + 2]);
                                 glm::vec3 v1(positions[idx1 * 3], positions[idx1 * 3 + 1], positions[idx1 * 3 + 2]);
                                 glm::vec3 v2(positions[idx2 * 3], positions[idx2 * 3 + 1], positions[idx2 * 3 + 2]);
-                                glm::vec3 n(normals[idx0 * 3], normals[idx0 * 3 + 1], normals[idx0 * 3 + 2]);
+                                glm::vec3 n0(normals[idx0 * 3], normals[idx0 * 3 + 1], normals[idx0 * 3 + 2]);
+                                glm::vec3 n1(normals[idx1 * 3], normals[idx1 * 3 + 1], normals[idx1 * 3 + 2]);
+                                glm::vec3 n2(normals[idx2 * 3], normals[idx2 * 3 + 1], normals[idx2 * 3 + 2]);
                                 /*cout << "NORMAL" << endl;
                                 cout << "(" << n[0] << ", " << n[1] << ", " << n[2] << ")" << endl;
                                 cout << "POSITIONS" << endl;
@@ -123,7 +125,9 @@ int Scene::loadGeom(string objectid) {
                                 cout << "(" << v2[0] << ", " << v2[1] << ", " << v2[2] << ")" << endl;*/
                                 Geom triangle;
                                 triangle.type = TRIANGLE;
-                                triangle.normal = n;
+                                triangle.n0 = n0;
+                                triangle.n1 = n1;
+                                triangle.n2 = n2;
                                 triangle.v0 = v0;
                                 triangle.v1 = v1;
                                 triangle.v2 = v2;

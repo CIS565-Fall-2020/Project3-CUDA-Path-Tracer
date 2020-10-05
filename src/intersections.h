@@ -167,7 +167,13 @@ __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
         return -1;
     }
     intersectionPoint = multiplyMV(triangle.transform, glm::vec4(baryPos, 1.f));
-    normal = glm::normalize(multiplyMV(triangle.invTranspose, glm::vec4(triangle.normal, 0.f)));
+    // compute smoothened normal
+    float S = 0.5f * glm::length(glm::cross(triangle.v0 - triangle.v1, triangle.v2 - triangle.v1));
+    float S0 = 0.5f * glm::length(glm::cross(triangle.v1 - baryPos, triangle.v2 - baryPos));
+    float S1 = 0.5f * glm::length(glm::cross(triangle.v0 - baryPos, triangle.v2 - baryPos));
+    float S2 = 0.5f * glm::length(glm::cross(triangle.v0 - baryPos, triangle.v1 - baryPos));
+    glm::vec3 smoothNormal = triangle.n0 * S0 / S + triangle.n1 * S1 / S + triangle.n2 * S2 / S;
+    normal = glm::normalize(multiplyMV(triangle.invTranspose, glm::vec4(smoothNormal, 0.f)));
     float t = glm::length(r.origin - intersectionPoint);
     return t;
 }

@@ -36,7 +36,9 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
-    glm::vec3 normal; // triangles only
+    glm::vec3 n0; // triangles only
+    glm::vec3 n1; // triangles only
+    glm::vec3 n2; // triangles only
     glm::vec3 v0; // triangles only
     glm::vec3 v1; // triangles only
     glm::vec3 v2; // triangles only
