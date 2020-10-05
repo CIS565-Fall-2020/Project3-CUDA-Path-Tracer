@@ -17,11 +17,13 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
 public:
-    Scene(string filename);
+    Scene(string filename, bool usingWorldSpace = false);
     ~Scene() {}
 
     std::vector<Geom> geoms;
     std::vector<Material> materials;
     std::vector<glm::vec3> triangles; // Triangles of meshes
+    bool isWorldSpace; // How triangle positions are interpreted
+    
     RenderState state;
 };

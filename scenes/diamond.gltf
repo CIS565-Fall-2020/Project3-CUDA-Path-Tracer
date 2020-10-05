@@ -1,0 +1,185 @@
+{
+    "asset": {
+        "copyright": "(C)2020 69411",
+        "generator": "maya2glTF v1.1.0 c13125a0af77",
+        "version": "2.0"
+    },
+    "scenes": [
+        {
+            "nodes": [
+                0
+            ]
+        }
+    ],
+    "scene": 0,
+    "nodes": [
+        {
+            "name": "pCylinder1",
+            "mesh": 0
+        }
+    ],
+    "meshes": [
+        {
+            "name": "pCylinderShape1",
+            "extras": {
+                "targetNames": []
+            },
+            "primitives": [
+                {
+                    "attributes": {
+                        "NORMAL": 1,
+                        "POSITION": 2,
+                        "TANGENT": 3,
+                        "TEXCOORD_0": 4
+                    },
+                    "indices": 0,
+                    "mode": 4,
+                    "material": 0
+                }
+            ]
+        }
+    ],
+    "materials": [
+        {
+            "name": "lambert1",
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [
+                    0.4000000059604645,
+                    0.4000000059604645,
+                    0.4000000059604645,
+                    1.0
+                ],
+                "metallicFactor": 0.0,
+                "roughnessFactor": 1.0
+            }
+        }
+    ],
+    "accessors": [
+        {
+            "name": "pCylinderShape1#0/indices",
+            "bufferView": 0,
+            "byteOffset": 0,
+            "componentType": 5123,
+            "count": 72,
+            "max": [
+                37
+            ],
+            "min": [
+                0
+            ],
+            "type": "SCALAR"
+        },
+        {
+            "name": "pCylinderShape1#0/vertices/NORMAL",
+            "bufferView": 1,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 38,
+            "max": [
+                0.661976158618927,
+                1.0,
+                0.7566532492637634
+            ],
+            "min": [
+                -0.661976158618927,
+                -1.0,
+                -0.7566532492637634
+            ],
+            "type": "VEC3"
+        },
+        {
+            "name": "pCylinderShape1#0/vertices/POSITION",
+            "bufferView": 1,
+            "byteOffset": 456,
+            "componentType": 5126,
+            "count": 38,
+            "max": [
+                1.592333197593689,
+                1.0,
+                1.379001498222351
+            ],
+            "min": [
+                -1.592333197593689,
+                -1.0,
+                -1.3790016174316409
+            ],
+            "type": "VEC3"
+        },
+        {
+            "name": "pCylinderShape1#0/vertices/TANGENT",
+            "bufferView": 2,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 38,
+            "max": [
+                1.0,
+                0.6616787314414978,
+                0.8660256266593933,
+                1.0
+            ],
+            "min": [
+                -1.0,
+                -0.6616787314414978,
+                -0.8660256266593933,
+                1.0
+            ],
+            "type": "VEC4"
+        },
+        {
+            "name": "pCylinderShape1#0/vertices/TEXCOORD_0",
+            "bufferView": 3,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 38,
+            "max": [
+                0.65625,
+                0.9790664911270142
+            ],
+            "min": [
+                0.34375,
+                0.02093350887298584
+            ],
+            "type": "VEC2"
+        }
+    ],
+    "bufferViews": [
+        {
+            "name": "diamond/data/indices-2",
+            "buffer": 0,
+            "byteOffset": 1824,
+            "byteLength": 144,
+            "target": 34963
+        },
+        {
+            "name": "diamond/data/vertices-12",
+            "buffer": 0,
+            "byteOffset": 608,
+            "byteLength": 912,
+            "byteStride": 12,
+            "target": 34962
+        },
+        {
+            "name": "diamond/data/vertices-16",
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 608,
+            "byteStride": 16,
+            "target": 34962
+        },
+        {
+            "name": "diamond/data/vertices-8",
+            "buffer": 0,
+            "byteOffset": 1520,
+            "byteLength": 304,
+            "byteStride": 8,
+            "target": 34962
+        }
+    ],
+    "buffers": [
+        {
+            "name": "diamond/data",
+            "byteLength": 1968,
+            "uri": "diamond0.bin"
+        }
+    ]
+}

@@ -5,7 +5,8 @@
 #include <glm/gtx/string_cast.hpp>
 #include "mesh.h"
 
-Scene::Scene(string filename) {
+Scene::Scene(string filename, bool usingWorldSpace) {
+    isWorldSpace = usingWorldSpace;
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -106,6 +107,12 @@ int Scene::loadGeom(string objectid) {
                 newGeom.translation, newGeom.rotation, newGeom.scale);
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
+
+        if (isWorldSpace) {
+            for (int i = newGeom.triangleStart, ct = 0; ct < newGeom.triangleCount; i++, ct++) {
+                triangles[i] = glm::vec3(newGeom.transform * glm::vec4(triangles[i], 1.f));
+            }
+        }
 
         geoms.push_back(newGeom);
         return 1;

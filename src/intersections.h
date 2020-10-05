@@ -147,10 +147,10 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 __host__ __device__ float meshIntersectionTest(Geom geom, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside,
     const glm::vec3 *triangles) {
-    Ray q;
+    Ray q = r;
     q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
     q.direction = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
-    
+
     float tmin = FLT_MAX;
     int nearest = -1;
 
@@ -160,6 +160,7 @@ __host__ __device__ float meshIntersectionTest(Geom geom, Ray r,
         glm::vec3 v2 = triangles[i + 2];
         glm::vec3 bary;
         if (glm::intersectRayTriangle(q.origin, q.direction, v0, v1, v2, bary)) {
+            // Get the actual intersect from barycentric coordinates
             glm::vec3 p = (1 - bary[0] - bary[1]) * v0 + bary[0] * v1 + bary[1] * v2;
             float t = glm::distance(p, q.origin);
             if (t < tmin) {
@@ -177,10 +178,8 @@ __host__ __device__ float meshIntersectionTest(Geom geom, Ray r,
     glm::vec3 e1 = triangles[nearest + 1] - triangles[nearest];
     glm::vec3 e2 = triangles[nearest + 2] - triangles[nearest];
     glm::vec3 objspaceNormal = glm::normalize(glm::cross(e1, e2));
-
-    intersectionPoint = multiplyMV(geom.transform, glm::vec4(objspaceIntersection, 1.f));
     
-    float3 see = make_float3(intersectionPoint.x, intersectionPoint.y, intersectionPoint.z);
+    intersectionPoint = multiplyMV(geom.transform, glm::vec4(objspaceIntersection, 1.f));
     normal = glm::normalize(multiplyMV(geom.invTranspose, glm::vec4(objspaceNormal, 0.f)));
     outside = glm::dot(normal, r.direction) < 0;
     

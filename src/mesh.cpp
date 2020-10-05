@@ -52,3 +52,18 @@ void MeshLoader::pushTriangles(std::vector<glm::vec3>& triangles) {
 		}
 	}
 }
+
+void Octree::addTriangles(const std::vector<glm::vec3>& triangles) {
+
+	for (int i = 0; i < triangles.size(); i += 3) {
+		
+	}
+}
+
+void Octree::addGeoms(const std::vector<Geom>& geoms) {
+
+}
+
+void Octree::addHelper(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+
+}

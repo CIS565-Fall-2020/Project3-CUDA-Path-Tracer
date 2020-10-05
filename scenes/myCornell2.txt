@@ -45,7 +45,7 @@ SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        1
 REFR        1
-REFRIOR     1.1
+REFRIOR     1.55
 EMITTANCE   0
 
 // Mirror
@@ -129,8 +129,8 @@ SCALE       3 3 3
 // Mesh
 OBJECT 7
 mesh
-material 1
-gltf     "../scenes/Cube.gltf"
+material 4
+gltf     "../scenes/diamond.gltf"
 TRANS     -1 5 0
 ROTAT      0 0 0
 SCALE      1 1 1 
