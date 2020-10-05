@@ -16,15 +16,16 @@ private:
     int loadMaterial(string materialid);
 
     bool loadObj(Geom& geom, string objPath);
-    int loadGeom(string objectid);
+    int loadGeom(string objectid, string directory);
     
     int loadCamera();
+
 public:
     Scene(string filename);
     ~Scene();
 
     std::vector<Geom> geoms;
-    std::vector<Triangle> tris;
+    std::vector<Triangle> triangles;
     std::vector<Material> materials;
     RenderState state;
 };

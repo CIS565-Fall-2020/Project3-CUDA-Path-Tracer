@@ -3,6 +3,7 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <stdlib.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 #include "tiny_obj_loader.h"
@@ -12,6 +13,10 @@ Scene::Scene(string filename) {
 	cout << "Reading scene from " << filename << " ..." << endl;
 	cout << " " << endl;
 	char* fname = (char*)filename.c_str();
+ 
+	size_t lastSlash = filename.find_last_of("\\/");
+	string directory = (std::string::npos == lastSlash) ? "" : filename.substr(0, lastSlash);
+
 	fp_in.open(fname);
 	if (!fp_in.is_open()) {
 		cout << "Error reading from file - aborting!" << endl;
@@ -27,11 +32,11 @@ Scene::Scene(string filename) {
 				cout << " " << endl;
 			}
 			else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
-				loadGeom(tokens[1]);
+				loadGeom(tokens[1], directory);
 				cout << " " << endl;
 			}
 			else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
-				loadCamera();
+				loadCamera();	
 				cout << " " << endl;
 			}
 		}
@@ -39,7 +44,6 @@ Scene::Scene(string filename) {
 }
 
 bool Scene::loadObj(Geom& geom, string objPath) {
-	std::string inputfile = "cornell_box.obj";
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
@@ -47,7 +51,7 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 	std::string warn;
 	std::string err;
 
-	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str());
+	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, objPath.c_str());
 
 	if (!warn.empty()) {
 		std::cout << warn << std::endl;
@@ -58,8 +62,10 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 	}
 
 	if (!ret) {
-		exit(1);
+		return false;
 	}
+
+	geom.triangleIdxStart = triangles.size();
 
 	// Loop over shapes
 	for (size_t s = 0; s < shapes.size(); s++) {
@@ -68,7 +74,8 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
 			int fv = shapes[s].mesh.num_face_vertices[f];
 
-			// Loop over vertices in the face.
+			Triangle tri;
+			// Loop over vertices in the face. Face is only a triangle
 			for (size_t v = 0; v < fv; v++) {
 				// access to vertex
 				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
@@ -78,16 +85,21 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 				tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
 				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
 				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+				tri.v[v] = glm::vec3(vx, vy, vz);
+				tri.n[v] = glm::vec3(nx, ny, nz);
 			}
+			triangles.push_back(tri);
 			index_offset += fv;
 
 			// per-face material
 			shapes[s].mesh.material_ids[f];
 		}
 	}
+	geom.triangleIdxEnd = triangles.size() - 1;
+	return true;
 }
 
-int Scene::loadGeom(string objectid) {
+int Scene::loadGeom(string objectid, string directory) {
 	int id = atoi(objectid.c_str());
 	if (id != geoms.size()) {
 		cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
@@ -97,22 +109,26 @@ int Scene::loadGeom(string objectid) {
 		cout << "Loading Geom " << id << "..." << endl;
 		Geom newGeom;
 		string line;
-
 		//load object type
 		utilityCore::safeGetline(fp_in, line);
 		if (!line.empty() && fp_in.good()) {
-			if (strcmp(line.c_str(), "sphere") == 0) {
+			vector<string> tokens = utilityCore::tokenizeString(line);
+			if (strcmp(tokens[0].c_str(), "sphere") == 0) {
 				cout << "Creating new sphere..." << endl;
 				newGeom.type = SPHERE;
 			}
-			else if (strcmp(line.c_str(), "cube") == 0) {
+			else if (strcmp(tokens[0].c_str(), "cube") == 0) {
 				cout << "Creating new cube..." << endl;
 				newGeom.type = CUBE;
 			}
-			else if (strcmp(line.c_str(), "obj") == 0) {
+			else if (strcmp(tokens[0].c_str(), "obj") == 0) {
 				cout << "Creating new obj mesh..." << endl;
-				newGeom.type = OBJ;
-
+				newGeom.type = MESH;
+				string objPath = directory + "\\/" + tokens[1];
+				if (!loadObj(newGeom, objPath)) {
+					cout << "ERROR: CANNOT LOAD OBJ" << endl;
+					return -1;
+				}				
 			}
 		}
 
