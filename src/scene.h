@@ -14,7 +14,10 @@ class Scene {
 private:
     ifstream fp_in;
     int loadMaterial(string materialid);
+
+    bool loadObj(Geom& geom, string objPath);
     int loadGeom(string objectid);
+    
     int loadCamera();
 public:
     Scene(string filename);
