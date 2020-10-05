@@ -4,6 +4,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
 #include <thrust/remove.h>
+#include <vector>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -91,8 +92,12 @@ static ShadeableIntersection* dev_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 static PathSegment* dev_pathsTerminated = NULL;
 static ShadeableIntersection* dev_intersectionsFirst = NULL;
+static glm::vec3* dev_vertices = NULL;
+static glm::vec3* dev_normals = NULL;
+static int dev_numVertices;
+static Geom dev_meshBB;
 
-void pathtraceInit(Scene* scene) {
+void pathtraceInit(Scene* scene, const std::vector<glm::vec3>& vertices, const std::vector<glm::vec3>& normals, int numVertices, const Geom& meshBB) {
     hst_scene = scene;
     const Camera& cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -117,6 +122,15 @@ void pathtraceInit(Scene* scene) {
     cudaMalloc(&dev_intersectionsFirst, pixelcount * sizeof(ShadeableIntersection)); // Jacky added
     cudaMemset(dev_intersectionsFirst, 0, pixelcount * sizeof(ShadeableIntersection)); // Jacky added
 
+    cudaMalloc(&dev_vertices, numVertices * sizeof(glm::vec3)); // Jacky added
+    cudaMemcpy(dev_vertices, &vertices[0], numVertices * sizeof(glm::vec3), cudaMemcpyHostToDevice);    // Jacky added
+    
+    cudaMalloc(&dev_normals, numVertices * sizeof(glm::vec3)); // Jacky added
+    cudaMemcpy(dev_normals, &normals[0], numVertices * sizeof(glm::vec3), cudaMemcpyHostToDevice);    // Jacky added
+    
+    dev_numVertices = numVertices;    // Jacky added
+    dev_meshBB = meshBB;    // Jacky added
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -129,6 +143,8 @@ void pathtraceFree() {
     // TODO: clean up any extra device memory you created
     cudaFree(dev_pathsTerminated); // Jacky added
     cudaFree(dev_intersectionsFirst); // Jacky added
+    cudaFree(dev_vertices); // Jacky added
+    cudaFree(dev_normals);  // Jacky added
 
     checkCUDAError("pathtraceFree");
 }
@@ -203,6 +219,10 @@ __global__ void computeIntersections(
     , Geom* geoms
     , int geoms_size
     , ShadeableIntersection* intersections
+    , glm::vec3* dev_vertices
+    , glm::vec3* dev_normals
+    , int dev_numVertices
+    , Geom dev_meshBB
 )
 {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -236,7 +256,9 @@ __global__ void computeIntersections(
                 t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
             // TODO: add more intersection tests here... triangle? metaball? CSG?
-
+            else if (geom.type == MESH) {
+                t = meshIntersectionTest(pathSegment.ray, tmp_intersect, tmp_normal, dev_vertices, dev_normals, dev_numVertices, dev_meshBB);
+            }
             // Compute the minimum t from the intersection tests to determine what
             // scene geometry object was hit first.
             if (t > 0.0f && t_min > t)
@@ -366,6 +388,8 @@ __global__ void shadeBSDFMaterial(
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
             // used for opacity, in which case they can indicate "no opacity".
             // This can be useful for post-processing and image compositing.
+            // Debug
+            // pathSegments[idx].color = (intersection.surfaceNormal + glm::vec3(1.f)) / 2.f;
         }
         else {
             pathSegments[idx].color = glm::vec3(0.f);
@@ -470,7 +494,11 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
                 , dev_paths
                 , dev_geoms
                 , hst_scene->geoms.size()
-                , dev_intersectionsFirst
+                , dev_intersectionsFirst 
+                , dev_vertices
+                , dev_normals
+                , dev_numVertices
+                , dev_meshBB
                 );
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
@@ -489,6 +517,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
                 , dev_geoms
                 , hst_scene->geoms.size()
                 , dev_intersections
+                , dev_vertices
+                , dev_normals
+                , dev_numVertices
+                , dev_meshBB
                 );
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
@@ -502,6 +534,10 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             , dev_geoms
             , hst_scene->geoms.size()
             , dev_intersections
+            , dev_vertices
+            , dev_normals
+            , dev_numVertices
+            , dev_meshBB
             );
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
