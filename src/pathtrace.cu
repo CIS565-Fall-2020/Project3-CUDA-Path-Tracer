@@ -205,8 +205,9 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		// TODO: implement antialiasing by jittering the ray
-#if camera_jittering
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+#if camera_jittering
+        
         thrust::uniform_real_distribution<float> u01(0, 1);
 		segment.ray.direction = glm::normalize(cam.view
 			- cam.right * cam.pixelLength.x * ((float)x + u01(rng) - (float)cam.resolution.x * 0.5f)
@@ -223,7 +224,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 #if dof
         // pbrt 6.2.3
-        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        //thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
         glm::vec2 offset = ConcentricSampleDisk(rng) * cam.apertureRadius;
 
         float ft = abs(cam.focusDist / segment.ray.direction.z);

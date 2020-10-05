@@ -43,7 +43,7 @@ MATERIAL 4
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
-REFL        1
+REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
@@ -62,8 +62,8 @@ EMITTANCE   0
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  200
-DEPTH       32
+ITERATIONS  100
+DEPTH       8
 FILE        cornell
 EYE         0.0 5 10.5
 LOOKAT      0 5 0

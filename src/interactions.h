@@ -3,6 +3,7 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include "intersections.h"
+#include "cfg.h"
 
 // CHECKITOUT
 /**
@@ -10,15 +11,40 @@
  * Used for diffuse lighting.
  */
 
+__host__ __device__
+void StratifiedSample1D(
+    thrust::default_random_engine& rng, 
+    float* samp, 
+    const int& nSamples,
+    bool jitter = true) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float invNsamples = 1.0f / nSamples;
+    int offset = 200;
+    for (int i = 0 + offset; i < nSamples + offset; i++) {
+        float delta = jitter ? u01(rng) : 0.5f;
+        samp[i] = min( (i + delta) * invNsamples, (float)0x1.fffffep-1);
+    }
+}
 
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
+    
     thrust::uniform_real_distribution<float> u01(0, 1);
-
+    
+#if stratified_sampling
+    float samp[2];
+    StratifiedSample1D(rng, samp, 2, true);
+    float up = sqrt(samp[0]); // cos(theta)
+    float over = sqrt(1 - up * up); // sin(theta)
+    float around = samp[1] * TWO_PI;
+#else
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
+#endif // stratified_sampling
+
+    
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
