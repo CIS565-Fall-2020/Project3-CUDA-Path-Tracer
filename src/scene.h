@@ -8,6 +8,9 @@
 #include "utilities.h"
 #include "sceneStructs.h"
 
+// Jack12 add gltf support 
+
+
 using namespace std;
 
 class Scene {
