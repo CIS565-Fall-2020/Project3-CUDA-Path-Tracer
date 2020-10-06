@@ -122,15 +122,15 @@ SCALE       .01 10 10
 OBJECT 6
 sphere
 material 5
-TRANS       3.2 6.7 0.8
+TRANS       2 7 2
 ROTAT       0 0 0
 SCALE       3 3 3
 
 // Mesh
 OBJECT 7
 mesh
-material 4
-gltf     "../scenes/diamond.gltf"
-TRANS     -1 5 0
+material 1
+gltf     "../scenes/Cube.gltf"
+TRANS     -1.2 1.1 -1.3
 ROTAT      0 0 0
-SCALE      1 1 1 
+SCALE      1 1 1
