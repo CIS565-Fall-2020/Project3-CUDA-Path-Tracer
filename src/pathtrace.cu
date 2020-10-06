@@ -76,6 +76,7 @@ static Geom* dev_geoms = NULL;
 static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
+static int* dev_lights = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -99,6 +100,8 @@ void pathtraceInit(Scene* scene) {
 	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 	// TODO: initialize any extra device memeory you need
+	cudaMalloc(&dev_lights, scene->lights.size() * sizeof(int));
+	cudaMemcpy(dev_lights, scene->lights.data(), scene->lights.size() * sizeof(int), cudaMemcpyHostToDevice);
 
 	checkCUDAError("pathtraceInit");
 }
@@ -110,6 +113,7 @@ void pathtraceFree() {
 	cudaFree(dev_materials);
 	cudaFree(dev_intersections);
 	// TODO: clean up any extra device memory you created
+	cudaFree(dev_lights);
 
 	checkCUDAError("pathtraceFree");
 }
@@ -232,6 +236,7 @@ __global__ void shadeFakeMaterial(
 	, ShadeableIntersection* shadeableIntersections
 	, PathSegment* pathSegments
 	, Material* materials
+	, const int* lights
 )
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -392,7 +397,8 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			cam,
 			dev_intersections,
 			dev_paths,
-			dev_materials
+			dev_materials,
+			dev_lights
 			);
 		checkCUDAError("shading fake material");
 

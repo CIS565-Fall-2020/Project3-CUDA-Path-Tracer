@@ -69,10 +69,12 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 __host__ __device__
 void scatterRay(
         const Camera& cam,
+        thrust::default_random_engine& rng,
 		PathSegment& pathSegment,
         ShadeableIntersection& intersection,
         Material& mat,
-        thrust::default_random_engine &rng) {
+        const int* lights,
+        const Geom* geometry) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
