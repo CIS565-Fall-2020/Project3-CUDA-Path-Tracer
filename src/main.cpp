@@ -66,6 +66,12 @@ int main(int argc, char** argv) {
     ogLookAt = cam.lookAt;
     zoom = glm::length(cam.position - ogLookAt);
 
+	// Load Gltf if needed
+	for (int i = 2; i < argc; i++) {
+		const char *gltfFile = argv[i];
+		scene->loadGltf(gltfFile);
+	}
+
     // Initialize CUDA and GL components
     init();
 

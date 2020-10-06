@@ -81,7 +81,7 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 			const auto count = attrAccessor.count;
 
 			if (attr.first == "POSITION") {
-				const unsigned char* data_ptr = (&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
+				const unsigned char* data_ptr = &buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
 				if (count % 3 != 0) {
 					cout << "Only support triangle mesh" << endl;
 					throw;
@@ -92,9 +92,9 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 					const float* px = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
 					const float* py = reinterpret_cast<const float*>(data_ptr + (i + 1) * byte_stride);
 					const float* pz = reinterpret_cast<const float*>(data_ptr + (i + 2) * byte_stride);
-					newGeom.x = glm::vec3(px[0], px[1], px[2]);
-					newGeom.y = glm::vec3(py[0], py[1], py[2]);
-					newGeom.z = glm::vec3(pz[0], pz[1], pz[2]);
+					newGeom.v0 = glm::vec3(px[0], px[1], px[2]);
+					newGeom.v1 = glm::vec3(py[0], py[1], py[2]);
+					newGeom.v2 = glm::vec3(pz[0], pz[1], pz[2]);
 					newGeom.materialid = prim.material + existingMats;
 					geoms.push_back(newGeom);
 				}

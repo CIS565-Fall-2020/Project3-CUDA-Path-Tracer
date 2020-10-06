@@ -29,9 +29,9 @@ struct Geom {
     glm::mat4 invTranspose;
 
 	// For TRIANGLE
-	glm::vec3 x;
-	glm::vec3 y;
-	glm::vec3 z;
+	glm::vec3 v0;
+	glm::vec3 v1;
+	glm::vec3 v2;
 };
 
 struct Material {

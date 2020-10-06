@@ -18,6 +18,7 @@
 #include "pathtrace.h"
 #include "intersections.h"
 #include "interactions.h"
+#include "glm/gtx/normal.hpp"
 
 #define ERRORCHECK 1
 #define SORTBYMAT 0
@@ -274,9 +275,15 @@ __global__ void computeIntersections(
 		else if (geom.type == TRIANGLE) {
 			glm::vec3 baryRes;
 			bool ret = glm::intersectRayTriangle(pathSegment.ray.origin, pathSegment.ray.direction,
-				geom.x, geom.y, geom.z, baryRes);
+				geom.v0, geom.v1, geom.v2, baryRes);
 			if (ret) {
 				// Intersect
+				tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * baryRes.z;
+				t = glm::length(pathSegment.ray.origin - tmp_intersect);
+				tmp_normal = glm::triangleNormal(geom.v0, geom.v1, geom.v2);
+				if (glm::dot(pathSegment.ray.origin, tmp_normal) > 0.0f) {
+					outside = false;
+				}
 			}
 			else {
 				// No intersection

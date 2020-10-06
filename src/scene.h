@@ -19,12 +19,14 @@ private:
     int loadMaterial(string materialid);
     int loadGeom(string objectid);
     int loadCamera();
-	int loadGltf(string filename);
+	
 	void traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 pTran);
 
 public:
     Scene(string filename);
     ~Scene();
+
+	int loadGltf(string filename);
 
     std::vector<Geom> geoms;
     std::vector<Material> materials;
