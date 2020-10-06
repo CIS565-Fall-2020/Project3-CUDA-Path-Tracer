@@ -10,6 +10,7 @@
 static int num_triangles = 0;
 static int num_meshes = 0;
 
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -181,12 +182,22 @@ int Scene::loadGeom(string objectid) {
                 triangle.transform = newGeom.transform;
                 triangle.inverseTransform = newGeom.inverseTransform;
                 triangle.invTranspose = newGeom.invTranspose;
+                triangle.max_point = glm::vec3(triangle.transform * glm::vec4(glm::vec3(glm::max(triangle.v0.x, glm::max(triangle.v1.x, triangle.v2.x)),
+                                                                                        glm::max(triangle.v0.y, glm::max(triangle.v1.y, triangle.v2.y)),
+                                                                                        glm::max(triangle.v0.z, glm::max(triangle.v1.z, triangle.v2.z))), 1.f));
+                triangle.min_point = glm::vec3(triangle.transform * glm::vec4(glm::vec3(glm::min(triangle.v0.x, glm::min(triangle.v1.x, triangle.v2.x)),
+                                                                                        glm::min(triangle.v0.y, glm::min(triangle.v1.y, triangle.v2.y)),
+                                                                                        glm::min(triangle.v0.z, glm::min(triangle.v1.z, triangle.v2.z))), 1.f));
                 geoms.push_back(triangle);
                 num_triangles++;
             }
             num_meshes++;
         }
         else {
+            if (newGeom.type == CUBE || newGeom.type == SPHERE) {
+                newGeom.max_point = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(0.5f), 1.f));
+                newGeom.min_point = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(-0.5f), 1.f));
+            }
             geoms.push_back(newGeom);
         }
         return 1;

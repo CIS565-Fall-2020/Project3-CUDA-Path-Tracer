@@ -161,19 +161,25 @@ __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
     Ray rt;
     rt.origin = ro;
     rt.direction = rd;
-    glm::vec3 baryPos(0.f);
-    bool intersects = glm::intersectRayTriangle(rt.origin, rt.direction, triangle.v0, triangle.v1, triangle.v2, baryPos);
+    glm::vec3 baryCoor(0.f);
+    bool intersects = glm::intersectRayTriangle(rt.origin, rt.direction, triangle.v0, triangle.v1, triangle.v2, baryCoor);
     if (!intersects) {
         return -1;
     }
+    //glm::vec3 baryPos = baryCoor;
+    glm::vec3 baryPos = (1.f - baryCoor.x - baryCoor.y) * triangle.v0 + baryCoor.x * triangle.v1 + baryCoor.y * triangle.v2;
     intersectionPoint = multiplyMV(triangle.transform, glm::vec4(baryPos, 1.f));
     // compute smoothened normal
     float S = 0.5f * glm::length(glm::cross(triangle.v0 - triangle.v1, triangle.v2 - triangle.v1));
     float S0 = 0.5f * glm::length(glm::cross(triangle.v1 - baryPos, triangle.v2 - baryPos));
     float S1 = 0.5f * glm::length(glm::cross(triangle.v0 - baryPos, triangle.v2 - baryPos));
     float S2 = 0.5f * glm::length(glm::cross(triangle.v0 - baryPos, triangle.v1 - baryPos));
-    glm::vec3 smoothNormal = triangle.n0 * S0 / S + triangle.n1 * S1 / S + triangle.n2 * S2 / S;
+    glm::vec3 smoothNormal = glm::normalize(triangle.n0 * S0 / S + triangle.n1 * S1 / S + triangle.n2 * S2 / S);
     normal = glm::normalize(multiplyMV(triangle.invTranspose, glm::vec4(smoothNormal, 0.f)));
+    if (glm::dot(normal, r.direction) > 0) {
+        normal = -normal;
+        outside = false;
+    }
     float t = glm::length(r.origin - intersectionPoint);
     return t;
 }

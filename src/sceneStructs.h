@@ -36,12 +36,18 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
-    glm::vec3 n0; // triangles only
-    glm::vec3 n1; // triangles only
-    glm::vec3 n2; // triangles only
-    glm::vec3 v0; // triangles only
-    glm::vec3 v1; // triangles only
-    glm::vec3 v2; // triangles only
+
+    // Triangles only
+    glm::vec3 n0;
+    glm::vec3 n1;
+    glm::vec3 n2;
+    glm::vec3 v0;
+    glm::vec3 v1;
+    glm::vec3 v2;
+
+    // Bounding box
+    glm::vec3 max_point;
+    glm::vec3 min_point;
 };
 
 struct Material {
@@ -92,6 +98,30 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+};
+
+// Hierarchical spatial datastructe: Octree
+struct OctNode {
+    int id;
+    glm::vec3 maxCorner;
+    glm::vec3 minCorner;
+    std::vector<Geom> geoms;
+
+    // children ids
+    int upFarLeft;
+    int upFarRight;
+    int upNearLeft;
+    int upNearRight;
+    int downFarLeft;
+    int downFarRight;
+    int downNearLeft;
+    int downNearRight;
+};
+
+struct Octree {
+    int rootId; // root id
+    glm::vec3 maxCorner;
+    glm::vec3 minCorner;
 };
 
 struct keep_path

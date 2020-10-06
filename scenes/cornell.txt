@@ -50,7 +50,7 @@ SPECEX      1
 SPECRGB     .98 .98 .98
 REFL        0
 REFR        1
-REFRIOR     1.2
+REFRIOR     1.5
 EMITTANCE   0
 
 // Mirror
@@ -95,7 +95,7 @@ cube
 material 0
 TRANS       0 10 0
 ROTAT       0 0 0
-SCALE       4 .4 4
+SCALE       3 .3 3
 
 // Floor
 OBJECT 1
@@ -145,19 +145,19 @@ TRANS       3.2 6 -1.75
 ROTAT       30 45 0
 SCALE       2 2 2
 
-// dielectric sphere
+// glossy sphere
 OBJECT 7
 sphere
-material 4
+material 6
 TRANS       -2 4 -2
 ROTAT       25 90 42
 SCALE       2 2 2
 
-// Mesh duck glossy
+// Mesh duck glass
 OBJECT 8
 mesh
 ../scenes/duck/Duck.gltf
-material 6
+material 4
 TRANS       0 0.35 1
 ROTAT       0 -45 0
 SCALE       0.03 0.03 0.03

@@ -5,6 +5,7 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include <thrust/partition.h>
+#include <thrust/device_ptr.h>
 
 #include "sceneStructs.h"
 #include "scene.h"
@@ -84,6 +85,61 @@ static ShadeableIntersection * dev_intersections = NULL;
 static ShadeableIntersection* dev_first_bounce = NULL;
 static PathSegment* dev_first_bounce_paths = NULL;
 
+static Octree octree;
+static OctNode* dev_octnodes = NULL;
+
+/*
+* Update the OctNode bounding box if necessary
+*/
+void updateBounds(glm::vec3& maxBound, glm::vec3& minBound, glm::vec3 maxGeom, glm::vec3 minGeom) {
+    if (maxGeom.x > maxBound.x) maxBound.x = maxGeom.x;
+    if (maxGeom.y > maxBound.y) maxBound.y = maxGeom.y;
+    if (maxGeom.z > maxBound.z) maxBound.z = maxGeom.z;
+    if (minGeom.x < minBound.x) minBound.x = minGeom.x;
+    if (minGeom.y < minBound.y) minBound.y = minGeom.y;
+    if (minGeom.z < minBound.z) minBound.z = minGeom.z;
+}
+
+/*
+* Check if given geometry has an overlap with given OctNode
+*/
+bool doesGeomOverlap(Geom& geom, OctNode& node) {
+    return (geom.min_point.x >= node.minCorner.x) ||
+        (geom.min_point.y >= node.minCorner.y) ||
+        (geom.min_point.z >= node.minCorner.z) ||
+        (geom.max_point.x <= node.maxCorner.x) ||
+        (geom.max_point.y <= node.maxCorner.y) ||
+        (geom.max_point.z <= node.maxCorner.z);
+}
+
+void setupOctree() {
+    if (hst_scene->geoms.size() == 0) {
+        // No geometry - set empty tree
+        octree.rootId = -1;
+    } else {
+        // Setup root
+        thrust::device_ptr<OctNode> octnodes(dev_octnodes);
+        OctNode* root = octnodes.get();
+        // Potential node children
+        int upFarLeft = -1;
+        int upFarRight = -1;
+        int upNearLeft = -1;
+        int upNearRight = -1;
+        int downFarLeft = -1;
+        int downFarRight = -1;
+        int downNearLeft = -1;
+        int downNearRight = -1;
+        glm::vec3 maxPos(std::numeric_limits<float>::min());
+        glm::vec3 minPos(std::numeric_limits<float>::max());
+        for (Geom geom : hst_scene->geoms) {
+            updateBounds(maxPos, minPos, geom.max_point, geom.min_point);
+            //root->geoms.push_back(geom);
+        }
+        // Set children nodes if necessary - first define bounding boxes for potential octnodes
+
+    }
+}
+
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
@@ -113,7 +169,12 @@ void pathtraceInit(Scene *scene) {
     cudaMalloc(&dev_first_bounce_paths, pixelcount * sizeof(PathSegment));
     cudaMemset(dev_first_bounce_paths, 0, pixelcount * sizeof(PathSegment));
 
+    cudaMalloc(&dev_octnodes, scene->geoms.size() * sizeof(OctNode));
+
     checkCUDAError("pathtraceInit");
+
+    // Setup the Octree
+    setupOctree();
 }
 
 void pathtraceFree() {
@@ -126,6 +187,7 @@ void pathtraceFree() {
   	cudaFree(dev_intersections);
     cudaFree(dev_first_bounce);
     cudaFree(dev_first_bounce_paths);
+    cudaFree(dev_octnodes);
     checkCUDAError("pathtraceFree");
 }
 
