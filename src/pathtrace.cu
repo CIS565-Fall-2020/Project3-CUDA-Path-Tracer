@@ -103,6 +103,12 @@ struct bounce_end {
 	}
 };
 
+struct sort_by_mat {
+	__host__ __device__ bool operator()(const ShadeableIntersection& ins1, const ShadeableIntersection& ins2) {
+		return ins1.materialId > ins2.materialId;
+	}
+};
+
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
@@ -485,7 +491,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 		// TODO (ADD): sort rays by material
 #if SORTBYMAT
-		thrust::sort_by_key(dev_thrust_pathMats, dev_thrust_pathMats + num_paths, dev_thrust_pathIdxes);
+		//thrust::sort_by_key(dev_thrust_pathMats, dev_thrust_pathMats + num_paths, dev_thrust_pathIdxes);
+		thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, sort_by_mat());
 #endif
 		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
 		iter,
