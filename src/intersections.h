@@ -109,13 +109,7 @@ __host__ __device__ float meshTriangleIntersectionTest(Geom obj, Ray r, glm::vec
         if (did_isect) {
             // to world space
             tmp_tri_normal = tri.normal;
-            tmp_tri_intersect = glm::normalize(tmp_tri_intersect);
-
-            // convert barycentric to local
-            glm::vec3 v1_obj = multiplyMV(obj.inverseTransform, glm::vec4(tri.v1, 1.0f));
-            glm::vec3 v2_obj = multiplyMV(obj.inverseTransform, glm::vec4(tri.v2, 1.0f));
-            glm::vec3 v3_obj = multiplyMV(obj.inverseTransform, glm::vec4(tri.v3, 1.0f));
-            tmp_tri_intersect = (tmp_tri_intersect.x * v1_obj) + (tmp_tri_intersect.y * v2_obj) + (tmp_tri_intersect.z * v3_obj);
+            tmp_tri_intersect = ro + rd * tmp_tri_intersect.z;
 
             // local to world
             tmp_tri_intersect = multiplyMV(obj.transform, glm::vec4(tmp_tri_intersect, 1.f));
