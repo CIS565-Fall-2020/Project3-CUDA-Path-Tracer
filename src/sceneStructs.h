@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 #include <vector>
 #include <cuda_runtime.h>
@@ -10,6 +9,7 @@
 enum GeomType {
 	SPHERE,
 	CUBE,
+	MESH
 };
 
 struct Ray {
@@ -73,6 +73,17 @@ struct ShadeableIntersection {
 	float t;
 	glm::vec3 surfaceNormal;
 	int materialId;
+};
+
+struct GltfMesh
+{
+
+};
+
+struct Test
+{
+	int* x;
+	int num;
 };
 
 struct material_comp

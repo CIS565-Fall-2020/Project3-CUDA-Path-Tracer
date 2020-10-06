@@ -115,3 +115,12 @@ MATERIAL 4
 TRANS       -1 4 -1
 ROTAT       0 0 0
 SCALE       3 3 3
+
+// gltf Mesh
+OBJECT 7
+mesh
+../scenes/mjolnir/scene.gltf
+MATERIAL 1
+TRANS       -1 4 -1
+ROTAT       0 0 0
+SCALE       2 2 2

@@ -18,7 +18,7 @@
 
 #define ERRORCHECK 1
 #define RECORDEDITERATION 100
-#define CACHEFIRSTBOUNCE false
+#define CACHEFIRSTBOUNCE true
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -88,6 +88,13 @@ static ShadeableIntersection* dev_intersections = nullptr;
 static PathSegment* dev_first_paths = nullptr;
 static ShadeableIntersection* dev_first_intersections = nullptr;
 
+// gltf mesh data
+static float* dev_gltf_vertices = nullptr;                  
+static unsigned int* dev_gltf_faces = nullptr;
+static unsigned int* dev_gltf_num_vertices = nullptr;
+static unsigned int* dev_gltf_num_faces = nullptr;
+static int total_gltf_meshes = 0;
+
 cudaEvent_t iter_event_start = nullptr;
 cudaEvent_t iter_event_end = nullptr;
 
@@ -96,6 +103,13 @@ void pathtraceInit(Scene* scene)
 	hst_scene = scene;
 	const Camera& cam = hst_scene->state.camera;
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
+
+	// if glTF mesh exists
+	if (!scene->meshes.empty())
+	{
+		preprocessGltfData(scene);
+		total_gltf_meshes = scene->getMeshesSize();
+	}
 
 	cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
 	cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
@@ -179,7 +193,13 @@ __global__ void computeIntersections(int depth,
 									 PathSegment* pathSegments, 
 									 Geom* geoms, 
 									 int geoms_size, 
-									 ShadeableIntersection* intersections)
+									 ShadeableIntersection* intersections,
+								     int total_meshes,
+									 unsigned int* faces,
+									 float* vertices,
+									 unsigned int* num_faces,
+									 unsigned int* num_vertices
+									 )
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -202,13 +222,18 @@ __global__ void computeIntersections(int depth,
 		{
 			Geom& geom = geoms[i];
 
-			if (geom.type == CUBE)
+			if (geom.type == GeomType::CUBE)
 			{
 				t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
-			else if (geom.type == SPHERE)
+			else if (geom.type == GeomType::SPHERE)
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+			}
+			else if (geom.type == GeomType::MESH)
+			{
+				t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside, 
+										 total_meshes, faces, vertices, num_faces, num_vertices);
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
@@ -235,6 +260,38 @@ __global__ void computeIntersections(int depth,
 			intersections[path_index].surfaceNormal = normal;
 		}
 	}
+}
+
+void preprocessGltfData(Scene* scene)
+{
+	cudaMalloc(&dev_gltf_faces, scene->total_faces * sizeof(unsigned int));
+	cudaMalloc(&dev_gltf_vertices, scene->total_vertices * sizeof(float));
+
+	for (int i = 0, face_offset = 0, vertex_offset = 0; i < scene->getMeshesSize(); i++)
+	{
+		const gltf::Mesh<float>& mesh = scene->meshes[i];
+		int cur_num_faces = scene->meshes[i].faces.size();
+		int cur_num_vertices = scene->meshes[i].vertices.size();
+
+		cudaMemcpy(dev_gltf_faces + face_offset, &(mesh.faces), cur_num_faces * sizeof(unsigned int),
+			cudaMemcpyKind::cudaMemcpyHostToDevice);
+		cudaMemcpy(dev_gltf_vertices + vertex_offset, &(mesh.vertices), cur_num_vertices * sizeof(float),
+			cudaMemcpyKind::cudaMemcpyHostToDevice);
+		
+		scene->faces_per_mesh.push_back(cur_num_faces);
+		scene->vertices_per_mesh.push_back(cur_num_vertices);
+
+		face_offset += cur_num_faces;
+		vertex_offset += cur_num_vertices;
+	}
+
+	cudaMalloc(&dev_gltf_num_vertices, scene->vertices_per_mesh.size() * sizeof(int));
+	cudaMalloc(&dev_gltf_num_faces, scene->faces_per_mesh.size() * sizeof(int));
+
+	cudaMemcpy(dev_gltf_num_vertices, &(scene->vertices_per_mesh), scene->vertices_per_mesh.size() * sizeof(int),
+		cudaMemcpyKind::cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_gltf_num_faces, &(scene->faces_per_mesh), scene->faces_per_mesh.size() * sizeof(int),
+		cudaMemcpyKind::cudaMemcpyHostToDevice);
 }
 
 __global__ void shadeMaterial(int iter,
@@ -347,13 +404,18 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 		}
 		else
 		{
-			computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+			computeIntersections <<<numblocksPathSegmentTracing, blockSize1d >> > (
 				depth,
 				cur_num_paths,
 				dev_paths,
 				dev_geoms,
 				hst_scene->geoms.size(),
-				dev_intersections
+				dev_intersections,
+				total_gltf_meshes,
+				dev_gltf_faces,
+				dev_gltf_vertices，
+				dev_gltf_num_faces,
+				dev_gltf_num_vertices
 			);
 
 			// In the first bounce, store first intersections in the cache _dev_first_intersections_ 
@@ -370,7 +432,12 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 			dev_paths,
 			dev_geoms,
 			hst_scene->geoms.size(),
-			dev_intersections
+			dev_intersections,
+			total_gltf_meshes,
+			dev_gltf_faces,
+			dev_gltf_vertices，
+			dev_gltf_num_faces,
+			dev_gltf_num_vertices
 		);
 #endif // CACHEFIRSTBOUNCE
 

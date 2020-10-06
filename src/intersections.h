@@ -4,6 +4,7 @@
 #include <glm/gtx/intersect.hpp>
 #include "sceneStructs.h"
 #include "utilities.h"
+#include "gltf-loader.h"
 
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
@@ -162,4 +163,84 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere,
 	}
 
 	return glm::length(r.origin - intersectionPoint);
+}
+
+/**
+ * Test intersection between a ray and a mesh loaded from glTF file. 
+ *
+ * @param intersectionPoint  Output parameter for point of intersection.
+ * @param normal             Output parameter for surface normal.
+ * @param outside            Output param for whether the ray came from outside.
+ * @return                   Ray parameter `t` value. -1 if no intersection.
+ */
+__host__ __device__ float meshIntersectionTest(Geom mesh,
+											   Ray r,
+											   glm::vec3& intersectionPoint,
+											   glm::vec3& normal,
+											   bool& outside,
+											   int total_meshes,
+											   unsigned int* faces,
+											   float* vertices,
+									           unsigned int* num_faces,
+											   unsigned int* num_vertices)
+{
+	float t = 0;
+
+	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	Ray rt;
+	rt.origin = ro;
+	rt.direction = rd;
+
+	for (int i = 0, faces_offset = 0, vertices_offset = 0; i < total_meshes; i++)
+	{
+		int cur_num_faces = num_faces[i];
+		int cur_num_vertices = num_vertices[i];
+
+		for (int face_idx = 0; face_idx < cur_num_faces / 3; face_idx++)
+		{
+			unsigned int f0, f1, f2;
+			float v0[3], v1[3], v2[3];
+
+			f0 = faces[3 * face_idx + 0 + faces_offset];
+			f1 = faces[3 * face_idx + 1 + faces_offset];
+			f2 = faces[3 * face_idx + 2 + faces_offset];
+
+			v0[0] = vertices[3 * f0 + 0 + vertices_offset];
+			v0[1] = vertices[3 * f0 + 1 + vertices_offset];
+			v0[2] = vertices[3 * f0 + 2 + vertices_offset];
+
+			v1[0] = vertices[3 * f1 + 0 + vertices_offset];
+			v1[1] = vertices[3 * f1 + 1 + vertices_offset];
+			v1[2] = vertices[3 * f1 + 2 + vertices_offset];
+
+			v2[0] = vertices[3 * f2 + 0 + vertices_offset];
+			v2[1] = vertices[3 * f2 + 1 + vertices_offset];
+			v2[2] = vertices[3 * f2 + 2 + vertices_offset];
+
+			glm::vec3 p0(v0[0], v0[1], v0[2]);
+			glm::vec3 p1(v1[0], v1[1], v1[2]);
+			glm::vec3 p2(v2[0], v2[1], v2[2]);
+
+			glm::vec3 res;
+			bool intersected = glm::intersectRayTriangle(ro, rd, p0, p1, p2, res);
+			if (intersected)
+			{
+				t = res.z;
+				outside = false;
+
+				glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
+				intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+				normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
+				printf("cuda print test");
+				return glm::length(r.origin - intersectionPoint);
+			}
+		}
+
+		faces_offset += cur_num_faces;
+		vertices_offset += cur_num_vertices;
+	}
+
+	return -1;
 }

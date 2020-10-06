@@ -30,7 +30,10 @@ int height;
 //-------------MAIN--------------
 //-------------------------------
 
+
 int main(int argc, char** argv) {
+	
+
 	startTimeString = currentTimeString();
 
 	if (argc < 2) {
@@ -72,6 +75,7 @@ int main(int argc, char** argv) {
 	// GLFW main loop
 	mainLoop();
 
+	system("pause");
 	return 0;
 }
 

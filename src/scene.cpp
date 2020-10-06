@@ -1,10 +1,12 @@
-#include <iostream>
 #include "scene.h"
+#include <iostream>
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-Scene::Scene(string filename) {
+Scene::Scene(string filename) 
+    : total_faces(0), total_vertices(0)
+{
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -32,6 +34,14 @@ Scene::Scene(string filename) {
     }
 }
 
+Scene::~Scene()
+{}
+
+int Scene::getMeshesSize() const
+{
+    return meshes.size();
+}
+
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
@@ -42,15 +52,32 @@ int Scene::loadGeom(string objectid) {
         Geom newGeom;
         string line;
 
-        //load object type
+        // load object type
         utilityCore::safeGetline(fp_in, line);
         if (!line.empty() && fp_in.good()) {
-            if (strcmp(line.c_str(), "sphere") == 0) {
+            if (strcmp(line.c_str(), "sphere") == 0) 
+            {
                 cout << "Creating new sphere..." << endl;
-                newGeom.type = SPHERE;
-            } else if (strcmp(line.c_str(), "cube") == 0) {
+                newGeom.type = GeomType::SPHERE;
+            } 
+            else if (strcmp(line.c_str(), "cube") == 0)
+            {
                 cout << "Creating new cube..." << endl;
-                newGeom.type = CUBE;
+                newGeom.type = GeomType::CUBE;
+            }
+            else if (strcmp(line.c_str(), "mesh") == 0)
+            {
+                cout << "Creating new mesh..." << endl;
+                newGeom.type = GeomType::MESH;
+
+                utilityCore::safeGetline(fp_in, line);
+                const std::string gltf_file = line;
+                bool ret = LoadGLTF(gltf_file, 1.0, &(this->meshes), nullptr, nullptr, 
+                                    &this->total_faces, &this->total_vertices);
+                if (!ret)
+                {
+                    std::cerr << "Failed to load glTF file [ " << gltf_file << " ]" << std::endl;
+                }
             }
         }
 
