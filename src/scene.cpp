@@ -63,14 +63,37 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 	glm::mat4 gTran = pTran * tran * rot * scale;
 
 	const tinygltf::Mesh &mesh = model.meshes[node.mesh];
+	Geom newGeom;
+	newGeom.type = TRIANGLE;
+
 	// For each primitive
 	for (const auto &prim : mesh.primitives) {
 		for (const auto &attr : prim.attributes) {
-			if (attr.first == "POSITION") {
+			const auto attrAccessor = model.accessors[attr.second];
+			const auto &bufferView =
+				model.bufferViews[attrAccessor.bufferView];
+			const auto &buffer = model.buffers[bufferView.buffer];
+			const auto dataPtr = buffer.data.data() + bufferView.byteOffset +
+				attrAccessor.byteOffset;
+			const auto byte_stride = attrAccessor.ByteStride(bufferView);
+			const auto count = attrAccessor.count;
 
+			if (attr.first == "POSITION") {
+				const float* positions = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
+				if (count != 3) {
+					cout << "Only support triangle mesh" << endl;
+					throw;
+				}
+				// x
+				newGeom.x = glm::vec3(positions[0], positions[1], positions[2]);
+				// y
+				newGeom.y = glm::vec3(positions[byte_stride], positions[byte_stride + 1], positions[byte_stride + 2]);
+				// z
+				newGeom.z = glm::vec3(positions[2*byte_stride], positions[2*byte_stride + 1], positions[2*byte_stride + 2]);
 			}
 			else if (attr.first == "NORMAL") {
-
+				const float* normals = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
+				// TODO: what to do with normals
 			}
 		}
 	}

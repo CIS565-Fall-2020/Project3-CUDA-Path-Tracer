@@ -27,6 +27,11 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+
+	// For TRIANGLE
+	glm::vec3 x;
+	glm::vec3 y;
+	glm::vec3 z;
 };
 
 struct Material {
