@@ -103,31 +103,6 @@ int Scene::loadGeom(string objectid) {
     }
 }
 
-static void CalcNormal(glm::vec3& N, glm::vec3& v0, glm::vec3& v1, glm::vec3& v2) {
-    glm::vec3 v10;
-    v10[0] = v1[0] - v0[0];
-    v10[1] = v1[1] - v0[1];
-    v10[2] = v1[2] - v0[2];
-
-    glm::vec3 v20;
-    v20[0] = v2[0] - v0[0];
-    v20[1] = v2[1] - v0[1];
-    v20[2] = v2[2] - v0[2];
-
-    N[0] = v10[1] * v20[2] - v10[2] * v20[1];
-    N[1] = v10[2] * v20[0] - v10[0] * v20[2];
-    N[2] = v10[0] * v20[1] - v10[1] * v20[0];
-
-    float len2 = N[0] * N[0] + N[1] * N[1] + N[2] * N[2];
-    if (len2 > 0.0f) {
-        float len = sqrtf(len2);
-
-        N[0] /= len;
-        N[1] /= len;
-        N[2] /= len;
-    }
-}
-
 
 bool Scene::loadObj(string filename, Geom& geom) {
     tinyobj::attrib_t attrib;
@@ -189,8 +164,7 @@ bool Scene::loadObj(string filename, Geom& geom) {
             geom.rightTop = glm::max(geom.rightTop, p3);
 
             if (attrib.normals.size() <= 0) {
-                glm::vec3 n1;
-                CalcNormal(n1, t.p1, t.p2, t.p3);
+                glm::vec3 n1 = glm::normalize(glm::cross(t.p2 - t.p1, t.p3 - t.p2));
                 t.n1 = n1;
                 t.n2 = n1;
                 t.n3 = n1;

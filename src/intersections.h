@@ -191,6 +191,27 @@ __host__ __device__ bool boundingIntersectionTest(Ray r, glm::vec3 leftBottom, g
     return false;
 }
 
+__host__ __device__ float triangleIntersect(const Ray& r, Triangle &tri, glm::vec3 &normal)
+{
+    //1. Ray-plane intersection
+    float t = glm::dot(tri.n1, (tri.p1 - r.origin)) / glm::dot(tri.n1, r.direction);
+    if (t < 0) return -1;
+
+    glm::vec3 P = r.origin + t * r.direction;
+    //2. Barycentric test
+    float S = 0.5f * glm::length(glm::cross(tri.p1 - tri.p2, tri.p1 - tri.p3));
+    float s1 = 0.5f * glm::length(glm::cross(P - tri.p2, P - tri.p3)) / S;
+    float s2 = 0.5f * glm::length(glm::cross(P - tri.p3, P - tri.p1)) / S;
+    float s3 = 0.5f * glm::length(glm::cross(P - tri.p1, P - tri.p2)) / S;
+    float sum = s1 + s2 + s3;
+
+    if (s1 >= 0 && s1 <= 1 && s2 >= 0 && s2 <= 1 && s3 >= 0 && s3 <= 1 && abs(sum - 1.0f) < 0.001f) {
+        normal = s1 / S * tri.n1 + s2 / S * tri.n2 + s3 / S * tri.n3;
+        return t;
+    }
+    return -1;
+}
+
 /**
  * Test intersection between a ray and a transformed mesh. 
  *
@@ -218,22 +239,18 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
         return -1;
     }
 #endif
-
     float t_min = FLT_MAX;
     bool isFound = false;
     glm::vec3 objspaceIntersection;
     glm::vec3 nnormal;
-    for (int i = mesh.startIndex; i < mesh.endIndex; i++) {
+    for (int i = mesh.startIndex; i <= mesh.endIndex; i++) {
         glm::vec3 tmp_intersect;
-        if (glm::intersectRayTriangle(rt.origin, rt.direction, triangles[i].p1, triangles[i].p2, triangles[i].p3, tmp_intersect)) {
-            float t = glm::distance(tmp_intersect, rt.origin);
-            if (t_min > t)
-            {
-                t_min = t;
-                objspaceIntersection = tmp_intersect;
-                nnormal = (triangles[i].n1 + triangles[i].n2 + triangles[i].n3) / 3.0f;
-                isFound = true;
-            }
+        glm::vec3 tmp_normal;
+        float t = triangleIntersect(rt, triangles[i], tmp_normal);
+        if (t > 0 && t_min > t) {
+            t_min = t;
+            nnormal = tmp_normal;
+            isFound = true;
         }
     }
 
@@ -241,6 +258,7 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
         return -1;
     }
 
+    objspaceIntersection = getPointOnRay(rt, t_min);
     intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
     if (mesh.moving) {
         intersectionPoint += r.time * (mesh.target - mesh.translation);

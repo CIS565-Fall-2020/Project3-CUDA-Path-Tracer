@@ -121,16 +121,16 @@ void scatterRay(
         if (m.specular.exponent > 0.0f) {
             float p1 = u01(rng);
             float p2 = u01(rng);
-            pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal) + m.specular.exponent * glm::vec3(p0, p1, p2));
+            pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal) + m.specular.exponent * glm::normalize(glm::vec3(p0, p1, p2)));
         }
         else {
             pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
         }
         float scale = m.hasReflective <= 0.0 ? 0.0 : 1.0 / m.hasReflective;
         pathSegment.color *= m.color * scale;
-        pathSegment.ray.origin = intersect + EPSILON * normal;
+        pathSegment.ray.origin = intersect + 0.001f * pathSegment.ray.direction;
     }
-    // specular
+    // refract
     else if (p0 <= m.hasReflective + m.hasRefractive) {
         float costheta = glm::dot(-pathSegment.ray.direction, normal);
         costheta = costheta > 1.0 ? 1.0 : costheta;
@@ -148,7 +148,7 @@ void scatterRay(
             pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.001f);
             return;
         }
-        float f = fresnel(costheta, m.indexOfRefraction);
+        float f = fresnel(costheta, m.indexOfRefraction) / abs(costheta);
         // reflect or refract?
         if (u01(rng) < f) {
             pathSegment.ray.direction = glm::normalize(reflect);
@@ -166,6 +166,6 @@ void scatterRay(
         pathSegment.ray.direction = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
         float scale = m.hasReflective >= 1.0 ? 0.0 : 1.0 / (1.0 - m.hasReflective);
         pathSegment.color *= m.color * scale;
-        pathSegment.ray.origin = intersect + EPSILON * normal;
+        pathSegment.ray.origin = intersect + 0.001f * pathSegment.ray.direction;
     }
 }
