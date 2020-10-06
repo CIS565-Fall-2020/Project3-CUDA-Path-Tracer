@@ -4,6 +4,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include "gltf-loader.h"
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -13,6 +15,10 @@ Scene::Scene(string filename) {
         cout << "Error reading from file - aborting!" << endl;
         throw;
     }
+
+    faceCount = 0;
+    meshCount = 0;
+
     while (fp_in.good()) {
         string line;
         utilityCore::safeGetline(fp_in, line);
@@ -30,7 +36,17 @@ Scene::Scene(string filename) {
             }
         }
     }
+
+    for (int i = 0; i < geoms.size(); i++) 
+    {
+        int mId = geoms.at(i).materialid;
+        if (mId < materials.size() && materials[mId].emittance > 0.0f) 
+        {
+            lights.push_back(geoms.at(i));
+        }
+    }
 }
+
 
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
@@ -41,6 +57,8 @@ int Scene::loadGeom(string objectid) {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
+        std::vector<Geom> meshGeoms;
+        bool isMesh = false;
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -48,9 +66,78 @@ int Scene::loadGeom(string objectid) {
             if (strcmp(line.c_str(), "sphere") == 0) {
                 cout << "Creating new sphere..." << endl;
                 newGeom.type = SPHERE;
+                //newGeom.modelId = -1;
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
+                //newGeom.modelId = -1;
+            }
+            else if (strcmp(line.c_str(), "mesh") == 0) 
+            {
+                isMesh = true;
+                cout << "Creating new mesh..." << endl;
+                newGeom.type = MESH;
+
+                // Load Mesh
+                cout << "Load new mesh..." << endl;
+                utilityCore::safeGetline(fp_in, line);
+
+                cout << "Loading new mesh..." << endl;
+
+                std::vector<example::Mesh<float>> curMesh;
+
+                bool isLoaded = example::LoadGLTF(line, 1.0f, &curMesh, &gltfMaterials, &gltfTextures);
+
+                if (!isLoaded) 
+                {
+                    std::cout << "Load mesh failed!" << std::endl;
+                    return -1;
+                }
+
+               
+                //newGeom.offset = faceCount;
+
+                meshes.push_back(curMesh);
+
+                int curFaceNum = 0;
+                newGeom.offset = faceCount;
+
+                for (int i = 0; i < curMesh.size(); i++) 
+                {
+                    Geom curGeom;
+                    curGeom.type = MESH;
+                    curGeom.offset = curFaceNum;
+                    curGeom.faceNum = curMesh.at(i).faces.size() / 3;
+                    curGeom.materialid = curMesh.at(i).material_ids + materials.size();
+
+                    glm::vec3 curTranslation = glm::vec3(curMesh.at(i).localTranslate[0], 
+                                                         curMesh.at(i).localTranslate[1],
+                                                         curMesh.at(i).localTranslate[2]);
+                    glm::vec3 curRotation = glm::vec3(curMesh.at(i).localRotation[0],
+                                                      curMesh.at(i).localRotation[1],
+                                                      curMesh.at(i).localRotation[2]);
+                    glm::vec3 curScale = glm::vec3(curMesh.at(i).localScale[0],
+                                                   curMesh.at(i).localScale[1],
+                                                   curMesh.at(i).localScale[2]);
+
+                    curGeom.transform = utilityCore::buildTransformationMatrix(
+                        curTranslation, curRotation, curScale);
+
+                    BoundingBox bb;
+
+                    bb.boundingCenter = glm::vec3(curMesh.at(i).center[0], curMesh.at(i).center[1], curMesh.at(i).center[2]);
+                    bb.boundingScale = glm::vec3(curMesh.at(i).scale[0], curMesh.at(i).scale[1], curMesh.at(i).scale[2]);
+
+                    curGeom.boundingIdx = boundingBoxes.size();
+
+                    boundingBoxes.push_back(bb);
+
+                    curFaceNum += curMesh.at(i).faces.size() / 3;
+
+                    meshGeoms.push_back(curGeom);
+                }
+                faceCount += curFaceNum;
+                //newGeom.faceNum = curFaceNum;
             }
         }
 
@@ -58,33 +145,78 @@ int Scene::loadGeom(string objectid) {
         utilityCore::safeGetline(fp_in, line);
         if (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
-            newGeom.materialid = atoi(tokens[1].c_str());
-            cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+            if (!isMesh) 
+            {
+                newGeom.materialid = atoi(tokens[1].c_str());
+                cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+                /*for (int i = 0; i < meshGeoms.size(); i++) 
+                {
+                    meshGeoms.at(i).materialid = atoi(tokens[1].c_str());
+                    cout << "Connecting Geom " << objectid << "  Mesh " << i << " to Material " << newGeom.materialid << "..." << endl;
+                }*/
+            }
         }
 
         //load transformations
         utilityCore::safeGetline(fp_in, line);
         while (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
-
-            //load tranformations
-            if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
-                newGeom.translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            } else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
-                newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
-                newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+            if (isMesh) 
+            {
+                // Load Mesh Transforms
+                for (int i = 0; i < meshGeoms.size(); i++) 
+                {
+                    if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
+                        meshGeoms.at(i).translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                    }
+                    else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
+                        meshGeoms.at(i).rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                    }
+                    else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
+                        meshGeoms.at(i).scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                    }
+                }
             }
+            else 
+            {
+                //load tranformations
+                if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
+                    newGeom.translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                }
+                else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
+                    newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                }
+                else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
+                    newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                }
+            }
+            
 
             utilityCore::safeGetline(fp_in, line);
         }
 
-        newGeom.transform = utilityCore::buildTransformationMatrix(
-                newGeom.translation, newGeom.rotation, newGeom.scale);
-        newGeom.inverseTransform = glm::inverse(newGeom.transform);
-        newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
+        if (isMesh) 
+        {
+            for (int i = 0; i < meshGeoms.size(); i++) 
+            {
+                meshGeoms.at(i).transform *= utilityCore::buildTransformationMatrix(
+                    meshGeoms.at(i).translation, meshGeoms.at(i).rotation, meshGeoms.at(i).scale);
+                meshGeoms.at(i).inverseTransform = glm::inverse(meshGeoms.at(i).transform);
+                meshGeoms.at(i).invTranspose = glm::inverseTranspose(meshGeoms.at(i).transform);
 
-        geoms.push_back(newGeom);
+                geoms.push_back(meshGeoms.at(i));
+            }
+        }
+        else 
+        {
+            newGeom.transform = utilityCore::buildTransformationMatrix(
+                newGeom.translation, newGeom.rotation, newGeom.scale);
+            newGeom.inverseTransform = glm::inverse(newGeom.transform);
+            newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
+
+            geoms.push_back(newGeom);
+        }
+        
         return 1;
     }
 }

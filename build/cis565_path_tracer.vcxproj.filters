@@ -4,10 +4,16 @@
     <ClCompile Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\glslUtility.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc">
+      <Filter>Sources</Filter>
+    </ClCompile>
     <ClCompile Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\image.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp">
@@ -27,6 +33,9 @@
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\glslUtility.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\image.h">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -36,7 +45,22 @@
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\json.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\macros.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\material.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\mesh.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.h">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\pathtrace.h">
@@ -49,6 +73,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\sceneStructs.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\tiny_gltf.h">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\utilities.h">

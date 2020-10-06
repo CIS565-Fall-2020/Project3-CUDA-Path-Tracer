@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=x, y, etaT, enterDot
+Expressions=a, width, height, metallic.x, metallic.y, uvy2, uvx, uvy, uvx1, uvy1

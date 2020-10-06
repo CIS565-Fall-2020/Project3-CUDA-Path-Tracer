@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\scenes\cornell.txt</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>../scenes/cornellGltf.txt</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

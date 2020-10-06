@@ -71,8 +71,15 @@ set(headers
     src/pathtrace.h
     src/scene.h
     src/sceneStructs.h
+    src/json.hpp
     src/preview.h
     src/utilities.h
+    src/tiny_gltf.h
+    src/macros.h
+    src/gltf-loader.h
+    src/material.h
+    src/mesh.h
+    src/octree.h
     )
 
 set(sources
@@ -84,6 +91,8 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/gltf-loader.cc
+    src/octree.cpp
     )
 
 list(SORT headers)

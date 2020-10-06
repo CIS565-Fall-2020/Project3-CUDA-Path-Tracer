@@ -7,9 +7,27 @@
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
+enum FilterMode
+{
+    NEAREST = 9728,
+    LINEAR = 9729,
+    NEAREST_MIPMAP_NEAREST = 9984,
+    LINEAR_MIPMAP_NEAREST = 9985,
+    NEAREST_MIPMAP_LINEAR = 9986,
+    LINEAR_MIPMAP_LINEAR = 9987,
+};
+
+enum Wrap
+{
+    CLAMP_TO_EDGE = 33071,
+    MIRRORED_REPEAT = 33648,
+    REPEAT = 10497,
+};
+
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH,
 };
 
 struct Ray {
@@ -20,9 +38,27 @@ struct Ray {
 struct Geom {
     enum GeomType type;
     int materialid;
+    int faceNum;
+    int offset;
+    int boundingIdx;
     glm::vec3 translation;
     glm::vec3 rotation;
     glm::vec3 scale;
+    glm::mat4 transform;
+    glm::mat4 inverseTransform;
+    glm::mat4 invTranspose;
+};
+
+struct BoundingBox 
+{
+    glm::vec3 boundingScale;
+    glm::vec3 boundingCenter;
+};
+
+struct OctBox 
+{
+    glm::vec3 boundingScale;
+    glm::vec3 boundingCenter;
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
@@ -38,6 +74,7 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    bool isMesh;
 };
 
 
@@ -84,8 +121,17 @@ struct is_terminated
 struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
+  glm::vec3 surfaceTangent;
+  glm::vec3 surfaceBiTangent;
+  glm::vec2 uv;
   int materialId;
   bool outside;
+  bool isMesh;
+};
+
+struct InputtedMesh 
+{
+    std::vector<int> indices;
 };
 
 struct material_sort
