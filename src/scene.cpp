@@ -3,9 +3,11 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
-
-#define TINYGLTF_IMPLEMENTATION
-#include <tiny_gltf.h>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <map>
+#include <string>
 
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -38,6 +40,42 @@ Scene::Scene(string filename) {
     }
 }
 
+void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 &pTran) {
+	glm::mat4 tran = glm::mat4(1.0f);
+	glm::mat4 rot = glm::mat4(1.0f);
+	glm::mat4 scale = glm::mat4(1.0f);
+	// Translation
+	if (node.translation.size() > 0) {
+		tran = glm::translate(glm::mat4(), glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
+	}
+
+	// Rotation
+	if (node.rotation.size() > 0) {
+		glm::quat q = glm::quat(node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]);
+		rot = glm::toMat4(q);
+	}
+
+	// Scaling
+	if (node.scale.size() > 0) {
+		scale = glm::scale(glm::mat4(), glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
+	}
+
+	glm::mat4 gTran = pTran * tran * rot * scale;
+
+	const tinygltf::Mesh &mesh = model.meshes[node.mesh];
+	// For each primitive
+	for (const auto &prim : mesh.primitives) {
+		for (const auto &attr : prim.attributes) {
+			if (attr.first == "POSITION") {
+
+			}
+			else if (attr.first == "NORMAL") {
+
+			}
+		}
+	}
+}
+
 int Scene::loadGltf(string filename) {
 	
 	tinygltf::Model model;
@@ -51,6 +89,10 @@ int Scene::loadGltf(string filename) {
 		return -1;
 	}
 	
+	// Iterate through all nodes
+	for (const auto &node : model.nodes) {
+
+	}
 	return 0;
 }
 

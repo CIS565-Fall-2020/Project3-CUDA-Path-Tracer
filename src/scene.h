@@ -8,6 +8,9 @@
 #include "utilities.h"
 #include "sceneStructs.h"
 
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
+
 using namespace std;
 
 class Scene {
@@ -17,6 +20,7 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
 	int loadGltf(string filename);
+	void traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 &pTran);
 
 public:
     Scene(string filename);
