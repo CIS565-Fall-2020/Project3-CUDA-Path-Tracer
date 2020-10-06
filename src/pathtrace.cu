@@ -208,7 +208,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
 #if camera_jittering
         
-        thrust::uniform_real_distribution<float> u01(0, 1);
+        //thrust::uniform_real_distribution<float> u01(0, 1);
+        thrust::uniform_real_distribution<float> u01(-0.5, 0.5);
 		segment.ray.direction = glm::normalize(cam.view
 			- cam.right * cam.pixelLength.x * ((float)x + u01(rng) - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y + u01(rng) - (float)cam.resolution.y * 0.5f)
