@@ -18,6 +18,7 @@
 #include "intersections.h"
 #include "interactions.h"
 
+#define ANTIALIASING 1
 #define TIMEPATHTRACE 0 // Measure performance
 #define DEPTHOFFIELD 0
 #define SORTPATHSBYMATERIAL 1 // Improve performance
@@ -154,10 +155,19 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
     segment.ray.origin = cam.position;
     segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
+    float addedJitter0 = 0.f;
+    float addedJitter1 = 0.f;
+#ifdef ANTIALIASING
+    thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+    thrust::uniform_real_distribution<float> uo(-0.5, 0.5);
+    addedJitter0 = uo(rng);
+    addedJitter1 = uo(rng);
+#endif
+
     // TODO: implement antialiasing by jittering the ray
     segment.ray.direction = glm::normalize(cam.view
-      - cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-      - cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+      - cam.right * cam.pixelLength.x * ((float)x + addedJitter0 - (float)cam.resolution.x * 0.5f)
+      - cam.up * cam.pixelLength.y * ((float)y + addedJitter1 - (float)cam.resolution.y * 0.5f)
     );
 
     segment.pixelIndex = index;

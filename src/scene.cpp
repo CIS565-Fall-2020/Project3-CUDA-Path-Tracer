@@ -90,9 +90,6 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 			}
 			triangles.push_back(tri);
 			index_offset += fv;
-
-			// per-face material
-			shapes[s].mesh.material_ids[f];
 		}
 	}
 	geom.triangleIdxEnd = triangles.size() - 1;
