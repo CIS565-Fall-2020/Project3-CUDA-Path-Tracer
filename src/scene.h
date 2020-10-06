@@ -8,7 +8,7 @@
 #include "utilities.h"
 #include "sceneStructs.h"
 
-#define TINYGLTF_IMPLEMENTATION
+//#define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
 
 using namespace std;

@@ -79,7 +79,7 @@ void scatterRay(
 
 	// update ray origin
 	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
-	pathSegment.ray.origin = intersect + 0.001f * normal;
+	pathSegment.ray.origin = intersect + 0.0001f * normal;
 
 	thrust::uniform_real_distribution<float> u01(0, 1);
 	glm::vec3 dir_spec = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));

@@ -22,6 +22,7 @@
 #define ERRORCHECK 1
 #define SORTBYMAT 0
 #define CACHE 0
+#define DEPTH_OF_FIELD 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -96,6 +97,11 @@ struct path_is_end {
 	}
 };
 
+struct bounce_end {
+	__host__ __device__ bool operator()(const PathSegment& seg) {
+		return seg.remainingBounces >= 0;
+	}
+};
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
@@ -166,6 +172,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 		// TODO: implement antialiasing by jittering the ray
 	// gaussian sampling for aperture simulation
+#if DEPTH_OF_FIELD
 	thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
 	thrust::random::normal_distribution<float> r_r(0.0f, 5 * cam.pixelLength.x);
 	thrust::random::normal_distribution<float> r_u(0.0f, 5 * cam.pixelLength.y);
@@ -175,7 +182,13 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 		- r_r(rng) * cam.right - r_u(rng) * cam.up
 			);
-
+#else
+	// original
+	segment.ray.direction = glm::normalize(cam.view
+		- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
+		- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+	);
+#endif
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}
@@ -224,7 +237,8 @@ __global__ void computeIntersections(
 	}
 #endif
 
-	int path_index = pathIndexes[index];
+	//int path_index = pathIndexes[index];
+	int path_index = index;
 	PathSegment pathSegment = pathSegments[path_index];
 
 	float t;
@@ -305,7 +319,8 @@ __global__ void shadeFakeMaterial (
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index < num_paths)
   {
-	  int idx = pathIndexes[index];
+	  //int idx = pathIndexes[index];
+	  int idx = index;
     ShadeableIntersection intersection = shadeableIntersections[idx];
     if (intersection.t > 0.0f) { // if the intersection exists...
       // Set up the RNG
@@ -481,8 +496,13 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		dev_materials
 		);
 		// TODO (ADD): stream compaction
+		/*
 		int *new_end = thrust::remove_if(thrust::device, dev_path_idxes, dev_path_idxes + num_paths, path_is_end());
 		num_paths = new_end - dev_path_idxes;
+		*/
+		dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_path_end, bounce_end());
+		num_paths = dev_path_end - dev_paths;
+
 		iterationComplete = (num_paths == 0);
 		//iterationComplete = (thrust::count_if(thrust::device, dev_paths, dev_path_end, path_is_end()) == num_paths); // TODO: should be based off stream compaction results.
 		//iterationComplete = (depth > 5000);

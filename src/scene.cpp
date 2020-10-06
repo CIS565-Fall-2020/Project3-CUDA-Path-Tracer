@@ -7,7 +7,9 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <map>
-#include <string>
+
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
 
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -41,6 +43,7 @@ Scene::Scene(string filename) {
 }
 
 void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 &pTran) {
+#if 1
 	glm::mat4 tran = glm::mat4(1.0f);
 	glm::mat4 rot = glm::mat4(1.0f);
 	glm::mat4 scale = glm::mat4(1.0f);
@@ -107,6 +110,7 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 		const auto &child = model.nodes[c];
 		traverseNode(model, child, gTran);
 	}
+#endif
 }
 
 int Scene::loadGltf(string filename) {
