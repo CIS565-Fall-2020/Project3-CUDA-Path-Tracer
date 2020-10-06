@@ -271,6 +271,18 @@ __global__ void computeIntersections(
 		{
 			t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 		}
+		else if (geom.type == TRIANGLE) {
+			glm::vec3 baryRes;
+			bool ret = glm::intersectRayTriangle(pathSegment.ray.origin, pathSegment.ray.direction,
+				geom.x, geom.y, geom.z, baryRes);
+			if (ret) {
+				// Intersect
+			}
+			else {
+				// No intersection
+				t = -1.0f;
+			}
+		}
 		// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 		// Compute the minimum t from the intersection tests to determine what

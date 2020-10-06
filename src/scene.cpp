@@ -42,7 +42,7 @@ Scene::Scene(string filename) {
     }
 }
 
-void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 &pTran) {
+void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 pTran) {
 #if 1
 	glm::mat4 tran = glm::mat4(1.0f);
 	glm::mat4 rot = glm::mat4(1.0f);
@@ -66,9 +66,8 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 	glm::mat4 gTran = pTran * tran * rot * scale;
 
 	const tinygltf::Mesh &mesh = model.meshes[node.mesh];
-	Geom newGeom;
-	newGeom.type = TRIANGLE;
-
+	
+	int existingMats = materials.size();
 	// For each primitive
 	for (const auto &prim : mesh.primitives) {
 		for (const auto &attr : prim.attributes) {
@@ -82,29 +81,32 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 			const auto count = attrAccessor.count;
 
 			if (attr.first == "POSITION") {
-				const float* positions = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
-				if (count != 3) {
+				const unsigned char* data_ptr = (&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
+				if (count % 3 != 0) {
 					cout << "Only support triangle mesh" << endl;
 					throw;
 				}
-				// x
-				newGeom.x = glm::vec3(positions[0], positions[1], positions[2]);
-				// y
-				newGeom.y = glm::vec3(positions[byte_stride], positions[byte_stride + 1], positions[byte_stride + 2]);
-				// z
-				newGeom.z = glm::vec3(positions[2*byte_stride], positions[2*byte_stride + 1], positions[2*byte_stride + 2]);
+				for (int i = 0; i < count; i = i + 3) {
+					Geom newGeom;
+					newGeom.type = TRIANGLE;
+					const float* px = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
+					const float* py = reinterpret_cast<const float*>(data_ptr + (i + 1) * byte_stride);
+					const float* pz = reinterpret_cast<const float*>(data_ptr + (i + 2) * byte_stride);
+					newGeom.x = glm::vec3(px[0], px[1], px[2]);
+					newGeom.y = glm::vec3(py[0], py[1], py[2]);
+					newGeom.z = glm::vec3(pz[0], pz[1], pz[2]);
+					newGeom.materialid = prim.material + existingMats;
+					geoms.push_back(newGeom);
+				}
 			}
 			else if (attr.first == "NORMAL") {
 				const float* normals = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
 				// TODO: what to do with normals
 			}
-		}
-		// Material 
-		newGeom.materialid = prim.material;
+		}		
 	}
 
-	geoms.push_back(newGeom);
-
+	
 	// Traverse children
 	for (const auto &c : node.children) {
 		const auto &child = model.nodes[c];
@@ -131,7 +133,7 @@ int Scene::loadGltf(string filename) {
 		traverseNode(model, node, glm::mat4(1.f));
 	}
 
-	// Load Materials
+	// Load Materials (after traversing nodes)
 	for (const auto &gltfMat : model.materials) {
 		Material mat;
 		tinygltf::PbrMetallicRoughness pbr = gltfMat.pbrMetallicRoughness;
