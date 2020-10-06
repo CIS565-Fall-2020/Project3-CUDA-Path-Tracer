@@ -142,3 +142,85 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+// Find intersection of mesh bounding box and ray
+__host__ __device__ float meshBboxIntersectionTest(Geom MeshBbox, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    Ray q;
+    q.origin = multiplyMV(MeshBbox.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(MeshBbox.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float tmin = -1e38f;
+    float tmax = 1e38f;
+    glm::vec3 tmin_n;
+    glm::vec3 tmax_n;
+    for (int xyz = 0; xyz < 3; ++xyz) {
+        float qdxyz = q.direction[xyz];
+        /*if (glm::abs(qdxyz) > 0.00001f)*/ {
+            float t1 = (MeshBbox.bboxMin[xyz] - q.origin[xyz]) / qdxyz;
+            float t2 = (MeshBbox.bboxMax[xyz] - q.origin[xyz]) / qdxyz;
+            float ta = glm::min(t1, t2);
+            float tb = glm::max(t1, t2);
+            glm::vec3 n;
+            n[xyz] = t2 < t1 ? +1 : -1;
+            if (ta > 0 && ta > tmin) {
+                tmin = ta;
+                tmin_n = n;
+            }
+            if (tb < tmax) {
+                tmax = tb;
+                tmax_n = n;
+            }
+        }
+    }
+
+    if (tmax >= tmin && tmax > 0) {
+        outside = true;
+        if (tmin <= 0) {
+            tmin = tmax;
+            tmin_n = tmax_n;
+            outside = false;
+        }
+        intersectionPoint = multiplyMV(MeshBbox.transform, glm::vec4(getPointOnRay(q, tmin), 1.0f));
+        normal = glm::normalize(multiplyMV(MeshBbox.invTranspose, glm::vec4(tmin_n, 0.0f)));
+        return glm::length(r.origin - intersectionPoint);
+    }
+    return -1;
+}
+
+// Find intersection of each triangle and the ray
+__host__ __device__ float triangleIntersectionTest(Geom geom, Triangle *triangles, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    
+    Ray q;
+    q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float tMin = FLT_MAX;
+    int iMin = -1;
+
+    for (int i = geom.startTriangleIndex; i <= geom.endTriangleIndex; i++) {
+        Triangle& tri = triangles[i];
+        glm::vec3 baryPosition;
+        bool isIntersect = glm::intersectRayTriangle(q.origin, q.direction, tri.vert[0], tri.vert[1], tri.vert[2], baryPosition);
+        if (!isIntersect) {
+            continue;
+        }
+        float t = baryPosition.z;
+        if (t > 0 && t < tMin) {
+            iMin = i;
+            tMin = t;
+        }
+    }
+
+    intersectionPoint = multiplyMV(geom.transform, glm::vec4(getPointOnRay(q, tMin), 1.0f));
+    normal = glm::normalize(multiplyMV(geom.transform, glm::vec4(triangles[iMin].nor, 0.0f)));
+    if (glm::dot(normal, r.direction) < 0) {
+        outside = true;
+    }
+    else {
+        outside = false;
+    }
+
+    return tMin;
+}

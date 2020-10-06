@@ -42,7 +42,6 @@ int main(int argc, char** argv) {
 
     // Load scene file
     scene = new Scene(sceneFile);
-
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
     renderState = &scene->state;

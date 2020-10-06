@@ -19,6 +19,7 @@
 #define ERRORCHECK 1
 #define SORTBYMATERIAL 0
 #define CACHE 1
+#define DOF 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -81,6 +82,7 @@ static ShadeableIntersection * dev_intersections = NULL;
 // ...
 static PathSegment* dev_paths_cache = NULL;
 static ShadeableIntersection* dev_intersections_cache = NULL;
+static Triangle* dev_triangles = NULL;
 
 
 
@@ -108,6 +110,10 @@ void pathtraceInit(Scene *scene) {
 
     cudaMalloc(&dev_intersections_cache, pixelcount * sizeof(ShadeableIntersection));
     cudaMemset(dev_intersections_cache, 0, pixelcount * sizeof(ShadeableIntersection));
+
+    cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
+    cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -118,7 +124,7 @@ void pathtraceFree() {
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
     // TODO: clean up any extra device memory you created
-
+    cudaFree(dev_triangles);
     checkCUDAError("pathtraceFree");
 }
 
@@ -149,7 +155,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 			);
-        
+#if DOF
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
         thrust::uniform_real_distribution<float> u01(0, 1);
 
@@ -161,6 +167,9 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         segment.ray.origin = cam.position + glm::vec3(lensPoint.x, lensPoint.y, 0);
 
         segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+#endif // DOF
+
+
         
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
@@ -177,7 +186,8 @@ __global__ void computeIntersections(
 	, PathSegment * pathSegments
 	, Geom * geoms
 	, int geoms_size
-	, ShadeableIntersection * intersections
+	, ShadeableIntersection * intersections,
+    Triangle* triangles
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -211,7 +221,19 @@ __global__ void computeIntersections(
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
-
+            else if (geom.type == MESH) {
+                // Check bbox
+                t = meshBboxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                
+                if (t != -1) {
+                   // for (int i = geom.startTriangleIndex; i <= geom.endTriangleIndex; ++i) {
+                       // Triangle &tri = triangles[2];
+                        t = triangleIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                    //}
+                 }
+                
+                
+            }
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
 			if (t > 0.0f && t_min > t)
@@ -354,7 +376,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
-    float lensRadius = 1;
+    float lensRadius = 0.01;
     float focalDistance = 12;
     printf("\n\niter: %d   \n", iter);
 
@@ -426,6 +448,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             , dev_geoms
             , hst_scene->geoms.size()
             , dev_intersections
+            , dev_triangles
             );
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
@@ -444,6 +467,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             , dev_geoms
             , hst_scene->geoms.size()
             , dev_intersections
+            , dev_triangles
             );
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
