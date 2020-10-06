@@ -1,3 +1,5 @@
+#ifndef MESH_H
+#define MESH_H
 #include "tiny_gltf.h"
 
 #include <string>
@@ -33,12 +35,14 @@ public:
 	glm::vec3 minCorner;
 	glm::vec3 maxCorner;
 	OctreeNode* children[8];
-	int triangleStart;
-	int triangleCount;
-	int geomStart;
-	int geomCount;
+	std::vector<int> triangleIndices;
+	std::vector<int> geomIndices;
 
-
+	OctreeNode() {
+		for (int i = 0; i < 8; i++) {
+			children[i] = nullptr;
+		}
+	}
 	~OctreeNode() {
 		for (int i = 0; i < 8; i++) {
 			delete children[i];
@@ -53,9 +57,23 @@ public:
 	void addTriangles(const std::vector<glm::vec3>& triangles);
 	void addGeoms(const std::vector<Geom>& geoms);
 
-private:
+	Octree(int maxLevel, float sceneSize) :
+		root(new OctreeNode()), maxLevel(maxLevel), sceneSize(sceneSize) {
+		root->maxCorner = glm::vec3(sceneSize * 0.5f);
+		root->minCorner = -root->maxCorner;
+	}
+	~Octree() { delete root; }
 
-	void addHelper(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
-	
-	int maxLevel;
+private:
+	void addPrimitive(glm::vec3 minCorner, glm::vec3 maxCorner,
+		bool isTriangle, int primitiveIndex);
+	int childIndex(const glm::vec3& point, const glm::vec3& split);
+	void childBoundingBox(const glm::vec3& parentMin, const glm::vec3& parentMax,
+		int index, glm::vec3& childMin, glm::vec3& childMax);
+
+	int maxLevel; // Max level of octree
+	float sceneSize; // Determine the bounding box for the entire scene
 };
+
+
+#endif // !MESH_H

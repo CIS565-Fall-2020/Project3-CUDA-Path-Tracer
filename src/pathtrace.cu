@@ -16,6 +16,7 @@
 #include "pathtrace.h"
 #include "intersections.h"
 #include "interactions.h"
+#include "mesh.h"
 
 #define ERRORCHECK 1
 #define CACHE_FIRST 0
@@ -90,6 +91,9 @@ static int* dev_sobol_seed = nullptr;
 // Triangles of meshes
 static glm::vec3* dev_triangles = nullptr;
 
+// Octree for culling
+static OctreeNodeDevice* dev_octree = nullptr;
+
 // TODO: static variables for device memory, any extra info you need, etc
 
 // Generate the start point of sobol sequence for each pixel
@@ -107,6 +111,14 @@ __global__ void generateSeed(Camera cam, int* sobolSeed) {
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
+
+    // Need to prepare the octree for device if we are using culling
+    if (scene->usingCulling) {
+        std::vector<OctreeNodeDevice> temp = scene->prepareOctree();
+        cudaMalloc(&dev_octree, temp.size() * sizeof(OctreeNodeDevice));
+        cudaMemcpy(dev_octree, temp.data(), temp.size() * sizeof(OctreeNodeDevice), cudaMemcpyHostToDevice);
+    }
+
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
 
@@ -163,12 +175,15 @@ void pathtraceFree() {
     // Mesh triangles
     cudaFree(dev_triangles);
 
+    // Free octree
+    if (hst_scene->usingCulling) {
+        cudaFree(dev_octree);
+    }
+
     // TODO: clean up any extra device memory you created
 
     checkCUDAError("pathtraceFree");
 }
-
-
 
 /**
 * Generate PathSegments with rays from the camera through the screen into the
@@ -216,7 +231,23 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	}
 }
 
-// TODO:
+// Compute intersection using Octree
+__global__ void computeIntersectionsOctree(
+    int depth
+    , int num_paths
+    , PathSegment* pathSegments
+    , Geom* geoms
+    , int geoms_size
+    , ShadeableIntersection* intersections
+    , glm::vec3* triangles
+    , OctreeNodeDevice* octree
+) {
+    int path_index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (path_index < num_paths) {
+        //TODO!!!!!!!!!!!!!
+    }
+}
+
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
@@ -228,12 +259,10 @@ __global__ void computeIntersections(
 	, int geoms_size
 	, ShadeableIntersection * intersections
     , glm::vec3 * triangles
-	)
-{
+) {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (path_index < num_paths)
-	{
+	if (path_index < num_paths) {
 		PathSegment pathSegment = pathSegments[path_index];
 
 		float t;

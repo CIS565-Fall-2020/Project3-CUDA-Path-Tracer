@@ -7,6 +7,7 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "sceneStructs.h"
+#include "mesh.h"
 
 using namespace std;
 
@@ -17,13 +18,20 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
 public:
-    Scene(string filename, bool usingWorldSpace = false);
+    Scene(
+        string filename,
+        bool usingCulling = false,
+        int maxOctreeLevel = 8,
+        float sceneSize = 40.f);
     ~Scene() {}
 
     std::vector<Geom> geoms;
     std::vector<Material> materials;
     std::vector<glm::vec3> triangles; // Triangles of meshes
-    bool isWorldSpace; // How triangle positions are interpreted
+    bool isWorldSpace; // In which frame of reference are triangles defined
+    bool usingCulling;
+    Octree octree;
+    std::vector<OctreeNodeDevice> prepareOctree();
     
     RenderState state;
 };

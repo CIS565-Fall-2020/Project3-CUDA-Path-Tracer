@@ -1,6 +1,5 @@
 // Define these only in *one* .cc file.
 #define TINYGLTF_IMPLEMENTATION
-
 // #define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
 
 #include "mesh.h"
@@ -54,16 +53,91 @@ void MeshLoader::pushTriangles(std::vector<glm::vec3>& triangles) {
 }
 
 void Octree::addTriangles(const std::vector<glm::vec3>& triangles) {
-
 	for (int i = 0; i < triangles.size(); i += 3) {
-		
+		glm::vec3 minCorner(FLT_MAX);
+		glm::vec3 maxCorner(-FLT_MAX);
+		for (int j = i; j < i + 3; j++) {
+			const glm::vec3& t = triangles[j];
+			minCorner.x = std::min(minCorner.x, t.x);
+			minCorner.y = std::min(minCorner.y, t.y);
+			minCorner.z = std::min(minCorner.z, t.z);
+			maxCorner.x = std::max(maxCorner.x, t.x);
+			maxCorner.y = std::max(maxCorner.y, t.y);
+			maxCorner.z = std::max(maxCorner.z, t.z);
+		}
+		addPrimitive(minCorner, maxCorner, true, i);
 	}
 }
 
 void Octree::addGeoms(const std::vector<Geom>& geoms) {
-
+	for (int i = 0; i < geoms.size(); i++) {
+		auto& geom = geoms[i];
+		if (geom.type != MESH) {
+			glm::vec3 minCorner, maxCorner;
+			geom.getBoundingBox(minCorner, maxCorner);
+			addPrimitive(minCorner, maxCorner, false, i);
+		}
+	}
 }
 
-void Octree::addHelper(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+/// <summary>
+/// A helper function for adding a cube/sphere/triangle to the octree.
+/// </summary>
+/// <param name="minCorner"> Bounding box lower corner. </param>
+/// <param name="maxCorner"> Bounding box upper corner. </param>
+void Octree::addPrimitive(glm::vec3 minCorner, glm::vec3 maxCorner,
+	bool isTriangle, int primitiveIndex) {
+	int level = 1;
+	for (OctreeNode* node = root; ; level++) {
+		glm::vec3 split = (node->minCorner + node->maxCorner) * 0.5f;
+		int minChild = childIndex(minCorner, split);
+		int maxChild = childIndex(maxCorner, split);
+		if (level >= maxLevel || minChild != maxChild) {
+			if (isTriangle) {
+				node->triangleIndices.push_back(primitiveIndex);
+			}
+			else {
+				node->geomIndices.push_back(primitiveIndex);
+			}
+			return;
+		}
+		else { // Fit in a lower level, i.e., a child bounding box
+			if (node->children[minChild] == nullptr) {
+				node->children[minChild] = new OctreeNode();
+				childBoundingBox(node->minCorner, node->maxCorner, minChild,
+					node->children[minChild]->minCorner, node->children[minChild]->maxCorner);
+			}
+			node = node->children[minChild];
+		}
+	}
+}
 
+/// <summary>
+/// Determine the index of child this point is located in.
+/// </summary>
+/// <returns> An index from 0 to 7. </returns>
+int Octree::childIndex(const glm::vec3& point, const glm::vec3& split) {
+	int x = point.x <= split.x ? 0 : 1;
+	int y = point.y <= split.y ? 0 : 1;
+	int z = point.z <= split.z ? 0 : 1;
+	return x * 4 + y * 2 + z;
+}
+
+/// <summary>
+/// Get the bounding box of the child octree by index.
+/// The bounding box is represented by two diagonal corner points.
+/// </summary>
+void Octree::childBoundingBox(const glm::vec3& parentMin, const glm::vec3& parentMax,
+	int index, glm::vec3& childMin, glm::vec3& childMax) {
+	assert(0 <= index && index < 8);
+	glm::vec3 split = (parentMin + parentMax) * 0.5f;
+	int x = index & 4;
+	int y = index & 2;
+	int z = index & 1;
+	childMin.x = x == 0 ? parentMin.x : split.x;
+	childMin.y = y == 0 ? parentMin.y : split.y;
+	childMin.z = z == 0 ? parentMin.z : split.z;
+	childMax.x = x == 0 ? split.x : parentMax.x;
+	childMax.y = y == 0 ? split.y : parentMax.y;
+	childMax.z = z == 0 ? split.z : parentMax.z;
 }

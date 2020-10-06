@@ -3,10 +3,11 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include "mesh.h"
+#include <queue>
 
-Scene::Scene(string filename, bool usingWorldSpace) {
-    isWorldSpace = usingWorldSpace;
+Scene::Scene(string filename, bool usingCulling, int maxOctreeLevel, float sceneSize)
+    : usingCulling(usingCulling), isWorldSpace(usingCulling),
+    octree(maxOctreeLevel, sceneSize) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -31,6 +32,12 @@ Scene::Scene(string filename, bool usingWorldSpace) {
                 cout << " " << endl;
             }
         }
+    }
+
+    // Add triangles and other geometries to octree if we are using culling
+    if (usingCulling) {
+        octree.addTriangles(triangles);
+        octree.addGeoms(geoms);
     }
 }
 
@@ -215,4 +222,51 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
+}
+
+std::vector<OctreeNodeDevice> Scene::prepareOctree() {
+    std::vector<OctreeNodeDevice> result;
+    std::vector<glm::vec3> rearrangedTriangles;
+    std::vector<Geom> rearrangedGeoms;
+
+    std::queue<OctreeNode*> que;
+    que.push(octree.root);
+    while (!que.empty()) {
+        int n = que.size();
+        int childrenBegin = result.size() + n;
+        for (int i = 0; i < n; i++) {
+            OctreeNode* node = que.front();
+            que.pop();
+            OctreeNodeDevice dev_node;
+            dev_node.minCorner = node->minCorner;
+            dev_node.maxCorner = node->maxCorner;
+            dev_node.triangleStart = rearrangedTriangles.size();
+            dev_node.triangleCount = 0;
+            for (int tIdx : node->triangleIndices) {
+                rearrangedTriangles.push_back(triangles[tIdx]);
+                rearrangedTriangles.push_back(triangles[tIdx + 1]);
+                rearrangedTriangles.push_back(triangles[tIdx + 2]);
+                dev_node.triangleCount++;
+            }
+            dev_node.geomStart = rearrangedGeoms.size();
+            dev_node.geomCount = 0;
+            for (int gIdx : node->geomIndices) {
+                rearrangedGeoms.push_back(geoms[gIdx]);
+                dev_node.geomCount++;
+            }
+            for (int c = 0; c < 8; c++) {
+                if (node->children[c] != nullptr) {
+                    dev_node.children[c] = childrenBegin++;
+                    que.push(node->children[c]);
+                }
+                else {
+                    dev_node.children[c] = -1;
+                }
+            }
+            result.push_back(dev_node);
+        }
+    }
+    triangles = rearrangedTriangles;
+    geoms = rearrangedGeoms;
+    return result;
 }

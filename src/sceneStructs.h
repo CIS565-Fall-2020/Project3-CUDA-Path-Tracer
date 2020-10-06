@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SCENESTRUCTS_H
+#define SCENESTRUCTS_H
 
 #include <string>
 #include <vector>
@@ -29,6 +30,7 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    inline void getBoundingBox(glm::vec3& minCorner, glm::vec3& maxCorner) const;
 };
 
 struct Material {
@@ -99,3 +101,40 @@ struct path_sort {
         return a.materialId < b.materialId;
     }
 };
+
+inline void Geom::getBoundingBox(glm::vec3& minCorner, glm::vec3& maxCorner) const {
+    if (type == SPHERE) {
+        float s = std::max(scale.x, std::max(scale.y, scale.z));
+        glm::vec3 halfSide(s * 0.5f);
+        minCorner = translation - halfSide;
+        maxCorner = translation + halfSide;
+    }
+    else if (type == CUBE) {
+        minCorner = glm::vec3(FLT_MAX);
+        maxCorner = glm::vec3(-FLT_MAX);
+        std::vector<glm::vec3> corners = {
+            glm::vec3(-0.5, -0.5, -0.5),
+            glm::vec3(-0.5, -0.5, 0.5),
+            glm::vec3(-0.5, 0.5, -0.5),
+            glm::vec3(-0.5, 0.5, 0.5),
+            glm::vec3(0.5, -0.5, -0.5),
+            glm::vec3(0.5, -0.5, 0.5),
+            glm::vec3(0.5, 0.5, -0.5),
+            glm::vec3(0.5, 0.5, 0.5)
+        };
+        for (int i = 0; i < 8; i++) {
+            corners[i] = glm::vec3(transform * glm::vec4(corners[i], 1));
+            minCorner.x = std::min(corners[i].x, minCorner.x);
+            minCorner.y = std::min(corners[i].y, minCorner.y);
+            minCorner.z = std::min(corners[i].z, minCorner.z);
+            maxCorner.x = std::max(corners[i].x, maxCorner.x);
+            maxCorner.y = std::max(corners[i].y, maxCorner.y);
+            maxCorner.z = std::max(corners[i].z, maxCorner.z);
+        }
+    }
+    else {
+        std::cout << "Geom::getBoundingBox: do not support type " << type << std::endl;
+    }
+}
+
+#endif // !SCENESTRUCTS_H
