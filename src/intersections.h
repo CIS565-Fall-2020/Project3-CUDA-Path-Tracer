@@ -155,12 +155,11 @@ __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, 
 	float t_min = INFINITY;
 	for (int i = mesh.triangleIdxStart; i <= mesh.triangleIdxEnd; i++) {
 		Triangle tri = tris[i];
-		glm::vec3 baryPosition;
-		if (glm::intersectRayTriangle(ro, rd, tri.v[0], tri.v[1], tri.v[2], baryPosition)) {
-			float t = baryPosition.z;
+		glm::vec3 bary;
+		if (glm::intersectRayTriangle(ro, rd, tri.v[0], tri.v[1], tri.v[2], bary)) {
+			float t = bary.z;
 			if (t < t_min) {
 				t_min = t;
-				intersectionPoint = baryPosition.x * tri.v[0] + baryPosition.y * tri.v[1] + tri.v[2];
 				normal = glm::normalize(glm::cross(tri.v[1] - tri.v[0], tri.v[2] - tri.v[0]));
 			}
 		}
@@ -170,6 +169,7 @@ __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, 
 	}
 
 	outside = glm::dot(normal, rd) <= 0;
+	intersectionPoint = ro + rd * t_min;
 
 	intersectionPoint = multiplyMV(mesh.transform, glm::vec4(intersectionPoint, 1.f));
 	normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(normal, 0.0f)));
