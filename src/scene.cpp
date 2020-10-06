@@ -122,10 +122,31 @@ int Scene::loadGltf(string filename) {
 		return -1;
 	}
 	
-	// Iterate through all nodes
+	// Iterate through all nodes (load triangles)
 	for (const auto &node : model.nodes) {
-
+		traverseNode(model, node, glm::mat4(1.f));
 	}
+
+	// Load Materials
+	for (const auto &gltfMat : model.materials) {
+		Material mat;
+		tinygltf::PbrMetallicRoughness pbr = gltfMat.pbrMetallicRoughness;
+		mat.color = glm::vec3(pbr.baseColorFactor[0], pbr.baseColorFactor[1], pbr.baseColorFactor[2]);
+		mat.hasReflective = pbr.metallicFactor;
+		mat.specular.color = mat.color;
+		materials.push_back(mat);
+	}
+
+	// Load Lights (after other materials)
+	for (const auto &light : model.lights) {
+		Material eMat;
+		eMat.color = glm::vec3(light.color[0], light.color[1], light.color[2]);
+		eMat.emittance = (float)light.intensity;
+		materials.push_back(eMat);
+	}
+
+	// Load Camera
+
 	return 0;
 }
 
