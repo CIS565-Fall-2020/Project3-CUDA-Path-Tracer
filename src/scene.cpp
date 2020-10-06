@@ -81,13 +81,15 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 				const auto byteStride = indicesAccessor.ByteStride(bufferView);
 				const auto count = indicesAccessor.count;
 				for (int i = 0; i < count; i++) {
-					const char *idx = reinterpret_cast<const char*>(dataAddress + i * byteStride);
+					const unsigned short *idx = reinterpret_cast<const unsigned short*>(dataAddress + i * byteStride);
 					indices.push_back(idx[0]);
 				}
 			}
 			
 			// fetch positions and normals
 			vector<glm::vec3> vertex_positions;
+			vector<glm::vec3> vertex_normals;
+
 			for (const auto &attr : prim.attributes) {
 				const auto attrAccessor = model.accessors[attr.second];
 				const auto &bufferView =
@@ -97,9 +99,9 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 					attrAccessor.byteOffset;
 				const auto byte_stride = attrAccessor.ByteStride(bufferView);
 				const auto count = attrAccessor.count;
+				const unsigned char* data_ptr = &buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
 
 				if (attr.first == "POSITION") {
-					const unsigned char* data_ptr = &buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
 					if (count % 3 != 0) {
 						cout << "Only support triangle mesh" << endl;
 						throw;
@@ -124,8 +126,10 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 					*/
 				}
 				else if (attr.first == "NORMAL") {
-					const float* normals = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
-					// TODO: what to do with normals
+					for (int i = 0; i < count; i++) {
+						const float* n = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
+						vertex_normals.push_back(glm::vec3(n[0], n[1], n[2]));
+					}
 				}
 			}
 			if (prim.indices < 0) {
@@ -139,6 +143,7 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 				newGeom.v0 = vertex_positions[indices[k]];
 				newGeom.v1 = vertex_positions[indices[k + 1]];
 				newGeom.v2 = vertex_positions[indices[k + 2]];
+				newGeom.normal = vertex_normals[indices[k]];
 				newGeom.materialid = prim.material + existingMats;
 				geoms.push_back(newGeom);
 			}

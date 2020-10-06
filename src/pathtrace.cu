@@ -278,9 +278,10 @@ __global__ void computeIntersections(
 				geom.v0, geom.v1, geom.v2, baryRes);
 			if (ret) {
 				// Intersect
-				tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * baryRes.z;
-				t = glm::length(pathSegment.ray.origin - tmp_intersect);
-				tmp_normal = glm::triangleNormal(geom.v0, geom.v1, geom.v2);
+				tmp_normal = geom.normal;
+				tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * (1 - baryRes.x - baryRes.y);
+				//t = glm::length(pathSegment.ray.origin - tmp_intersect);
+				t = baryRes.z;
 				if (glm::dot(pathSegment.ray.origin, tmp_normal) > 0.0f) {
 					outside = false;
 				}
