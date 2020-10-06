@@ -65,47 +65,85 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 
 	glm::mat4 gTran = pTran * tran * rot * scale;
 
-	const tinygltf::Mesh &mesh = model.meshes[node.mesh];
-	
-	int existingMats = materials.size();
-	// For each primitive
-	for (const auto &prim : mesh.primitives) {
-		for (const auto &attr : prim.attributes) {
-			const auto attrAccessor = model.accessors[attr.second];
-			const auto &bufferView =
-				model.bufferViews[attrAccessor.bufferView];
-			const auto &buffer = model.buffers[bufferView.buffer];
-			const auto dataPtr = buffer.data.data() + bufferView.byteOffset +
-				attrAccessor.byteOffset;
-			const auto byte_stride = attrAccessor.ByteStride(bufferView);
-			const auto count = attrAccessor.count;
+	if (node.mesh >= 0) {
+		const tinygltf::Mesh &mesh = model.meshes[node.mesh];
 
-			if (attr.first == "POSITION") {
-				const unsigned char* data_ptr = &buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
-				if (count % 3 != 0) {
-					cout << "Only support triangle mesh" << endl;
-					throw;
-				}
-				for (int i = 0; i < count; i = i + 3) {
-					Geom newGeom;
-					newGeom.type = TRIANGLE;
-					const float* px = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
-					const float* py = reinterpret_cast<const float*>(data_ptr + (i + 1) * byte_stride);
-					const float* pz = reinterpret_cast<const float*>(data_ptr + (i + 2) * byte_stride);
-					newGeom.v0 = glm::vec3(px[0], px[1], px[2]);
-					newGeom.v1 = glm::vec3(py[0], py[1], py[2]);
-					newGeom.v2 = glm::vec3(pz[0], pz[1], pz[2]);
-					newGeom.materialid = prim.material + existingMats;
-					geoms.push_back(newGeom);
+		int existingMats = materials.size();
+		// For each primitive
+		for (const auto &prim : mesh.primitives) {
+			// check for indices
+			vector<int> indices;
+			if (prim.indices >= 0) {
+				const auto &indicesAccessor = model.accessors[prim.indices];
+				const auto &bufferView = model.bufferViews[indicesAccessor.bufferView];
+				const auto &buffer = model.buffers[bufferView.buffer];
+				const unsigned char* dataAddress = &buffer.data[bufferView.byteOffset + indicesAccessor.byteOffset];
+				const auto byteStride = indicesAccessor.ByteStride(bufferView);
+				const auto count = indicesAccessor.count;
+				for (int i = 0; i < count; i++) {
+					const char *idx = reinterpret_cast<const char*>(dataAddress + i * byteStride);
+					indices.push_back(idx[0]);
 				}
 			}
-			else if (attr.first == "NORMAL") {
-				const float* normals = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
-				// TODO: what to do with normals
+			
+			// fetch positions and normals
+			vector<glm::vec3> vertex_positions;
+			for (const auto &attr : prim.attributes) {
+				const auto attrAccessor = model.accessors[attr.second];
+				const auto &bufferView =
+					model.bufferViews[attrAccessor.bufferView];
+				const auto &buffer = model.buffers[bufferView.buffer];
+				const auto dataPtr = buffer.data.data() + bufferView.byteOffset +
+					attrAccessor.byteOffset;
+				const auto byte_stride = attrAccessor.ByteStride(bufferView);
+				const auto count = attrAccessor.count;
+
+				if (attr.first == "POSITION") {
+					const unsigned char* data_ptr = &buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
+					if (count % 3 != 0) {
+						cout << "Only support triangle mesh" << endl;
+						throw;
+					}
+					for (int i = 0; i < count; i++) {
+						const float* p = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
+						vertex_positions.push_back(glm::vec3(p[0], p[1], p[2]));
+					}
+					/*
+					for (int i = 0; i < count; i = i + 3) {
+						Geom newGeom;
+						newGeom.type = TRIANGLE;
+						const float* px = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
+						const float* py = reinterpret_cast<const float*>(data_ptr + (i + 1) * byte_stride);
+						const float* pz = reinterpret_cast<const float*>(data_ptr + (i + 2) * byte_stride);
+						newGeom.v0 = glm::vec3(px[0], px[1], px[2]);
+						newGeom.v1 = glm::vec3(py[0], py[1], py[2]);
+						newGeom.v2 = glm::vec3(pz[0], pz[1], pz[2]);
+						newGeom.materialid = prim.material + existingMats;
+						geoms.push_back(newGeom);
+					}
+					*/
+				}
+				else if (attr.first == "NORMAL") {
+					const float* normals = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + attrAccessor.byteOffset]);
+					// TODO: what to do with normals
+				}
 			}
-		}		
+			if (prim.indices < 0) {
+				for (int i = 0; i < vertex_positions.size(); i++) {
+					indices.push_back(i);
+				}
+			}
+			for (int k = 0; k < indices.size(); k = k + 3) {
+				Geom newGeom;
+				newGeom.type = TRIANGLE;
+				newGeom.v0 = vertex_positions[indices[k]];
+				newGeom.v1 = vertex_positions[indices[k + 1]];
+				newGeom.v2 = vertex_positions[indices[k + 2]];
+				newGeom.materialid = prim.material + existingMats;
+				geoms.push_back(newGeom);
+			}
+		}
 	}
-
 	
 	// Traverse children
 	for (const auto &c : node.children) {
