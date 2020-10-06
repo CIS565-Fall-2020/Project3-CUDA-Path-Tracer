@@ -88,51 +88,65 @@ int Scene::loadGeom(string objectid) {
                     }
                     for (tinygltf::Mesh mesh : model.meshes) {
                         for (tinygltf::Primitive prim : mesh.primitives) {
-                            // Get the accessors and buffer views
+
+                            // Get the position buffer
                             const tinygltf::Accessor& accessorPos = model.accessors[prim.attributes["POSITION"]];
                             const tinygltf::BufferView& bufferViewPos = model.bufferViews[accessorPos.bufferView];
-
-                            const tinygltf::Accessor& accessorNorm = model.accessors[prim.attributes["NORMAL"]];
-                            const tinygltf::BufferView& bufferViewNorm = model.bufferViews[accessorNorm.bufferView];
-
                             const tinygltf::Buffer& bufferPos = model.buffers[bufferViewPos.buffer];
-                            const tinygltf::Buffer& bufferNorm = model.buffers[bufferViewNorm.buffer];
-
                             const float* positions = reinterpret_cast<const float*>(&bufferPos.data[bufferViewPos.byteOffset + accessorPos.byteOffset]);
-                            const float* normals = reinterpret_cast<const float*>(&bufferNorm.data[bufferViewNorm.byteOffset + accessorNorm.byteOffset]);
 
                             // Get indices
-                            const tinygltf::Accessor& accessorIdx = model.accessors[0];
+                            const tinygltf::Accessor& accessorIdx = model.accessors[prim.indices];
                             const tinygltf::BufferView& bufferViewIdx = model.bufferViews[accessorIdx.bufferView];
                             const tinygltf::Buffer& bufferIdx = model.buffers[bufferViewIdx.buffer];
                             const unsigned short* indices = reinterpret_cast<const unsigned short*>(&bufferIdx.data[bufferViewIdx.byteOffset + accessorIdx.byteOffset]);
 
-                            for (size_t i = 0; i < accessorIdx.count; i += 3) {
-                                int idx0 = indices[i];
-                                int idx1 = indices[i + 1];
-                                int idx2 = indices[i + 2];
-                                // Get triangle vertices and surface normal
-                                glm::vec3 v0(positions[idx0 * 3], positions[idx0 * 3 + 1], positions[idx0 * 3 + 2]);
-                                glm::vec3 v1(positions[idx1 * 3], positions[idx1 * 3 + 1], positions[idx1 * 3 + 2]);
-                                glm::vec3 v2(positions[idx2 * 3], positions[idx2 * 3 + 1], positions[idx2 * 3 + 2]);
-                                glm::vec3 n0(normals[idx0 * 3], normals[idx0 * 3 + 1], normals[idx0 * 3 + 2]);
-                                glm::vec3 n1(normals[idx1 * 3], normals[idx1 * 3 + 1], normals[idx1 * 3 + 2]);
-                                glm::vec3 n2(normals[idx2 * 3], normals[idx2 * 3 + 1], normals[idx2 * 3 + 2]);
-                                /*cout << "NORMAL" << endl;
-                                cout << "(" << n[0] << ", " << n[1] << ", " << n[2] << ")" << endl;
-                                cout << "POSITIONS" << endl;
-                                cout << "(" << v0[0] << ", " << v0[1] << ", " << v0[2] << ")" << endl;
-                                cout << "(" << v1[0] << ", " << v1[1] << ", " << v1[2] << ")" << endl;
-                                cout << "(" << v2[0] << ", " << v2[1] << ", " << v2[2] << ")" << endl;*/
-                                Geom triangle;
-                                triangle.type = TRIANGLE;
-                                triangle.n0 = n0;
-                                triangle.n1 = n1;
-                                triangle.n2 = n2;
-                                triangle.v0 = v0;
-                                triangle.v1 = v1;
-                                triangle.v2 = v2;
-                                triangles.push_back(triangle);
+                            int doesNormExist = prim.attributes["NORMAL"];
+                            if (doesNormExist) {
+                                // Get the normal buffer
+                                const tinygltf::Accessor& accessorNorm = model.accessors[prim.attributes["NORMAL"]];
+                                const tinygltf::BufferView& bufferViewNorm = model.bufferViews[accessorNorm.bufferView];
+                                const tinygltf::Buffer& bufferNorm = model.buffers[bufferViewNorm.buffer];
+                                const float* normals = reinterpret_cast<const float*>(&bufferNorm.data[bufferViewNorm.byteOffset + accessorNorm.byteOffset]);
+
+                                for (size_t i = 0; i < accessorIdx.count; i += 3) {
+                                    int idx0 = indices[i];
+                                    int idx1 = indices[i + 1];
+                                    int idx2 = indices[i + 2];
+                                    // Get triangle vertices and surface normal
+                                    glm::vec3 v0(positions[idx0 * 3], positions[idx0 * 3 + 1], positions[idx0 * 3 + 2]);
+                                    glm::vec3 v1(positions[idx1 * 3], positions[idx1 * 3 + 1], positions[idx1 * 3 + 2]);
+                                    glm::vec3 v2(positions[idx2 * 3], positions[idx2 * 3 + 1], positions[idx2 * 3 + 2]);
+                                    glm::vec3 n0(normals[idx0 * 3], normals[idx0 * 3 + 1], normals[idx0 * 3 + 2]);
+                                    glm::vec3 n1(normals[idx1 * 3], normals[idx1 * 3 + 1], normals[idx1 * 3 + 2]);
+                                    glm::vec3 n2(normals[idx2 * 3], normals[idx2 * 3 + 1], normals[idx2 * 3 + 2]);
+                                    Geom triangle;
+                                    triangle.type = TRIANGLE;
+                                    triangle.n0 = n0;
+                                    triangle.n1 = n1;
+                                    triangle.n2 = n2;
+                                    triangle.v0 = v0;
+                                    triangle.v1 = v1;
+                                    triangle.v2 = v2;
+                                    triangles.push_back(triangle);
+                                }
+                            }
+                            else {
+                                for (size_t i = 0; i < accessorIdx.count; i += 3) {
+                                    int idx0 = indices[i];
+                                    int idx1 = indices[i + 1];
+                                    int idx2 = indices[i + 2];
+                                    // Get triangle vertices
+                                    glm::vec3 v0(positions[idx0 * 3], positions[idx0 * 3 + 1], positions[idx0 * 3 + 2]);
+                                    glm::vec3 v1(positions[idx1 * 3], positions[idx1 * 3 + 1], positions[idx1 * 3 + 2]);
+                                    glm::vec3 v2(positions[idx2 * 3], positions[idx2 * 3 + 1], positions[idx2 * 3 + 2]);
+                                    Geom triangle;
+                                    triangle.type = TRIANGLE;
+                                    triangle.v0 = v0;
+                                    triangle.v1 = v1;
+                                    triangle.v2 = v2;
+                                    triangles.push_back(triangle);
+                                }
                             }
                         }
                     }

@@ -87,29 +87,95 @@ static PathSegment* dev_first_bounce_paths = NULL;
 
 static Octree octree;
 static OctNode* dev_octnodes = NULL;
+static OctNode* hst_octnodes = NULL;
+static int octNodeId = 1; // id counter for octNode
 
 /*
 * Update the OctNode bounding box if necessary
 */
-void updateBounds(glm::vec3& maxBound, glm::vec3& minBound, glm::vec3 maxGeom, glm::vec3 minGeom) {
-    if (maxGeom.x > maxBound.x) maxBound.x = maxGeom.x;
-    if (maxGeom.y > maxBound.y) maxBound.y = maxGeom.y;
-    if (maxGeom.z > maxBound.z) maxBound.z = maxGeom.z;
-    if (minGeom.x < minBound.x) minBound.x = minGeom.x;
-    if (minGeom.y < minBound.y) minBound.y = minGeom.y;
-    if (minGeom.z < minBound.z) minBound.z = minGeom.z;
+void updateBounds(glm::vec3& maxBound, glm::vec3& minBound, Geom &geom) {
+    if (geom.max_point.x > maxBound.x) maxBound.x = geom.max_point.x;
+    if (geom.max_point.y > maxBound.y) maxBound.y = geom.max_point.y;
+    if (geom.max_point.z > maxBound.z) maxBound.z = geom.max_point.z;
+    if (geom.min_point.x < minBound.x) minBound.x = geom.min_point.x;
+    if (geom.min_point.y < minBound.y) minBound.y = geom.min_point.y;
+    if (geom.min_point.z < minBound.z) minBound.z = geom.min_point.z;
 }
 
 /*
-* Check if given geometry has an overlap with given OctNode
+* Check if given geometry has an overlap with given bounds
 */
-bool doesGeomOverlap(Geom& geom, OctNode& node) {
-    return (geom.min_point.x >= node.minCorner.x) ||
-        (geom.min_point.y >= node.minCorner.y) ||
-        (geom.min_point.z >= node.minCorner.z) ||
-        (geom.max_point.x <= node.maxCorner.x) ||
-        (geom.max_point.y <= node.maxCorner.y) ||
-        (geom.max_point.z <= node.maxCorner.z);
+bool doesGeomOverlap(Geom& geom, glm::vec3 &minCorner, glm::vec3 &maxCorner) {
+    return (geom.min_point.x >= minCorner.x) ||
+        (geom.min_point.y >= minCorner.y) ||
+        (geom.min_point.z >= minCorner.z) ||
+        (geom.max_point.x <= maxCorner.x) ||
+        (geom.max_point.y <= maxCorner.y) ||
+        (geom.max_point.z <= maxCorner.z);
+}
+
+void setupOctreeRecursive(int depth, glm::vec3 maxRoot, glm::vec3 minRoot, OctNode &root) {
+
+    // Setup potential children nodes
+    root.upFarLeft, root.upFarRight, root.upNearLeft, root.upNearRight, root.downFarLeft, root.downFarRight, root.downNearLeft, root.downNearRight = -1;
+    OctNode upFarLeft, upFarRight, upNearLeft, upNearRight, downFarLeft, downFarRight, downNearLeft, downNearRight;
+    std::vector<Geom> upFarLeftGeoms, upFarRightGeoms, upNearLeftGeoms, upNearRightGeoms, downFarLeftGeoms, downFarRightGeoms, downNearLeftGeoms, downNearRightGeoms;
+
+    // Compute bounds for potential children nodes
+    glm::vec3 boundingBoxSizes = (maxRoot - minRoot) / 2.f;
+
+    glm::vec3 upFarLeftMin(minRoot.x, minRoot.y + boundingBoxSizes.y, minRoot.z);
+    glm::vec3 upFarLeftMax(minRoot.x + boundingBoxSizes.x, maxRoot.y, minRoot.z + boundingBoxSizes.z);
+
+    glm::vec3 upFarRightMin(minRoot.x + boundingBoxSizes.x, minRoot.y + boundingBoxSizes.y, minRoot.z);
+    glm::vec3 upFarRightMax(maxRoot.x, maxRoot.y, minRoot.z + boundingBoxSizes.z);
+
+    glm::vec3 upNearLeftMin(minRoot.x, minRoot.y + boundingBoxSizes.y, minRoot.z + boundingBoxSizes.z);
+    glm::vec3 upNearLeftMax(minRoot.x + boundingBoxSizes.x, maxRoot.y, maxRoot.z);
+
+    glm::vec3 upNearRightMin(minRoot.x + boundingBoxSizes.x, minRoot.y + boundingBoxSizes.y, minRoot.z + boundingBoxSizes.z);
+    glm::vec3 upNearRightMax(maxRoot);
+
+    glm::vec3 downFarLeftMin(minRoot);
+    glm::vec3 downFarLeftMax(upNearRightMin);
+
+    glm::vec3 downFarRightMin(minRoot.x + boundingBoxSizes.x, minRoot.y, minRoot.z);
+    glm::vec3 downFarRightMax(maxRoot.x, minRoot.y + boundingBoxSizes.y, minRoot.z + boundingBoxSizes.z);
+
+    glm::vec3 downNearLeftMin(minRoot.x, minRoot.y, minRoot.z + boundingBoxSizes.z);
+    glm::vec3 downNearLeftMax(minRoot.x + boundingBoxSizes.x, minRoot.y + boundingBoxSizes.y, maxRoot.z);
+
+    glm::vec3 downNearRightMin(minRoot.x + boundingBoxSizes.x, minRoot.y, minRoot.z + boundingBoxSizes.z);
+    glm::vec3 downNearRightMax(maxRoot.x, minRoot.y + boundingBoxSizes.y, maxRoot.z);
+
+    // Iterate through geometry within the node and determine where they belong
+    for (Geom geom : root.geoms) {
+        // Up far left
+        if (doesGeomOverlap(geom, upFarLeftMin, upFarLeftMax)) {
+            upFarLeftGeoms.push_back(geom);
+            if (upFarLeftGeoms.size() == 1) {
+                root.upFarLeft = octNodeId++;
+            }
+        }
+        if (doesGeomOverlap(geom, upFarRightMin, upFarRightMax)) {
+            upFarRightGeoms.push_back(geom);
+            if (upFarRightGeoms.size() == 1) {
+                root.upFarRight = octNodeId++;
+            }
+        }
+        if (doesGeomOverlap(geom, upNearLeftMin, upNearLeftMax)) {
+            upNearLeftGeoms.push_back(geom);
+            if (upNearLeftGeoms.size() == 1) {
+                root.upNearLeft = octNodeId++;
+            }
+        }
+        if (doesGeomOverlap(geom, upNearRightMin, upNearRightMax)) {
+            upNearRightGeoms.push_back(geom);
+            if (upNearRightGeoms.size() == 1) {
+                root.upNearRight = octNodeId++;
+            }
+        }
+    }
 }
 
 void setupOctree() {
@@ -118,25 +184,17 @@ void setupOctree() {
         octree.rootId = -1;
     } else {
         // Setup root
-        thrust::device_ptr<OctNode> octnodes(dev_octnodes);
-        OctNode* root = octnodes.get();
-        // Potential node children
-        int upFarLeft = -1;
-        int upFarRight = -1;
-        int upNearLeft = -1;
-        int upNearRight = -1;
-        int downFarLeft = -1;
-        int downFarRight = -1;
-        int downNearLeft = -1;
-        int downNearRight = -1;
+        OctNode root;
+        root.id = 0;
         glm::vec3 maxPos(std::numeric_limits<float>::min());
         glm::vec3 minPos(std::numeric_limits<float>::max());
         for (Geom geom : hst_scene->geoms) {
-            updateBounds(maxPos, minPos, geom.max_point, geom.min_point);
-            //root->geoms.push_back(geom);
+            updateBounds(maxPos, minPos, geom);
+            root.geoms.push_back(geom);
         }
-        // Set children nodes if necessary - first define bounding boxes for potential octnodes
-
+        root.maxCorner = maxPos;
+        root.minCorner = minPos;
+        hst_octnodes[0] = root;
     }
 }
 
@@ -144,6 +202,8 @@ void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
+
+    hst_octnodes = new OctNode[scene->geoms.size()];
 
     cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));

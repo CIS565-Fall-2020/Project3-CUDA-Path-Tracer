@@ -7,7 +7,7 @@ SPECRGB     0 0 0
 REFL        0
 REFR        0
 REFRIOR     0
-EMITTANCE   5
+EMITTANCE   3
 
 // Diffuse white
 MATERIAL 1
@@ -75,6 +75,17 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
+// Blurry specular
+MATERIAL 7
+TYPE	    GLOSSY
+RGB         .85 .85 .35
+SPECEX      0.8
+SPECRGB     .85 .85 .35
+REFL        1
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
 // Camera
 CAMERA
 RES         800 800
@@ -92,7 +103,7 @@ UP          0 1 0
 // Ceiling light
 OBJECT 0
 cube
-material 0
+material 1
 TRANS       0 10 0
 ROTAT       0 0 0
 SCALE       3 .3 3
@@ -156,16 +167,16 @@ SCALE       2 2 2
 // Mesh duck glass
 OBJECT 8
 mesh
-../scenes/duck/Duck.gltf
-material 4
-TRANS       0 0.35 1
+../scenes/duck/duck.gltf
+material 7
+TRANS       0 1 2
 ROTAT       0 -45 0
 SCALE       0.03 0.03 0.03
 
 // Wall
 OBJECT 9
 cube
-material 1
-TRANS    0 0 10.8
-ROTAT    0 90 0
+material 0
+TRANS    0 5 10.8
+ROTAT    0 -90 0
 SCALE    .01 10 10
