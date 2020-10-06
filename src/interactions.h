@@ -4,6 +4,7 @@
 #include <thrust/remove.h>
 #include "intersections.h"
 #include "cfg.h"
+#include "utility"
 
 // CHECKITOUT
 /**
@@ -18,11 +19,31 @@ void StratifiedSample1D(
     const int& nSamples,
     bool jitter = true) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    float invNsamples = 1.0f / nSamples;
-    int offset = 200;
-    for (int i = 0 + offset; i < nSamples + offset; i++) {
+    
+    float invNsamples = 1.0f / (nSamples );
+    
+    for (int i = 0; i < nSamples; i++) {
         float delta = jitter ? u01(rng) : 0.5f;
         samp[i] = min( (i + delta) * invNsamples, (float)0x1.fffffep-1);
+    }
+}
+
+
+__host__ __device__
+void StratifiedSample2D(
+    thrust::default_random_engine& rng,
+    glm::vec2* samp,
+    const int& nSamples,
+    bool jitter = true) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+
+    float d = 1.0 / nSamples;
+
+    for (int i = 0; i < nSamples; i++) {
+        float jx = jitter ? u01(rng) : 0.5f;
+        float jy = jitter ? u01(rng) : 0.5f;
+        samp[i].x = min((i + jx) * d, 1.0f - EPSILON);
+        samp[i].y = min((i + jy) * d, 1.0f - EPSILON);
     }
 }
 
@@ -30,15 +51,21 @@ __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
     
-    thrust::uniform_real_distribution<float> u01(0, 1);
+    
     
 #if stratified_sampling
-    float samp[2];
-    StratifiedSample1D(rng, samp, 2, true);
-    float up = sqrt(samp[0]); // cos(theta)
+    const int nsamples = 256;
+    thrust::uniform_real_distribution<float> u01(0, nsamples);
+    
+    glm::vec2 samp[nsamples];
+    StratifiedSample2D(rng, samp, nsamples, true);
+    int idx = int(u01(rng));
+    float up = sqrt(samp[idx].x); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
-    float around = samp[1] * TWO_PI;
+    idx = int(u01(rng));
+    float around = samp[idx].y * TWO_PI;
 #else
+    thrust::uniform_real_distribution<float> u01(0, 1);
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;

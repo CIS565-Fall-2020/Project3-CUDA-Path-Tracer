@@ -403,6 +403,8 @@ __global__ void shadeTrueMaterial(
             // like what you would expect from shading in a rasterizer like OpenGL.
             // TODO: replace this! you should be able to start with basically a one-liner
             else {
+
+
                 scatterRay(
                     cur_pathSegment,
                     getPointOnRay(cur_pathSegment.ray, intersection.t),

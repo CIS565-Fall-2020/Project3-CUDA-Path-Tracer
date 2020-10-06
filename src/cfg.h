@@ -10,4 +10,4 @@
 
 #define dof 0
 
-#define stratified_sampling 1
+#define stratified_sampling 0
