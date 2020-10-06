@@ -96,6 +96,16 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 				// TODO: what to do with normals
 			}
 		}
+		// Material 
+		newGeom.materialid = prim.material;
+	}
+
+	geoms.push_back(newGeom);
+
+	// Traverse children
+	for (const auto &c : node.children) {
+		const auto &child = model.nodes[c];
+		traverseNode(model, child, gTran);
 	}
 }
 
