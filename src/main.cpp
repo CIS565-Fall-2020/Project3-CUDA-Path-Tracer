@@ -1,7 +1,9 @@
-#include "main.h"
-#include "preview.h"
 #include <cstring>
 #include <chrono>
+
+#include "main.h"
+#include "preview.h"
+#include "pathtrace.h"
 
 static std::string startTimeString;
 
@@ -26,6 +28,8 @@ Scene *scene;
 RenderState *renderState;
 int iteration;
 
+std::vector<StratifiedSampler> samplers;
+
 int width;
 int height;
 
@@ -45,8 +49,8 @@ int main(int argc, char** argv) {
 
     // Load scene file
     scene = new Scene(sceneFile);
-    scene->buildTree();
 
+    scene->buildTree();
     std::vector<std::pair<int, int>> stk;
     stk.emplace_back(scene->aabbTreeRoot, 0);
     int max = 0;
@@ -64,7 +68,7 @@ int main(int argc, char** argv) {
             stk.emplace_back(scene->aabbTree[node].rightChild, depth + 1);
         }
     }
-    std::cout << max << "\n";
+    std::cout << "AABB tree depth: " << max << "\n";
 
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
@@ -147,20 +151,33 @@ void runCuda() {
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
+        // reset samplers
+        samplers.resize(scene->state.traceDepth);
+        for (auto &s : samplers) {
+            s.resize(sqrtNumStratifiedSamples);
+        }
         startTime = std::chrono::high_resolution_clock::now();
     }
 
     if (iteration < renderState->iterations) {
-        uchar4 *pbo_dptr = NULL;
+        if (iteration % numStratifiedSamples == 0) {
+            for (auto &s : samplers) {
+                s.restart();
+            }
+            updateStratifiedSamples(samplers);
+        }
         iteration++;
+
+        uchar4 *pbo_dptr = NULL;
         cudaGLMapBufferObject((void**)&pbo_dptr, pbo);
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        pathtrace(pbo_dptr, frame, iteration, samplers[0].range());
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
+
         if (iteration == 1000) {
             std::cout << "1000 iterations, time: " << std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count() << "\n";
         }

@@ -46,7 +46,7 @@ __host__ __device__ float boxIntersectionTest(const GeomTransform &box, Ray r, g
             float ta = glm::min(t1, t2);
             float tb = glm::max(t1, t2);
             glm::vec3 n;
-            n[xyz] = t2 < t1 ? +1 : -1;
+            n[xyz] = t2 < t1 ? 1.0f : -1.0f;
             if (ta > 0 && ta > tmin) {
                 tmin = ta;
                 tmin_n = n;

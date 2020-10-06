@@ -45,16 +45,37 @@ struct Geom {
 	GeomType type = GeomType::INVALID;
 };
 
-struct Material {
-	glm::vec3 color;
-	struct {
-		float exponent;
-		glm::vec3 color;
-	} specular;
-	float hasReflective;
-	float hasRefractive;
+enum class MaterialType : unsigned char {
+	invalid,
+	emitter,
+	diffuse,
+	specularReflection,
+	specularTransmission,
+	disney
+};
+
+struct SpecularTransmissionMaterial {
 	float indexOfRefraction;
-	float emittance;
+};
+struct DisneyMaterial {
+	float
+		roughness,
+		metallic,
+		specular,
+		specularTint,
+		sheen,
+		sheenTint,
+		clearCoat,
+		clearCoatGloss;
+};
+
+struct Material {
+	union {
+		SpecularTransmissionMaterial specularTransmission;
+		DisneyMaterial disney;
+	};
+	glm::vec3 baseColorLinear;
+	MaterialType type;
 };
 
 struct Camera {
@@ -82,13 +103,14 @@ struct PathSegment {
 	int remainingBounces;
 	Ray ray;
 	int pixelIndex;
+	int lastGeom;
 };
 
 // Use with a corresponding PathSegment to do:
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
 struct ShadeableIntersection {
-	glm::vec3 surfaceNormal;
+	glm::vec3 geometricNormal, shadingNormal;
 	float t;
 	int materialId;
 };

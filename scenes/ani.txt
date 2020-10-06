@@ -12,13 +12,9 @@ UP          0 1 0
 
 // Emissive material (light)
 MATERIAL 0
+emitter
 RGB         1 1 1
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        0
-REFRIOR     0
-EMITTANCE   1
+END
 
 // Environment light
 OBJECT 0
@@ -31,73 +27,55 @@ SCALE       1000 1000 1000
 
 // ground_dirt1
 MATERIAL aiStandardSurface16SG
+diffuse
 RGB         0.6 0.3 0.0
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        0
-REFRIOR     0
-EMITTANCE   0
+END
 
 // ground_grass
 MATERIAL aiStandardSurface5SG
+diffuse
 RGB         0.1 1.0 0.2
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        0
-REFRIOR     0
-EMITTANCE   0
+END
+
+// glasses_mat
+MATERIAL aiStandardSurface2SG
+disney
+RGB 0.93 0.82 0.0
+METALLIC 1.0
+ROUGHNESS 0.25
+END
 
 // glass2
 MATERIAL aiStandardSurface17SG
+specularTransmission
 RGB         1.0 1.0 1.0
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        1
-REFRIOR     1.52
-EMITTANCE   0
+IOR         1.52
+END
 
 // grass_mat
 MATERIAL aiStandardSurface18SG
+diffuse
 RGB         0.2 0.35 0.0
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        0
-REFRIOR     0
-EMITTANCE   0
+END
 
 // water_mat
 MATERIAL aiStandardSurface6SG
+specularTransmission
 RGB         1.0 1.0 1.0
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        1
-REFRIOR     1.333
-EMITTANCE   0
+IOR         1.333
+END
 
 // mushroom_cap
 MATERIAL aiStandardSurface7SG
+diffuse
 RGB         0.36 0.02 0.02
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        0
-REFRIOR     0
-EMITTANCE   0
+END
 
 // lambert1
 MATERIAL initialShadingGroup
+diffuse
 RGB         0.5 0.5 0.5
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
-REFR        0
-REFRIOR     0
-EMITTANCE   0
+END
 
 // Mesh
 OBJECT 1

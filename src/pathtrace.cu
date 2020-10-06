@@ -17,7 +17,7 @@
 
 
 constexpr bool
-	sortByMaterial = false,
+	sortByMaterial = true,
 	cacheFirstBounce = false;
 
 
@@ -86,6 +86,7 @@ static int aabbTreeRoot;
 
 static bool firstBounceCached = false;
 static ShadeableIntersection *dev_firstBounceIntersections = nullptr;
+static glm::vec2 *dev_samplePool = nullptr;
 
 void pathtraceInit(Scene *scene) {
 	hst_scene = scene;
@@ -115,6 +116,8 @@ void pathtraceInit(Scene *scene) {
 	cudaMalloc(&dev_aabbTree, scene->aabbTree.size() * sizeof(AABBTreeNode));
 	cudaMemcpy(dev_aabbTree, scene->aabbTree.data(), scene->aabbTree.size() * sizeof(AABBTreeNode), cudaMemcpyHostToDevice);
 
+	cudaMalloc(&dev_samplePool, scene->state.traceDepth * numStratifiedSamples * sizeof(glm::vec2));
+
 	aabbTreeRoot = scene->aabbTreeRoot;
 
 	checkCUDAError("pathtraceInit");
@@ -132,6 +135,7 @@ void pathtraceFree() {
 		cudaFree(dev_firstBounceIntersections);
 	}
 	cudaFree(dev_aabbTree);
+	cudaFree(dev_samplePool);
 
 	checkCUDAError("pathtraceFree");
 }
@@ -157,19 +161,19 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	PathSegment &segment = pathSegments[index];
 
 	thrust::default_random_engine rand = makeSeededRandomEngine(iter, index, -1);
-	thrust::uniform_real_distribution<float> dist(-0.5f, 0.5f);
+	thrust::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
 	segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 	// implement antialiasing by jittering the ray
 	glm::vec3 dir =
 		cam.view -
-		cam.right * (cam.pixelLength.x * ((static_cast<float>(x) + dist(rand)) / cam.resolution.x - 0.5f)) -
-		cam.up * (cam.pixelLength.y * ((static_cast<float>(y) + dist(rand)) / cam.resolution.x - 0.5f));
+		cam.right * (cam.pixelLength.x * ((static_cast<float>(x) + dist(rand) - 0.5f) / cam.resolution.x - 0.5f)) -
+		cam.up * (cam.pixelLength.y * ((static_cast<float>(y) + dist(rand) - 0.5f) / cam.resolution.x - 0.5f));
 
 	// depth of field
 	dir *= cam.focalDistance;
-	glm::vec2 aperture = sampleUnitDiskUniform(rand) * cam.aperture;
+	glm::vec2 aperture = sampleUnitDiskUniform(glm::vec2(dist(rand), dist(rand))) * cam.aperture;
 	glm::vec3 dofOffset = aperture.x * cam.right + aperture.y * cam.up;
 
 	segment.ray.origin = cam.position + dofOffset;
@@ -177,6 +181,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 	segment.pixelIndex = index;
 	segment.remainingBounces = traceDepth;
+	segment.lastGeom = -1;
 }
 
 __device__ float max3(glm::vec3 xyz) {
@@ -192,33 +197,47 @@ __device__ bool rayBoxIntersection(const Ray &ray, glm::vec3 min, glm::vec3 max,
 	return rmin < far && rmax >= rmin && rmax > 0.0f;
 }
 
-__device__ bool rayGeomIntersection(const Ray &ray, const Geom &geom, float *dist, glm::vec3 *normal) {
+__device__ bool rayGeomIntersection(
+	const Ray &ray, const Geom &geom, float *dist, glm::vec3 *geomNormal, glm::vec3 *shadeNormal
+) {
 	float t = -1.0f;
-	glm::vec3 norm;
+	glm::vec3 geomNorm, shadeNorm;
 	if (geom.type == GeomType::CUBE) {
-		t = boxIntersectionTest(geom.implicit, ray, norm);
+		t = boxIntersectionTest(geom.implicit, ray, geomNorm);
+		shadeNorm = geomNorm;
 	} else if (geom.type == GeomType::SPHERE) {
-		t = sphereIntersectionTest(geom.implicit, ray, norm);
+		t = sphereIntersectionTest(geom.implicit, ray, geomNorm);
+		shadeNorm = geomNorm;
 	} else if (geom.type == GeomType::TRIANGLE) {
 		glm::vec2 bary;
 		t = triangleIntersectionTest(geom.triangle, ray, &bary);
 		if (t >= 0.0f) {
-			norm =
+			shadeNorm =
 				geom.triangle.normals[0] * (1.0f - bary.x - bary.y) +
 				geom.triangle.normals[1] * bary.x + geom.triangle.normals[2] * bary.y;
-			norm = glm::normalize(norm);
+			shadeNorm = glm::normalize(shadeNorm);
+
+			geomNorm = glm::normalize(glm::cross(
+				geom.triangle.vertices[1] - geom.triangle.vertices[0],
+				geom.triangle.vertices[2] - geom.triangle.vertices[0]
+			));
+			if (glm::dot(shadeNorm, geomNorm) < 0.0f) {
+				geomNorm = -geomNorm;
+			}
 		}
 	}
 	if (t > 0.0f && t < *dist) {
 		*dist = t;
-		*normal = norm;
+		*geomNormal = geomNorm;
+		*shadeNormal = shadeNorm;
 		return true;
 	}
 	return false;
 }
 
 __device__ int traverseAABBTree(
-	const Ray &ray, const AABBTreeNode *tree, int root, const Geom *geoms, float *dist, glm::vec3 *normal
+	const Ray &ray, const AABBTreeNode *tree, int root, const Geom *geoms, int lastGeom,
+	float *dist, glm::vec3 *geomNormal, glm::vec3 *shadeNormal
 ) {
 	constexpr int geomTestInterval = 4;
 
@@ -248,8 +267,12 @@ __device__ int traverseAABBTree(
 
 		if (++counter == geomTestInterval) {
 			for (int i = 0; i < numCandidates; ++i) {
-				if (rayGeomIntersection(ray, geoms[candidates[i]], dist, normal)) {
-					resIndex = candidates[i];
+				int geomId = candidates[i];
+				/*if (geomId == lastGeom) {
+					continue;
+				}*/
+				if (rayGeomIntersection(ray, geoms[geomId], dist, geomNormal, shadeNormal)) {
+					resIndex = geomId;
 				}
 			}
 			numCandidates = 0;
@@ -257,8 +280,12 @@ __device__ int traverseAABBTree(
 		}
 	}
 	for (int i = 0; i < numCandidates; ++i) {
-		if (rayGeomIntersection(ray, geoms[candidates[i]], dist, normal)) {
-			resIndex = candidates[i];
+		int geomId = candidates[i];
+		if (geomId == lastGeom) {
+			continue;
+		}
+		if (rayGeomIntersection(ray, geoms[geomId], dist, geomNormal, shadeNormal)) {
+			resIndex = geomId;
 		}
 	}
 	return resIndex;
@@ -278,15 +305,19 @@ __global__ void computeIntersections(
 		return;
 	}
 
-	PathSegment pathSegment = pathSegments[path_index];
+	PathSegment &pathSegment = pathSegments[path_index];
 
-	glm::vec3 normal;
+	glm::vec3 geomNormal, shadeNormal;
 	float t_min = FLT_MAX;
-	int hit_geom_index = -1;
+	int hitGeomIndex = -1;
 
-	hit_geom_index = traverseAABBTree(pathSegment.ray, aabbTree, aabbTreeRoot, geoms, &t_min, &normal);
+	hitGeomIndex = traverseAABBTree(
+		pathSegment.ray, aabbTree, aabbTreeRoot, geoms, pathSegment.lastGeom,
+		&t_min, &geomNormal, &shadeNormal
+	);
+	pathSegment.lastGeom = hitGeomIndex;
 
-	if (hit_geom_index == -1)
+	if (hitGeomIndex == -1)
 	{
 		intersections[path_index].t = -1.0f;
 		intersections[path_index].materialId = -1;
@@ -295,13 +326,14 @@ __global__ void computeIntersections(
 	{
 		//The ray hits something
 		intersections[path_index].t = t_min;
-		intersections[path_index].materialId = geoms[hit_geom_index].materialid;
-		intersections[path_index].surfaceNormal = normal;
+		intersections[path_index].materialId = geoms[hitGeomIndex].materialid;
+		intersections[path_index].geometricNormal = geomNormal;
+		intersections[path_index].shadingNormal = shadeNormal;
 	}
 }
 
 __global__ void shade(
-	int iter, int depth, int num_paths,
+	int iter, int depth, int num_paths, glm::vec2 *samplePool, float stratifiedRange,
 	ShadeableIntersection *intersections, PathSegment *paths, Material *materials
 ) {
 	int iSelf = blockIdx.x * blockDim.x + threadIdx.x;
@@ -317,9 +349,11 @@ __global__ void shade(
 		path.remainingBounces = -1;*/
 
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, iSelf, depth);
+		thrust::uniform_real_distribution<float> dist(0.0f, stratifiedRange);
 		scatterRay(
-			path, path.ray.origin + path.ray.direction * intersection.t, intersection.surfaceNormal,
-			materials[intersection.materialId], rng
+			path, path.ray.origin + path.ray.direction * intersection.t,
+			intersection.geometricNormal, intersection.shadingNormal, materials[intersection.materialId],
+			samplePool[(iter + utilhash(path.pixelIndex)) % numStratifiedSamples] + glm::vec2(dist(rng), dist(rng))
 		);
 	} else {
 		path.color = glm::vec3(0.0f);
@@ -361,7 +395,7 @@ struct MaterialCompare {
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
-void pathtrace(uchar4 *pbo, int frame, int iter) {
+void pathtrace(uchar4 *pbo, int frame, int iter, float stratifiedRange) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera &cam = hst_scene->state.camera;
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -412,7 +446,6 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
-
 	for (int depth = 0; num_paths > 0; ++depth) {
 		// clean shading chunks
 		cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
@@ -456,7 +489,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		}
 
 		shade<<<numblocksPathSegmentTracing, blockSize1d>>>(
-			iter, depth, num_paths, dev_intersections, dev_paths, dev_materials
+			iter, depth, num_paths, dev_samplePool + depth * numStratifiedSamples, stratifiedRange,
+			dev_intersections, dev_paths, dev_materials
 		);
 
 		num_paths = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, IsRayTravelling()) - dev_paths;
@@ -479,4 +513,14 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 
 	checkCUDAError("pathtrace");
+}
+
+void updateStratifiedSamples(const std::vector<StratifiedSampler> &samplers) {
+	glm::vec2 *dev_ptr = dev_samplePool;
+	for (std::size_t i = 0; i < samplers.size(); ++i) {
+		cudaMemcpy(
+			dev_ptr, samplers[i].pool().data(), numStratifiedSamples * sizeof(glm::vec2), cudaMemcpyHostToDevice
+		);
+		dev_ptr += numStratifiedSamples;
+	}
 }

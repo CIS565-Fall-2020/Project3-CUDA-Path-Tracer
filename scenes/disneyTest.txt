@@ -1,0 +1,226 @@
+// Camera
+CAMERA
+RES         800 800
+FOVY        45
+ITERATIONS  5000
+DEPTH       8
+FILE        test
+EYE         0 1 10
+LOOKAT      0 1 0
+UP          0 1 0
+
+
+MATERIAL emissive
+emitter
+RGB         10 10 10
+END
+
+OBJECT 0
+sphere
+MATERIAL emissive
+TRANS       3 6 4
+ROTAT       0 0 0
+SCALE       3 3 3
+
+MATERIAL emissive
+emitter
+RGB         0.5 0.5 0.5
+END
+
+OBJECT 0
+sphere
+MATERIAL emissive
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       1000 1000 1000
+
+
+MATERIAL lambert
+diffuse
+RGB 0.5 0.5 0.5
+END
+
+// ground
+OBJECT ground
+cube
+MATERIAL lambert
+TRANS 0 0 0
+SCALE 100 0.01 100
+
+
+
+
+
+
+
+
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.0
+END
+
+OBJECT
+sphere
+MATERIAL 1
+TRANS -7.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.2
+END
+
+OBJECT
+sphere
+MATERIAL 1
+TRANS -4.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.4
+END
+
+OBJECT
+sphere
+MATERIAL 1
+TRANS -1.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.6
+END
+
+OBJECT
+sphere
+MATERIAL 1
+TRANS 1.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.8
+END
+
+OBJECT
+sphere
+MATERIAL 1
+TRANS 4.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 1.0
+SPECULAR 1.0
+END
+
+OBJECT
+sphere
+MATERIAL 1
+TRANS 7.5 1 0
+SCALE 2 2 2
+
+
+
+
+
+
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.2 0.5
+METALLIC 0.0
+ROUGHNESS 0.0
+END
+
+OBJECT
+sphere
+MATERIAL 2
+TRANS -7.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.2 0.5
+METALLIC 0.2
+ROUGHNESS 0.0
+END
+
+OBJECT
+sphere
+MATERIAL 2
+TRANS -4.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.2 0.5
+METALLIC 0.4
+ROUGHNESS 0.0
+END
+
+OBJECT
+sphere
+MATERIAL 2
+TRANS -1.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.2 0.5
+METALLIC 0.6
+ROUGHNESS 0.0
+END
+
+OBJECT
+sphere
+MATERIAL 2
+TRANS 1.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.2 0.5
+METALLIC 0.8
+ROUGHNESS 0.0
+END
+
+OBJECT
+sphere
+MATERIAL 2
+TRANS 4.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.2 0.5
+METALLIC 1.0
+ROUGHNESS 0.0
+SPECULAR 1.0
+END
+
+OBJECT
+sphere
+MATERIAL 2
+TRANS 7.5 1 3
+SCALE 2 2 2

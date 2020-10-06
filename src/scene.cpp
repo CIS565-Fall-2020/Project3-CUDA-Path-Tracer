@@ -2,6 +2,8 @@
 #include <cstring>
 #include <sstream>
 #include <deque>
+#include <unordered_map>
+#include <memory>
 
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -196,34 +198,103 @@ int Scene::loadCamera() {
     return 1;
 }
 
+template <typename T> struct TypedReader;
+template <> struct TypedReader<float> {
+    inline static void read(std::istream &in, float &f) {
+        in >> f;
+    }
+};
+template <> struct TypedReader<glm::vec3> {
+    inline static void read(std::istream &in, glm::vec3 &v) {
+        in >> v.x >> v.y >> v.z;
+    }
+};
+
+struct ReaderBase {
+    virtual ~ReaderBase() = default;
+
+    virtual void read(std::istream &in) const = 0;
+};
+template <typename T> struct Reader : public ReaderBase {
+    explicit Reader(T *p) : ptr(p) {
+    }
+
+    void read(std::istream &in) const override {
+        TypedReader<T>::read(in, *ptr);
+    }
+
+    T *ptr;
+};
+
+using MatAttrMapping = std::unordered_map<std::string, std::shared_ptr<ReaderBase>>;
+bool readMaterialAttr(std::istream &in, const MatAttrMapping &map) {
+    if (in.eof()) {
+        return false;
+    }
+    std::string header;
+    in >> header;
+    if (header == "END") {
+        return false;
+    }
+    auto iter = map.find(header);
+    if (iter == map.end()) {
+        std::cout << "Unrecognized field: " << header << "\n";
+    } else {
+        std::string line;
+        std::getline(in, line);
+        std::istringstream ss(line);
+        iter->second->read(ss);
+    }
+    return true;
+}
+
 void Scene::loadMaterial(std::string materialid) {
     std::cout << "Loading Material " << materialid << "..." << std::endl;
     Material newMaterial;
+    std::memset(&newMaterial, 0, sizeof(newMaterial));
 
-    //load static properties
-    for (int i = 0; i < 7; i++) {
-        std::string line;
-        utilityCore::safeGetline(fp_in, line);
-        std::vector<std::string> tokens = utilityCore::tokenizeString(line);
-        if (strcmp(tokens[0].c_str(), "RGB") == 0) {
-            glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
-            newMaterial.color = color;
-        } else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
-            newMaterial.specular.exponent = atof(tokens[1].c_str());
-        } else if (strcmp(tokens[0].c_str(), "SPECRGB") == 0) {
-            glm::vec3 specColor(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            newMaterial.specular.color = specColor;
-        } else if (strcmp(tokens[0].c_str(), "REFL") == 0) {
-            newMaterial.hasReflective = atof(tokens[1].c_str());
-        } else if (strcmp(tokens[0].c_str(), "REFR") == 0) {
-            newMaterial.hasRefractive = atof(tokens[1].c_str());
-        } else if (strcmp(tokens[0].c_str(), "REFRIOR") == 0) {
-            newMaterial.indexOfRefraction = atof(tokens[1].c_str());
-        } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
-            newMaterial.emittance = atof(tokens[1].c_str());
-        }
+    std::string type;
+    fp_in >> type;
+    MatAttrMapping attributes;
+    if (type == "emitter") {
+        newMaterial.type = MaterialType::emitter;
+        attributes = MatAttrMapping({
+            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) }
+        });
+    } else if (type == "diffuse") {
+        newMaterial.type = MaterialType::diffuse;
+        attributes = MatAttrMapping({
+            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) }
+        });
+    } else if (type == "specularReflection") {
+        newMaterial.type = MaterialType::specularReflection;
+        attributes = MatAttrMapping({
+            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) }
+        });
+    } else if (type == "specularTransmission") {
+        newMaterial.type = MaterialType::specularTransmission;
+        attributes = MatAttrMapping({
+            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) },
+            { "IOR", std::make_shared<Reader<float>>(&newMaterial.specularTransmission.indexOfRefraction) }
+        });
+    } else if (type == "disney") {
+        newMaterial.type = MaterialType::disney;
+        attributes = MatAttrMapping({
+            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) },
+            { "ROUGHNESS", std::make_shared<Reader<float>>(&newMaterial.disney.roughness) },
+            { "METALLIC", std::make_shared<Reader<float>>(&newMaterial.disney.metallic) },
+            { "SPECULAR", std::make_shared<Reader<float>>(&newMaterial.disney.specular) },
+            { "SPECULAR_TINT", std::make_shared<Reader<float>>(&newMaterial.disney.specularTint) },
+            { "SHEEN", std::make_shared<Reader<float>>(&newMaterial.disney.sheen) },
+            { "SHEEN_TINT", std::make_shared<Reader<float>>(&newMaterial.disney.sheenTint) },
+            { "CLEARCOAT", std::make_shared<Reader<float>>(&newMaterial.disney.clearCoat) },
+            { "CLEARCOAT_GLOSS", std::make_shared<Reader<float>>(&newMaterial.disney.clearCoatGloss) }
+        });
     }
-    materialIdMapping[materialid] = materials.size();
+    while (readMaterialAttr(fp_in, attributes)) {
+    }
+
+    materialIdMapping[materialid] = static_cast<int>(materials.size());
     materials.push_back(newMaterial);
 }
 
@@ -361,7 +432,7 @@ void Scene::buildTree() {
     for (std::size_t i = 0; i < geoms.size(); ++i) {
         _leaf &cur = leaves[i];
         aabbForGeom(geoms[i], &cur.aabbMin, &cur.aabbMax);
-        cur.geomIndex = i;
+        cur.geomIndex = static_cast<int>(i);
         cur.centroid = 0.5f * (cur.aabbMin + cur.aabbMax);
     }
 
@@ -413,7 +484,7 @@ void Scene::buildTree() {
                 }
                 // find split direction
                 glm::vec3 centroidSpan = centroidMax - centroidMin;
-                std::size_t splitDim = centroidSpan.x > centroidSpan.y ? 0 : 1;
+                glm::vec3::length_type splitDim = centroidSpan.x > centroidSpan.y ? 0 : 1;
                 if (centroidSpan.z > centroidSpan[splitDim]) {
                     splitDim = 2;
                 }
