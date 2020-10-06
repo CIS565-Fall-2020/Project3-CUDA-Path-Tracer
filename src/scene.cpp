@@ -134,9 +134,83 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
     if (gltf_textures.size() > 0) {
         std::cout << "there has " << gltf_meshes.size() << " meshes." << std::endl;
         for (auto cur_mesh = gltf_meshes.begin(); cur_mesh != gltf_meshes.end(); cur_mesh++) {
-            for (int i = 0; i < cur_mesh->faces.size() / 3; i++) {
+            GLTF_Model cur_model;
+            glm::vec3 maxVal_vec(-INFINITY, -INFINITY, -INFINITY);
+            glm::vec3 minVal_vec(INFINITY, INFINITY, INFINITY);
 
+            for (int i = 0; i < cur_mesh->faces.size(); i+=3) {
+                
+                Triangle cur_triangle;
+                cur_model.self_geom.type = TRIANGLE;
+
+                int idx_f0 = i;
+                int idx_f1 = i + 1;
+                int idx_f2 = i + 2;
+
+                int idx_v0 = cur_mesh->faces[idx_f0];
+                int idx_v1 = cur_mesh->faces[idx_f1];
+                int idx_v2 = cur_mesh->faces[idx_f2];
+
+                cur_triangle.v0 = glm::vec3(
+                    cur_mesh -> vertices[3 * idx_v0],
+                    cur_mesh -> vertices[3 * idx_v0 + 1],
+                    cur_mesh -> vertices[3 * idx_v0 + 2]
+                );
+
+                cur_triangle.v1 = glm::vec3(
+                    cur_mesh->vertices[3 * idx_v1],
+                    cur_mesh->vertices[3 * idx_v1 + 1],
+                    cur_mesh->vertices[3 * idx_v1 + 2]
+                );
+
+                cur_triangle.v2 = glm::vec3(
+                    cur_mesh->vertices[3 * idx_v2],
+                    cur_mesh->vertices[3 * idx_v2 + 1],
+                    cur_mesh->vertices[3 * idx_v2 + 2]
+                );
+
+                cur_triangle.n0 = glm::vec3(
+                    cur_mesh->facevarying_normals[3 * idx_v0],
+                    cur_mesh->facevarying_normals[3 * idx_v0 + 1],
+                    cur_mesh->facevarying_normals[3 * idx_v0 + 2]
+                );
+
+                cur_triangle.n1 = glm::vec3(
+                    cur_mesh->facevarying_normals[3 * idx_v1],
+                    cur_mesh->facevarying_normals[3 * idx_v1 + 1],
+                    cur_mesh->facevarying_normals[3 * idx_v1 + 2]
+                );
+
+                cur_triangle.n2 = glm::vec3(
+                    cur_mesh->facevarying_normals[3 * idx_v2],
+                    cur_mesh->facevarying_normals[3 * idx_v2 + 1],
+                    cur_mesh->facevarying_normals[3 * idx_v2 + 2]
+                );
+
+                //cur_triangle.norm = glm::triangleNormal()
+                cur_model.triangles.emplace_back(cur_triangle);
+                cur_model.self_geom = parent_geom;
+                // assign bounding box
+                //TODO
+                minVal_vec = glm::min(minVal_vec, cur_triangle.v0);
+                minVal_vec = glm::min(minVal_vec, cur_triangle.v1);
+                minVal_vec = glm::min(minVal_vec, cur_triangle.v2);
+
+                maxVal_vec = glm::max(maxVal_vec, cur_triangle.v0);
+                maxVal_vec = glm::max(maxVal_vec, cur_triangle.v1);
+                maxVal_vec = glm::max(maxVal_vec, cur_triangle.v2);
             }
+            cur_model.bbox_geom = parent_geom;
+            cur_model.bbox_geom.scale = maxVal_vec - minVal_vec;
+            cur_model.bbox_geom.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
+            cur_model.bbox_geom.rotation = glm::vec3(0.0f);
+
+            cur_model.bbox_geom.transform = utilityCore::buildTransformationMatrix(
+                cur_model.bbox_geom.translation, cur_model.bbox_geom.rotation, cur_model.bbox_geom.scale);
+            cur_model.bbox_geom.inverseTransform = glm::inverse(cur_model.bbox_geom.transform);
+            cur_model.bbox_geom.invTranspose = glm::inverseTranspose(cur_model.bbox_geom.transform);
+
+            this->gltf_models.emplace_back(cur_model);
         }
     }
     return 0;
