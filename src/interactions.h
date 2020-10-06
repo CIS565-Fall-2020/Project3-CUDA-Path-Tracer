@@ -69,17 +69,16 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 __host__ __device__
 void scatterRay(
 		PathSegment &pathSegment,
-        glm::vec3 normal,
-		float t, // t as in ShadableIntersection
+        ShadeableIntersection &intersection,
         const Material &m,
         thrust::default_random_engine &rng) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
-
+	glm::vec3 normal = intersection.surfaceNormal;
 	// update ray origin
-	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
-	pathSegment.ray.origin = intersect + 0.0001f * normal;
+	glm::vec3 intersect = pathSegment.ray.origin + intersection.t * pathSegment.ray.direction;
+	pathSegment.ray.origin = intersect + 0.001f * normal;
 
 	thrust::uniform_real_distribution<float> u01(0, 1);
 	glm::vec3 dir_spec = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
@@ -90,24 +89,21 @@ void scatterRay(
 	if (m.hasRefractive) {
 		float cos_theta = glm::dot(-pathSegment.ray.direction, normal);
 		float ratio = m.indexOfRefraction;
-		glm::vec3 n = normal;
-		if (cos_theta < 0.0f) {
+		if (!intersection.outside) {
 			ratio = 1.f / ratio;
-			n *= -1.f;
-			cos_theta *= -1.f; // schlick's approximation, cos_theta > 0
 		}
-		glm::vec3 dir_refr = glm::refract(pathSegment.ray.direction, n, ratio);
+		glm::vec3 dir_refr = glm::refract(pathSegment.ray.direction, intersection.surfaceNormal, ratio);
 		float r0 = (1.f - ratio) * (1.f - ratio) / (1.f + ratio) / (1.f + ratio);
 		float r = r0 + (1.f - r0) * glm::pow(1.f - cos_theta, 5); // reflectance
 		if (choice > r) {
 			// refract
 			pathSegment.ray.direction = dir_refr;
-			pathSegment.color *= m.color * (1.f - r);
+			pathSegment.color *= m.color;
 		}
 		else {
 			// reflect
 			pathSegment.ray.direction = dir_spec;
-			pathSegment.color *= m.specular.color * r;
+			pathSegment.color *= m.specular.color;
 		}
 		return;
 	}

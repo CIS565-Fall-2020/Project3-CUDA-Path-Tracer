@@ -280,10 +280,10 @@ __global__ void computeIntersections(
 				// Intersect
 				tmp_normal = geom.normal;
 				tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * (1 - baryRes.x - baryRes.y);
-				//t = glm::length(pathSegment.ray.origin - tmp_intersect);
 				t = baryRes.z;
 				if (glm::dot(pathSegment.ray.origin, tmp_normal) > 0.0f) {
 					outside = false;
+					tmp_normal = -tmp_normal;
 				}
 			}
 			else {
@@ -315,6 +315,7 @@ __global__ void computeIntersections(
 		intersections[path_index].t = t_min;
 		intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 		intersections[path_index].surfaceNormal = normal;
+		intersections[path_index].outside = outside;
 		pathMats[index] = geoms[hit_geom_index].materialid;
 	}
 #if CACHE
@@ -377,7 +378,7 @@ __global__ void shadeFakeMaterial (
 			  pathSegments[idx].color = glm::vec3(0.0f);
 		  }
 		  else {
-			  scatterRay(pathSegments[idx], intersection.surfaceNormal, intersection.t, material, rng);
+			  scatterRay(pathSegments[idx], intersection, material, rng);
 		  }
 		  pathSegments[idx].remainingBounces -= 1;
       }
