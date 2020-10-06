@@ -61,6 +61,7 @@ endif(UNIX)
 set(GLM_ROOT_DIR "external")
 find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
+include_directories(${EXTERNAL}/include/raytrace)
 
 set(headers
     src/main.h
@@ -75,6 +76,7 @@ set(headers
     src/utilities.h
     src/PerformanceTimer.h
     src/cfg.h
+    external/include/raytrace/gltf-loader.h
     )
 
 set(sources

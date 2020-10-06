@@ -23,4 +23,7 @@ namespace utilityCore {
     extern glm::mat4 buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale);
     extern std::string convertIntToString(int number);
     extern std::istream& safeGetline(std::istream& is, std::string& t); //Thanks to http://stackoverflow.com/a/6089413
+    // Jack12 add
+    // ref https://github.com/syoyo/tinygltf/blob/master/examples/glview/glview.cc
+    //extern std::string GetFilePathExtension(const std::string& FileName);
 }

@@ -6,6 +6,7 @@
 
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
+#include "gltf-loader.h" // get example namespace
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -55,6 +56,12 @@ int Scene::loadGeom(string objectid) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
+            // Jack12
+            else if (strcmp(line.c_str(), "gltf_mesh") == 0) {
+                cout << "Creating new gltf mesh..." << endl;
+                newGeom.type = GLTF_MESH;
+            }
+
         }
 
         //link material
@@ -67,6 +74,7 @@ int Scene::loadGeom(string objectid) {
 
         //load transformations
         utilityCore::safeGetline(fp_in, line);
+        std::string cur_path;
         while (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
 
@@ -78,6 +86,12 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
+            // or path for gltf-mesh
+            //PATH should put to last
+            else if (strcmp(tokens[0].c_str(), "PATH") == 0) {
+                cur_path = tokens[0];
+                
+            }
 
             utilityCore::safeGetline(fp_in, line);
         }
@@ -86,10 +100,46 @@ int Scene::loadGeom(string objectid) {
                 newGeom.translation, newGeom.rotation, newGeom.scale);
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
-
-        geoms.push_back(newGeom);
+        if (newGeom.type != GLTF_MESH) {
+            geoms.push_back(newGeom);
+        }
+        else {
+            this->loadGLTFMesh(cur_path, newGeom);
+        }
+        
         return 1;
     }
+}
+
+int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
+    // ref https://github.com/syoyo/tinygltf/blob/master/examples/glview/glview.cc
+    std::cout << "read gltf mesh from " << file_path << std::endl;
+
+    std::vector<Geom> trianges;
+    // ty gktf-loader
+    std::vector<example::Material> gltf_materials;
+    std::vector<example::Mesh<float> > gltf_meshes;
+    std::vector<example::Texture> gltf_textures;
+    // ref https://github.com/syoyo/tinygltf/blob/master/examples/raytrace/main.cc, 
+    // ref https://github.com/taylornelms15/Project3-CUDA-Path-Tracer/blob/master/src/scene.cpp
+    bool flag = false;
+    flag = example::LoadGLTF(file_path, 1.0f, &gltf_meshes, &gltf_materials,&gltf_textures);
+
+    if (!flag) {
+        std::cout << "Failed to load glTF file "
+            << std::endl;
+        return -1;
+    }
+
+    if (gltf_textures.size() > 0) {
+        std::cout << "there has " << gltf_meshes.size() << " meshes." << std::endl;
+        for (auto cur_mesh = gltf_meshes.begin(); cur_mesh != gltf_meshes.end(); cur_mesh++) {
+            for (int i = 0; i < cur_mesh->faces.size() / 3; i++) {
+
+            }
+        }
+    }
+    return 0;
 }
 
 int Scene::loadCamera() {

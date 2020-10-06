@@ -10,6 +10,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    GLTF_MESH,
 };
 
 struct Ray {
@@ -26,6 +27,20 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+};
+
+struct Triangle {
+    glm::vec3 v1;
+    glm::vec3 v2;
+    glm::vec3 v3;
+
+    glm::vec3 norm;
+};
+
+struct GLTF_Model {
+    Geom self_geom;
+    Geom bbox_geom;
+    std::vector<Triangle> triangles;
 };
 
 struct Material {
