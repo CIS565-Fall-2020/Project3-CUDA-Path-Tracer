@@ -8,6 +8,9 @@
 #include "utilities.h"
 #include "sceneStructs.h"
 
+#include "tiny_gltf.h"
+#include "gltf-loader.h"
+
 // Jack12 add gltf support 
 
 
@@ -20,6 +23,12 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
     // jack12
+    bool myGLTFloader(
+        const std::string& file_path,
+        float scale,
+        std::vector<example::Mesh<float>>& out_mesh,
+        std::vector<example::Material>& materials,
+        std::vector<example::Texture>& textures);
     int loadGLTFMesh(
         const std::string& file_path,
         const Geom& parent);

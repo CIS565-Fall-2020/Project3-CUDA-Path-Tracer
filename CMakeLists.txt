@@ -88,6 +88,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    #external/include/raytrace/gltf-loader.cc
     )
 
 list(SORT headers)

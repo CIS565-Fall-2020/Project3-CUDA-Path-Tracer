@@ -190,8 +190,8 @@ __host__ __device__ float meshIntersectionTest(
     float t = -1.0f;
 #if usebbox
     // got no idea what this would do, but anyway...
-    bool bbox_outside = true;
-    t = boxIntersectionTest(bbox, r, intersectionPoint, normal, bbox_outside);
+    //bool bbox_outside = true;
+    t = boxIntersectionTest(bbox, r, intersectionPoint, normal, outside);
     if (t < 0) {
         return -1;
     }

@@ -82,6 +82,7 @@ static glm::vec3 * dev_image = NULL;
 static Geom * dev_geoms = NULL;
 // add triangles
 static Triangle* dev_triangles = NULL;
+static GLTF_Model* dev_gltf_models = NULL;
 
 static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
@@ -121,6 +122,9 @@ void pathtraceInit(Scene *scene) {
     // add triangles
     cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
     cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+    // and gltf models
+    cudaMalloc(&dev_gltf_models, scene->gltf_models.size() * sizeof(GLTF_Model));
+    cudaMemcpy(dev_gltf_models, scene->gltf_models.data(), scene->gltf_models.size() * sizeof(GLTF_Model), cudaMemcpyHostToDevice);
 
   	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
@@ -149,6 +153,7 @@ void pathtraceFree() {
   	cudaFree(dev_intersections);
 
     cudaFree(dev_triangles);
+    cudaFree(dev_gltf_models);
     // TODO: clean up any extra device memory you created
 #if cache_first_bounce
     cudaFree(dev_first_intersections_cache);
@@ -259,7 +264,9 @@ __global__ void computeIntersections(
 	, PathSegment * pathSegments
 	, Geom * geoms
 	, int geoms_size
-	, ShadeableIntersection * intersections
+	, ShadeableIntersection * intersections,
+    GLTF_Model* models = dev_gltf_models,
+    Triangle* triangles = dev_triangles
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -293,7 +300,14 @@ __global__ void computeIntersections(
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
             else if (geom.type == GLTF_MESH) {
-
+                t = meshIntersectionTest(
+                    geom,
+                    models,
+                    triangles,
+                    pathSegment.ray,
+                    tmp_intersect,
+                    tmp_normal,
+                    outside);
             }
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
