@@ -83,7 +83,9 @@ class Mesh {
   std::vector<T> facevarying_vertex_colors;  /// [xyz] * 3(triangle) * num_faces
   std::vector<unsigned int> faces;           /// triangle x num_faces
   std::vector<unsigned int> material_ids;    /// index x num_faces
+  std::vector<T> bbox_verts;                 /// [xyz] * 2
 
+  T transform[4][4];  // transformation from local to world     
   T pivot_xform[4][4];
   size_t stride;	 /// stride for vertex data.
 

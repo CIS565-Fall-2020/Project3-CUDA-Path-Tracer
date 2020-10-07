@@ -5,6 +5,8 @@
 #include "sceneStructs.h"
 #include "utilities.h"
 #include "gltf-loader.h"
+#include "glm/gtc/matrix_inverse.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
@@ -182,7 +184,8 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 											   unsigned int* faces,
 											   float* vertices,
 									           unsigned int* num_faces,
-											   unsigned int* num_vertices)
+											   unsigned int* num_vertices,
+											   float* bbox_verts)
 {
 	float t = 0;
 
@@ -198,6 +201,29 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 		int cur_num_faces = num_faces[i];
 		int cur_num_vertices = num_vertices[i];
 
+		glm::vec3 bbox_min(bbox_verts[i / 6 + 0], bbox_verts[i / 6 + 1], bbox_verts[i / 6 + 2]);
+		glm::vec3 bbox_max(bbox_verts[i / 6 + 3], bbox_verts[i / 6 + 4], bbox_verts[i / 6 + 5]);
+
+		glm::vec3 bbox_scale(bbox_verts[i / 6 + 3] - bbox_verts[i / 6 + 0],
+							 bbox_verts[i / 6 + 4] - bbox_verts[i / 6 + 1],
+							 bbox_verts[i / 6 + 5] - bbox_verts[i / 6 + 2]);
+
+		Geom bbox_geom;
+		bbox_geom.type = GeomType::CUBE;
+
+		glm::mat4 translationMat = glm::translate(glm::mat4(), glm::vec3(0));
+		glm::mat4 rotationMat = glm::rotate(glm::mat4(), 0.f, glm::vec3(1, 0, 0));
+		rotationMat = rotationMat * glm::rotate(glm::mat4(), 0.f, glm::vec3(0, 1, 0));
+		rotationMat = rotationMat * glm::rotate(glm::mat4(), 0.f, glm::vec3(0, 0, 1));
+		glm::mat4 scaleMat = glm::scale(glm::mat4(), bbox_scale);
+		glm::mat4 bbox_trans = translationMat * rotationMat * scaleMat;
+		bbox_trans = bbox_trans * mesh.transform;
+		setGeomTransform(&bbox_geom, bbox_trans);
+		float bbox_t = boxIntersectionTest(bbox_geom, r, intersectionPoint, normal, outside);
+		return bbox_t;
+
+		
+	
 		for (int face_idx = 0; face_idx < cur_num_faces / 3; face_idx++)
 		{
 			unsigned int f0, f1, f2;
@@ -233,7 +259,7 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 				glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
 				intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
 				normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
-				printf("cuda print test");
+		
 				return glm::length(r.origin - intersectionPoint);
 			}
 		}

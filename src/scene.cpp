@@ -44,22 +44,28 @@ int Scene::getMeshesSize() const
 
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
-    if (id != geoms.size()) {
+    if (id != geoms.size())
+    {
         cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
         return -1;
-    } else {
+    } 
+    else
+    {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
+        std::vector<Geom> gltfGeoms;
+        bool geomFromGltf = false;
+
         string line;
 
         // load object type
         utilityCore::safeGetline(fp_in, line);
         if (!line.empty() && fp_in.good()) {
-            if (strcmp(line.c_str(), "sphere") == 0) 
+            if (strcmp(line.c_str(), "sphere") == 0)
             {
                 cout << "Creating new sphere..." << endl;
                 newGeom.type = GeomType::SPHERE;
-            } 
+            }
             else if (strcmp(line.c_str(), "cube") == 0)
             {
                 cout << "Creating new cube..." << endl;
@@ -68,25 +74,67 @@ int Scene::loadGeom(string objectid) {
             else if (strcmp(line.c_str(), "mesh") == 0)
             {
                 cout << "Creating new mesh..." << endl;
-                newGeom.type = GeomType::MESH;
+                geomFromGltf = true;
 
                 utilityCore::safeGetline(fp_in, line);
                 const std::string gltf_file = line;
-                bool ret = LoadGLTF(gltf_file, 1.0, &(this->meshes), nullptr, nullptr, 
-                                    &this->total_faces, &this->total_vertices);
+                bool ret = LoadGLTF(gltf_file, 1, &(this->meshes), nullptr, nullptr,
+                    &this->total_faces, &this->total_vertices);
                 if (!ret)
                 {
                     std::cerr << "Failed to load glTF file [ " << gltf_file << " ]" << std::endl;
+                    return -1;
                 }
+
+                for (int i = 0; i < meshes.size(); i++)
+                {
+                    Geom meshGeom;
+                    meshGeom.type = GeomType::MESH;
+
+                    meshGeom.transform[0][0] = meshes[i].transform[0][0];
+                    meshGeom.transform[0][1] = meshes[i].transform[0][1];
+                    meshGeom.transform[0][2] = meshes[i].transform[0][2];
+                    meshGeom.transform[0][3] = meshes[i].transform[0][3];
+
+                    meshGeom.transform[1][0] = meshes[i].transform[1][0];
+                    meshGeom.transform[1][1] = meshes[i].transform[1][1];
+                    meshGeom.transform[1][2] = meshes[i].transform[1][2];
+                    meshGeom.transform[1][3] = meshes[i].transform[1][3];
+
+                    meshGeom.transform[2][0] = meshes[i].transform[2][0];
+                    meshGeom.transform[2][1] = meshes[i].transform[2][1];
+                    meshGeom.transform[2][2] = meshes[i].transform[2][2];
+                    meshGeom.transform[2][3] = meshes[i].transform[2][3];
+
+                    meshGeom.transform[3][0] = meshes[i].transform[3][0];
+                    meshGeom.transform[3][1] = meshes[i].transform[3][1];
+                    meshGeom.transform[3][2] = meshes[i].transform[3][2];
+                    meshGeom.transform[3][3] = meshes[i].transform[3][3];
+
+                    gltfGeoms.push_back(meshGeom);
+                }
+
             }
         }
 
         //link material
         utilityCore::safeGetline(fp_in, line);
-        if (!line.empty() && fp_in.good()) {
+        if (!line.empty() && fp_in.good())
+        {
             vector<string> tokens = utilityCore::tokenizeString(line);
-            newGeom.materialid = atoi(tokens[1].c_str());
-            cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+            if (geomFromGltf)
+            {
+                for (Geom& gltfGeom : gltfGeoms)
+                {
+                    gltfGeom.materialid = atoi(tokens[1].c_str());
+                }
+            }
+            else
+            {
+
+                newGeom.materialid = atoi(tokens[1].c_str());
+                cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+            }
         }
 
         //load transformations
@@ -97,21 +145,33 @@ int Scene::loadGeom(string objectid) {
             //load tranformations
             if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
                 newGeom.translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            } else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
                 newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-            } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
 
             utilityCore::safeGetline(fp_in, line);
         }
 
-        newGeom.transform = utilityCore::buildTransformationMatrix(
-                newGeom.translation, newGeom.rotation, newGeom.scale);
-        newGeom.inverseTransform = glm::inverse(newGeom.transform);
-        newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
+        glm::mat4 totalTransform = utilityCore::buildTransformationMatrix(newGeom.translation, newGeom.rotation, newGeom.scale);
+        if (geomFromGltf)
+        {
+            for (Geom& gltfGeom : gltfGeoms)
+            {
+                setGeomTransform(&gltfGeom, gltfGeom.transform * totalTransform);
+                geoms.push_back(gltfGeom);
+            }
+        }
+        else
+        {
+            setGeomTransform(&newGeom, totalTransform);
+            geoms.push_back(newGeom);
+        }
 
-        geoms.push_back(newGeom);
+        
         return 1;
     }
 }
@@ -182,7 +242,8 @@ int Scene::loadMaterial(string materialid) {
     if (id != materials.size()) {
         cout << "ERROR: MATERIAL ID does not match expected number of materials" << endl;
         return -1;
-    } else {
+    }
+    else {
         cout << "Loading Material " << id << "..." << endl;
         Material newMaterial;
 
@@ -192,20 +253,26 @@ int Scene::loadMaterial(string materialid) {
             utilityCore::safeGetline(fp_in, line);
             vector<string> tokens = utilityCore::tokenizeString(line);
             if (strcmp(tokens[0].c_str(), "RGB") == 0) {
-                glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
+                glm::vec3 color(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
                 newMaterial.color = color;
-            } else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
                 newMaterial.specular.exponent = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "SPECRGB") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "SPECRGB") == 0) {
                 glm::vec3 specColor(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
                 newMaterial.specular.color = specColor;
-            } else if (strcmp(tokens[0].c_str(), "REFL") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "REFL") == 0) {
                 newMaterial.hasReflective = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "REFR") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "REFR") == 0) {
                 newMaterial.hasRefractive = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "REFRIOR") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "REFRIOR") == 0) {
                 newMaterial.indexOfRefraction = atof(tokens[1].c_str());
-            } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
                 newMaterial.emittance = atof(tokens[1].c_str());
             }
         }

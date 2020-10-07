@@ -108,10 +108,11 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Sphere
+// gltf Mesh
 OBJECT 6
-sphere
-MATERIAL 4
-TRANS       -1 4 -1
+mesh
+../scenes/venus/scene.gltf
+MATERIAL 1
+TRANS       0 3 1
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       0.5 0.5 0.5

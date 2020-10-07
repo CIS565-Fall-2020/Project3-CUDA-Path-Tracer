@@ -3,6 +3,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
@@ -102,3 +104,10 @@ struct raytracing_continuing
 		return segment.remainingBounces > 0;
 	}
 };
+
+__host__ __device__ inline void setGeomTransform(Geom* geom, const glm::mat4& trans)
+{
+	geom->transform = trans;
+	geom->inverseTransform = glm::inverse(trans);
+	geom->invTranspose = glm::inverseTranspose(trans);
+}
