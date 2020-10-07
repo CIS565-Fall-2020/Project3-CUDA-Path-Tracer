@@ -88,28 +88,32 @@ int Scene::loadGeom(string objectid) {
                 
                 for (int i = 0; i < meshes.size(); i++)
                 {
+                    const gltf::Mesh<float>& mesh = meshes[i];
+
                     Geom meshGeom;
                     meshGeom.type = GeomType::MESH;
+                    meshGeom.meshid = i;
+                    meshGeom.num_faces = mesh.faces.size() / 3;
 
-                    meshGeom.transform[0][0] = meshes[i].transform[0][0];
-                    meshGeom.transform[0][1] = meshes[i].transform[0][1];
-                    meshGeom.transform[0][2] = meshes[i].transform[0][2];
-                    meshGeom.transform[0][3] = meshes[i].transform[0][3];
+                    meshGeom.transform[0][0] = mesh.transform[0][0];
+                    meshGeom.transform[0][1] = mesh.transform[0][1];
+                    meshGeom.transform[0][2] = mesh.transform[0][2];
+                    meshGeom.transform[0][3] = mesh.transform[0][3];
 
-                    meshGeom.transform[1][0] = meshes[i].transform[1][0];
-                    meshGeom.transform[1][1] = meshes[i].transform[1][1];
-                    meshGeom.transform[1][2] = meshes[i].transform[1][2];
-                    meshGeom.transform[1][3] = meshes[i].transform[1][3];
+                    meshGeom.transform[1][0] = mesh.transform[1][0];
+                    meshGeom.transform[1][1] = mesh.transform[1][1];
+                    meshGeom.transform[1][2] = mesh.transform[1][2];
+                    meshGeom.transform[1][3] = mesh.transform[1][3];
 
-                    meshGeom.transform[2][0] = meshes[i].transform[2][0];
-                    meshGeom.transform[2][1] = meshes[i].transform[2][1];
-                    meshGeom.transform[2][2] = meshes[i].transform[2][2];
-                    meshGeom.transform[2][3] = meshes[i].transform[2][3];
+                    meshGeom.transform[2][0] = mesh.transform[2][0];
+                    meshGeom.transform[2][1] = mesh.transform[2][1];
+                    meshGeom.transform[2][2] = mesh.transform[2][2];
+                    meshGeom.transform[2][3] = mesh.transform[2][3];
 
-                    meshGeom.transform[3][0] = meshes[i].transform[3][0];
-                    meshGeom.transform[3][1] = meshes[i].transform[3][1];
-                    meshGeom.transform[3][2] = meshes[i].transform[3][2];
-                    meshGeom.transform[3][3] = meshes[i].transform[3][3];
+                    meshGeom.transform[3][0] = mesh.transform[3][0];
+                    meshGeom.transform[3][1] = mesh.transform[3][1];
+                    meshGeom.transform[3][2] = mesh.transform[3][2];
+                    meshGeom.transform[3][3] = mesh.transform[3][3];
 
                     gltfGeoms.push_back(meshGeom);
                 }
@@ -178,7 +182,6 @@ int Scene::loadGeom(string objectid) {
             geoms.push_back(newGeom);
         }
 
-        
         return 1;
     }
 }

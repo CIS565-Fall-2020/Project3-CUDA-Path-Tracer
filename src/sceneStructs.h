@@ -22,6 +22,9 @@ struct Ray {
 struct Geom {
 	enum GeomType type;
 	int materialid;
+	int meshid = -1;  // id of the corresponding mesh
+	int num_faces ;   // number of faces in this mesh = gltf::Mesh::faces.size() / 3
+
 	glm::vec3 translation;
 	glm::vec3 rotation;
 	glm::vec3 scale;

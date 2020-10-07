@@ -8,8 +8,6 @@
 #include "glm/gtc/matrix_inverse.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
-#define BOUNDINGBOXINTERSECTIONTEST true
-
 __host__ __device__
 glm::mat4 getTansformation(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale) 
 {
@@ -196,8 +194,8 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 											   int total_meshes,
 											   unsigned int* faces,
 											   float* vertices,
-									           unsigned int* num_faces,
-											   unsigned int* num_vertices,
+									           unsigned int* faces_offset,
+											   unsigned int* verts_offset,
 											   float* bbox_verts)
 {
 	float t = 0;
@@ -209,68 +207,48 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 	rt.origin = ro;
 	rt.direction = rd;
 
-	for (int i = 0, faces_offset = 0, vertices_offset = 0; i < total_meshes; i++)
+	int mesh_idx = mesh.meshid;
+	int f_offset = faces_offset[mesh_idx];
+	int v_offset = verts_offset[mesh_idx];
+
+	for (int face_idx = 0; face_idx < mesh.num_faces; face_idx++)
 	{
-#if BOUNDINGBOXINTERSECTIONTEST
-		Geom bbox_geom;
-		bbox_geom.type = GeomType::CUBE;
-		glm::vec3 bbox_scale(bbox_verts[i / 6 + 3] - bbox_verts[i / 6 + 0],
-							 bbox_verts[i / 6 + 4] - bbox_verts[i / 6 + 1],
-						     bbox_verts[i / 6 + 5] - bbox_verts[i / 6 + 2]);
+		unsigned int f0, f1, f2;
+		float v0[3], v1[3], v2[3];
 
-		setGeomTransform(&bbox_geom, mesh.transform * getTansformation(glm::vec3(0), glm::vec3(0), bbox_scale));
-		t = boxIntersectionTest(bbox_geom, r, intersectionPoint, normal, outside);
-		if (t < 0)
+		f0 = faces[3 * face_idx + 0 + f_offset];
+		f1 = faces[3 * face_idx + 1 + f_offset];
+		f2 = faces[3 * face_idx + 2 + f_offset];
+
+		v0[0] = vertices[3 * f0 + 0 + v_offset];
+		v0[1] = vertices[3 * f0 + 1 + v_offset];
+		v0[2] = vertices[3 * f0 + 2 + v_offset];
+
+		v1[0] = vertices[3 * f1 + 0 + v_offset];
+		v1[1] = vertices[3 * f1 + 1 + v_offset];
+		v1[2] = vertices[3 * f1 + 2 + v_offset];
+
+		v2[0] = vertices[3 * f2 + 0 + v_offset];
+		v2[1] = vertices[3 * f2 + 1 + v_offset];
+		v2[2] = vertices[3 * f2 + 2 + v_offset];
+
+		glm::vec3 p0(v0[0], v0[1], v0[2]);
+		glm::vec3 p1(v1[0], v1[1], v1[2]);
+		glm::vec3 p2(v2[0], v2[1], v2[2]);
+
+		glm::vec3 res;
+		bool intersected = glm::intersectRayTriangle(ro, rd, p0, p1, p2, res);
+		if (intersected)
 		{
-			continue;
+			t = res.z;
+			outside = false;
+
+			glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
+			intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+			normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
+
+			return glm::length(r.origin - intersectionPoint);
 		}
-#endif // BOUNDINGBOXINTERSECTIONTEST
-
-		int cur_num_faces = num_faces[i];
-		int cur_num_vertices = num_vertices[i];
-	
-		for (int face_idx = 0; face_idx < cur_num_faces / 3; face_idx++)
-		{
-			unsigned int f0, f1, f2;
-			float v0[3], v1[3], v2[3];
-
-			f0 = faces[3 * face_idx + 0 + faces_offset];
-			f1 = faces[3 * face_idx + 1 + faces_offset];
-			f2 = faces[3 * face_idx + 2 + faces_offset];
-
-			v0[0] = vertices[3 * f0 + 0 + vertices_offset];
-			v0[1] = vertices[3 * f0 + 1 + vertices_offset];
-			v0[2] = vertices[3 * f0 + 2 + vertices_offset];
-
-			v1[0] = vertices[3 * f1 + 0 + vertices_offset];
-			v1[1] = vertices[3 * f1 + 1 + vertices_offset];
-			v1[2] = vertices[3 * f1 + 2 + vertices_offset];
-
-			v2[0] = vertices[3 * f2 + 0 + vertices_offset];
-			v2[1] = vertices[3 * f2 + 1 + vertices_offset];
-			v2[2] = vertices[3 * f2 + 2 + vertices_offset];
-
-			glm::vec3 p0(v0[0], v0[1], v0[2]);
-			glm::vec3 p1(v1[0], v1[1], v1[2]);
-			glm::vec3 p2(v2[0], v2[1], v2[2]);
-
-			glm::vec3 res;
-			bool intersected = glm::intersectRayTriangle(ro, rd, p0, p1, p2, res);
-			if (intersected)
-			{
-				t = res.z;
-				outside = false;
-
-				glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
-				intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
-				normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
-		
-				return glm::length(r.origin - intersectionPoint);
-			}
-		}
-
-		faces_offset += cur_num_faces;
-		vertices_offset += cur_num_vertices;
 	}
 
 	return -1;

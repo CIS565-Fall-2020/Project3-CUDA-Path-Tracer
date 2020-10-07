@@ -19,6 +19,7 @@
 #define ERRORCHECK 1
 #define RECORDEDITERATION 100
 #define CACHEFIRSTBOUNCE true
+#define BOUNDINGBOXINTERSECTIONTEST true
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -91,10 +92,11 @@ static ShadeableIntersection* dev_first_intersections = nullptr;
 // gltf mesh data
 static float* dev_gltf_vertices = nullptr;                  
 static unsigned int* dev_gltf_faces = nullptr;
-static unsigned int* dev_gltf_num_vertices = nullptr;
-static unsigned int* dev_gltf_num_faces = nullptr;
-static int total_gltf_meshes = 0;
+static unsigned int* dev_gltf_verts_offset = nullptr;
+static unsigned int* dev_gltf_faces_offset = nullptr;
+
 static float* dev_gltf_bbox_verts = nullptr;
+static int total_gltf_meshes = 0;
 
 cudaEvent_t iter_event_start = nullptr;
 cudaEvent_t iter_event_end = nullptr;
@@ -109,7 +111,6 @@ void pathtraceInit(Scene* scene)
 	if (!scene->meshes.empty())
 	{
 		preprocessGltfData(scene);
-		total_gltf_meshes = scene->getMeshesSize();
 	}
 
 	cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
@@ -152,8 +153,8 @@ void pathtraceFree()
 
 	cudaFree(dev_gltf_faces);
 	cudaFree(dev_gltf_vertices);
-	cudaFree(dev_gltf_num_faces);
-	cudaFree(dev_gltf_num_vertices);
+	cudaFree(dev_gltf_faces_offset);
+	cudaFree(dev_gltf_verts_offset);
 	cudaFree(dev_gltf_bbox_verts);
 
 	checkCUDAError("pathtraceFree");
@@ -240,14 +241,31 @@ __global__ void computeIntersections(int depth,
 			}
 			else if (geom.type == GeomType::MESH)
 			{
-				t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside, 
-										 total_meshes, faces, vertices, num_faces, num_vertices, bbox_verts);
+				bool bbox_hit = true;
+#if BOUNDINGBOXINTERSECTIONTEST
+				int i = geom.meshid;
+				Geom bbox_geom;
+				bbox_geom.type = GeomType::CUBE;
+				glm::vec3 bbox_scale(bbox_verts[i * 6 + 3] - bbox_verts[i * 6 + 0],
+									 bbox_verts[i * 6 + 4] - bbox_verts[i * 6 + 1],
+									 bbox_verts[i * 6 + 5] - bbox_verts[i * 6 + 2]);
+
+				setGeomTransform(&bbox_geom, geom.transform * getTansformation(glm::vec3(0), glm::vec3(0), bbox_scale));
+				t = boxIntersectionTest(bbox_geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				// Do bounding box intersection culling if not
+				bbox_hit = t > 0.0f && t < t_min;
+#endif // BOUNDINGBOXINTERSECTIONTEST
+				if (bbox_hit)
+				{
+					t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside,
+											 total_meshes, faces, vertices, num_faces, num_vertices, bbox_verts);
+				}
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
-			if (t > 0.0f && t_min > t)
+			if (t > 0.0f && t < t_min)
 			{
 				t_min = t;
 				hit_geom_index = i;
@@ -278,32 +296,32 @@ void preprocessGltfData(Scene* scene)
 	cudaMalloc(&dev_gltf_vertices, scene->total_vertices * sizeof(float));
 	cudaMalloc(&dev_gltf_bbox_verts, 6 * num_meshes * sizeof(float));
 
-	for (int i = 0, faces_offset = 0, vertices_offset = 0; i < num_meshes; i++)
+	for (int i = 0, face_offset = 0, vertice_offset = 0; i < num_meshes; i++)
 	{
 		const gltf::Mesh<float>& mesh = scene->meshes[i];
 		int cur_num_faces = mesh.faces.size();
 		int cur_num_vertices = mesh.vertices.size();
 
-		cudaMemcpy(dev_gltf_faces + faces_offset, mesh.faces.data(), cur_num_faces * sizeof(unsigned int),
+		cudaMemcpy(dev_gltf_faces + face_offset, mesh.faces.data(), cur_num_faces * sizeof(unsigned int),
 			cudaMemcpyKind::cudaMemcpyHostToDevice);
-		cudaMemcpy(dev_gltf_vertices + vertices_offset, mesh.vertices.data(), cur_num_vertices * sizeof(float),
+		cudaMemcpy(dev_gltf_vertices + vertice_offset, mesh.vertices.data(), cur_num_vertices * sizeof(float),
 			cudaMemcpyKind::cudaMemcpyHostToDevice);
 		cudaMemcpy(dev_gltf_bbox_verts + i * 6, mesh.bbox_verts.data(), 6 * sizeof(float),
 			cudaMemcpyKind::cudaMemcpyHostToDevice);
 		
-		scene->faces_per_mesh.push_back(cur_num_faces);
-		scene->vertices_per_mesh.push_back(cur_num_vertices);
+		scene->faces_per_mesh.push_back(face_offset);
+		scene->vertices_per_mesh.push_back(vertice_offset);
 
-		faces_offset += cur_num_faces;
-		vertices_offset += cur_num_vertices;
+		face_offset += cur_num_faces;
+		vertice_offset += cur_num_vertices;
 	}
 
-	cudaMalloc(&dev_gltf_num_vertices, scene->vertices_per_mesh.size() * sizeof(unsigned int));
-	cudaMalloc(&dev_gltf_num_faces, scene->faces_per_mesh.size() * sizeof(unsigned int));
+	cudaMalloc(&dev_gltf_verts_offset, scene->vertices_per_mesh.size() * sizeof(unsigned int));
+	cudaMalloc(&dev_gltf_faces_offset, scene->faces_per_mesh.size() * sizeof(unsigned int));
 
-	cudaMemcpy(dev_gltf_num_vertices, scene->vertices_per_mesh.data(), scene->vertices_per_mesh.size() * sizeof(unsigned int),
+	cudaMemcpy(dev_gltf_verts_offset, scene->vertices_per_mesh.data(), scene->vertices_per_mesh.size() * sizeof(unsigned int),
 		cudaMemcpyKind::cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_gltf_num_faces, scene->faces_per_mesh.data(), scene->faces_per_mesh.size() * sizeof(unsigned int),
+	cudaMemcpy(dev_gltf_faces_offset, scene->faces_per_mesh.data(), scene->faces_per_mesh.size() * sizeof(unsigned int),
 		cudaMemcpyKind::cudaMemcpyHostToDevice);
 
 	checkCUDAError("preprocess gltf data");
@@ -429,8 +447,8 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 				total_gltf_meshes,
 				dev_gltf_faces,
 				dev_gltf_vertices，
-				dev_gltf_num_faces,
-				dev_gltf_num_vertices,
+				dev_gltf_faces_offset,
+				dev_gltf_verts_offset,
 				dev_gltf_bbox_verts
 			);
 
@@ -452,8 +470,8 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 			total_gltf_meshes,
 			dev_gltf_faces,
 			dev_gltf_vertices，
-			dev_gltf_num_faces,
-			dev_gltf_num_vertices,
+			dev_gltf_faces_offset,
+			dev_gltf_verts_offset,
 			dev_gltf_bbox_verts
 		);
 #endif // CACHEFIRSTBOUNCE
