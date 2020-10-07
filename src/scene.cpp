@@ -212,12 +212,55 @@ int Scene::loadGltf(string filename) {
 		materials.push_back(eMat);
 	}
 
-
 	return 0;
 }
 
-void Scene::buildOctTree() {
-	OctreeNode root;
+void Scene::buildOctreeNode(OctreeNode &node, int depth) {
+	if (depth >= MAX_DEPTH || node.geomIndices.size() <= 1) {
+		return;
+	}
+	int startNodeIdx = octree.size();
+	
+	glm::vec3 c = node.center;
+	glm::vec3 v0 = node.bp0;
+	float dx = c[0] - v0[0];
+	float dy = c[1] - v0[1];
+	float dz = c[2] - v0[2];
+
+	// Add 8 child nodes
+	for (int i : {0, 1}) {
+		for (int j : {0, 1}) {
+			for (int k : {0, 1}) {
+				glm::vec3 p_min = v0 + glm::vec3(i*dx, j*dy, k*dz);
+				glm::vec3 p_max = p_min + glm::vec3(dx, dy, dz);
+				OctreeNode c(p_min, p_max);
+				// add intersecting mesh
+				for (int gIdx : node.geomIndices) {
+					if (c.intersectTriangle(geoms[gIdx])) {
+						c.geomIndices.push_back(gIdx);
+					}
+				}
+				octree.push_back(c);
+			}
+		}
+	}
+
+	// add children indices and iterate
+	for (int i = 0; i < 8; i++) {
+		node.childrenIndices.push_back(startNodeIdx + i);
+		buildOctreeNode(octree[startNodeIdx + i], depth + 1);
+	}
+}
+
+void Scene::buildOctree() {
+	OctreeNode root(pMin, pMax);
+	for (int i = 0; i < geoms.size(); i++) {
+		if (geoms[i].type == TRIANGLE) {
+			// only handle triangle mesh for now
+			root.geomIndices.push_back(i);
+		}
+	}
+	octree.push_back(root);
 }
 
 int Scene::loadGeom(string objectid) {

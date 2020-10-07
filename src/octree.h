@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include "sceneStructs.h"
 
 #define MAX_DEPTH 4
 
@@ -17,9 +18,9 @@ public:
 	vector<int> geomIndices;
 
 	OctreeNode();
-	OctreeNode(glm::vec3 &c, glm::vec3 &v0, glm::vec3 &v1);
+	OctreeNode(glm::vec3 &v0, glm::vec3 &v1);
 
-	bool intersectTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2);
+	bool intersectTriangle(const Geom &geom);
 	void subdivide();
 	void fillChildrenIndices();
 };
