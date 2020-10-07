@@ -101,7 +101,40 @@ void scatterRay(
         pathSegment.color *= m.specular.color;
         pathSegment.remainingBounces--;
     }
+    else if (m.hasReflective == 1.f && m.hasRefractive == 1.f) // Refraction
+    {
+        // entering: true- from low eta to high eta
+        bool entering = glm::dot(normal, pathSegment.ray.direction) < 0;
+        float eta = entering ? 1.f / m.indexOfRefraction : m.indexOfRefraction;
+
+        glm::vec3 unitDir = glm::normalize(pathSegment.ray.direction);
+        unitDir = entering ? -1.f * unitDir : unitDir;
+        float cosThetaI = glm::dot(unitDir, normal);
+        float sinThetaI = glm::sqrt(1.f - cosThetaI * cosThetaI);
+
+        bool cannotRefract = eta * sinThetaI > 1.f;
+
+        // Schlick's approximation for reflectance
+        float r0 = (1 - eta) / (1 + eta);
+        r0 = r0 * r0;
+        float reflectance = r0 + (1 - r0) * glm::pow((1 - cosThetaI), 5);
+
+        thrust::uniform_real_distribution<float> u01(0, 1);
+
+        if (cannotRefract || reflectance > u01(rng))   // reflection  
+        {
+			newDir = glm::reflect(pathSegment.ray.direction, normal);
+			pathSegment.color *= m.specular.color;
+			pathSegment.remainingBounces--;
+        }
+        else   // refraction
+        {
+            newDir = glm::refract(pathSegment.ray.direction, normal, eta);
+            pathSegment.color *= m.specular.color;
+            pathSegment.remainingBounces--;
+        }      
+    }
 
 	pathSegment.ray.direction = newDir;
-	pathSegment.ray.origin = intersect + newDir * EPSILON;  // to make the intersection point outside of the primitive
+	pathSegment.ray.origin = intersect + newDir * 0.001f;  // to make the intersection point outside of the primitive
 }

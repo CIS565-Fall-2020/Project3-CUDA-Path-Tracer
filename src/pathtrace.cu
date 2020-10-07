@@ -380,7 +380,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     // TODO: perform one iteration of path tracing
 
-    timer().startGpuTimer();
+    //timer().startGpuTimer();
 
 #if CACHE_BOUNCE == 1
 
@@ -497,9 +497,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             iterationComplete = true;
         }
     }
-    timer().endGpuTimer();
+    //timer().endGpuTimer();
 
-    printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(CUDA Measured)");
+    //printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(CUDA Measured)");
 
     // Assemble this iteration and apply it to the image
     dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
