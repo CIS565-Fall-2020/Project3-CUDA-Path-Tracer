@@ -83,6 +83,7 @@ void scatterRay(
     // calculateRandomDirectionInHemisphere defined above.
     glm::vec3 color;
     glm::vec3 normal = intersection.surfaceNormal;
+    glm::vec3 wi = -pathSegment.ray.direction;
     pathSegment.ray.origin = intersection.intersectPos;
 
     thrust::uniform_real_distribution<float> u01(0, 1);
@@ -112,7 +113,9 @@ void scatterRay(
         float ambient = 0.2;
         float lux = diffuse + ambient;
         color = mat.color * lux / (1.f - mat.hasReflective);
-        color = mat.color;
+        color = mat.color * pathSegment.throughput;
+
+        pathSegment.throughput *= color * glm::abs(glm::dot(pathSegment.ray.direction, normal)) / TWO_PI;
 
         pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
     }

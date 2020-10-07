@@ -148,6 +148,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
+		segment.throughput = glm::vec3(1.f);
 	}
 }
 
@@ -247,6 +248,7 @@ __global__ void shadeFakeMaterial(
 	if (idx < num_paths)
 	{
 		ShadeableIntersection intersection = shadeableIntersections[idx];
+		int pi = pathSegments[idx].pixelIndex;
 		if (intersection.t > 0.0f) { // if the intersection exists...
 		  // Set up the RNG
 		  // LOOK: this is how you use thrust's RNG! Please look at
@@ -259,7 +261,7 @@ __global__ void shadeFakeMaterial(
 
 			// If the material indicates that the object was a light, "light" the ray
 			if (material.emittance > 0.0f) {
-				pathSegments[idx].color *= (materialColor * material.emittance);
+				pathSegments[idx].color *= (material.color * material.emittance);
 				pathSegments[idx].remainingBounces = 0;
 			}
 			// Otherwise, do some pseudo-lighting computation. This is actually more
