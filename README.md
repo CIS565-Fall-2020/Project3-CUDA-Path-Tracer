@@ -11,8 +11,8 @@ CUDA Path Tracer
 * A shading kernel with BSDF evaluation for:
   * Ideal Diffuse surfaces
   * Perfectly specular-reflective (mirrored) surfaces
-* Path continuation/termination using Stream Compaction (Thrust::partition)
-* Sorting rays/pathSegments/intersections contiguous in memory by material type
+* Path continuation/termination using Stream Compaction (thrust::partition)
+* Sorting rays/pathSegments/intersections contiguous in memory by material type (thrust::sort_by_key)
 * The first bounce intersections cache for re-use across all subsequent iterations
 
 ### Results

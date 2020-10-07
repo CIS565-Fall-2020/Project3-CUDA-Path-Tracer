@@ -19,6 +19,7 @@
 
 #define STREAM_COMPACTION
 #define SORT_MATERIAL
+#define DEPTH_OF_FIELD
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -46,6 +47,35 @@ __host__ __device__
 thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int depth) {
 	int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
 	return thrust::default_random_engine(h);
+}
+
+// Copy from my CIS561 HW
+__host__ __device__
+glm::vec3 squareToDiskConcentric(const glm::vec2 &sample)
+{
+	// Reference PBRT 13.6.2
+	// Map [0, 1] to [-1, -1]
+	glm::vec2 sampleOffset = sample * 2.f - glm::vec2(1.f, 1.f);
+
+	// Handle degeneracy at the origin
+	if (sampleOffset.x == 0.f && sampleOffset.y == 0.f)
+	{
+		return glm::vec3(0.f, 0.f, 0.f);
+	}
+
+	// Apply concentric mapping to point
+	float theta, r;
+	if (std::abs(sampleOffset.x) > std::abs(sampleOffset.y))
+	{
+		r = sampleOffset.x;
+		theta = PI / 4.f * (sampleOffset.y / sampleOffset.x);
+	}
+	else {
+		r = sampleOffset.y;
+		theta = PI / 2.f - PI / 4.f * (sampleOffset.x / sampleOffset.y);
+	}
+
+	return glm::vec3(r * std::cos(theta), r * std::sin(theta), 0.f);
 }
 
 //Kernel that writes the image to the OpenGL PBO directly.
@@ -142,11 +172,23 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.ray.origin = cam.position;
 		segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-		// TODO: implement antialiasing by jittering the ray
 		segment.ray.direction = glm::normalize(cam.view
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
-		);
+			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f));
+#ifdef DEPTH_OF_FIELD
+		float lensRadius = 0.5f;
+		float focalDistance = 8.5f;
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+		thrust::uniform_real_distribution<float> u01(0, 1);
+
+		glm::vec3 pLens = lensRadius * squareToDiskConcentric(glm::vec2(u01(rng), u01(rng)));
+		float ft = focalDistance / glm::dot(segment.ray.direction, cam.view);
+		///float ft = focalDistance / segment.ray.direction.z;
+		glm::vec3 pFocus = cam.position + ft * segment.ray.direction;
+		segment.ray.origin = cam.position + cam.right * pLens.x + cam.up * pLens.y;
+		segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+
+#endif
 
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
@@ -218,7 +260,7 @@ __global__ void computeIntersections(int depth, int num_paths,
 }
 
 __global__ void shadeMaterial(
-	int iter, int num_paths,
+	int iter, int num_paths, int depth,
 	ShadeableIntersection * shadeableIntersections,
 	PathSegment * pathSegments,
 	Material * materials)
@@ -233,7 +275,7 @@ __global__ void shadeMaterial(
 		ShadeableIntersection intersection = shadeableIntersections[idx];
 		if (intersection.t > 0.0f) { // if the intersection exists...
 			// Set up the RNG
-			thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
+			thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, depth);
 
 			Material material = materials[intersection.materialId];
 			glm::vec3 materialColor = material.color;
@@ -393,7 +435,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		// TODO: compare between directly shading the path segments and shading
 		// path segments that have been reshuffled to be contiguous in memory.
 
-		shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (iter, num_paths, 
+		shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (iter, num_paths, depth,
 			dev_intersections, dev_paths, dev_materials);
 
 #ifdef STREAM_COMPACTION

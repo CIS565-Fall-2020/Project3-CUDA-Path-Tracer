@@ -43,6 +43,15 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 		+ sin(around) * over * perpendicularDirection2;
 }
 
+// Reference: https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/refraction
+__host__ __device__
+float schlickApproximation(float cosTheta, float IOR)
+{
+	float r0 = (1 - IOR) / (1 + IOR);
+	r0 = r0 * r0;
+	return r0 + (1 - r0) * pow(1.0f - abs(cosTheta), 5.0f);
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -84,11 +93,36 @@ void scatterRay(
 
 	glm::vec3 wo = pathSegment.ray.direction;
 	glm::vec3 wi;
+	float pdf = 1.0;
 
 	if (xi < m.hasReflective)	// Specular
 	{
+		pdf = m.hasReflective;
 		wi = glm::normalize(glm::reflect(wo, normal));
-		pathSegment.color *= m.specular.color / m.hasReflective;
+		pathSegment.color *= m.specular.color / pdf;
+	}
+	else if (xi < m.hasReflective + m.hasRefractive)	// Refraction
+	{
+		pdf = m.hasRefractive;
+		bool entering = glm::dot(wo, normal) < 0;
+		float etaI = entering ? 1 : m.indexOfRefraction;
+		float etaT = entering ? m.indexOfRefraction : 1;
+		float cosTheta = glm::min(glm::dot(-wo, normal), 1.0f);
+		float sinTheta = glm::sqrt(1.0f - cosTheta);
+
+		float R = schlickApproximation(cosTheta, m.indexOfRefraction);
+		float sample = u01(rng);
+		if (m.indexOfRefraction * sinTheta > 1.0f || R > sample)	// Cannot refract
+		{
+			wi = glm::normalize(glm::reflect(wo, normal));
+			pathSegment.color *= m.specular.color / pdf;
+		}
+		else
+		{
+			wi = glm::normalize(glm::refract(wo, normal, etaI / etaT));
+			pathSegment.color *= m.color / pdf;
+			normal = -normal;
+		}
 	}
 	else    // Diffuse
 	{
@@ -96,9 +130,10 @@ void scatterRay(
 		//float pdf = absCosTheta * INV_PI;
 		//glm::vec3 f = m.color * INV_PI;
 		//pathSegment.color *= (f * absCosTheta / pdf) / (1 - m.hasReflective);
+		pdf = 1 - m.hasReflective - m.hasRefractive;
 		wi = calculateRandomDirectionInHemisphere(normal, rng);
-		pathSegment.color *= m.color / (1 - m.hasReflective);
+		pathSegment.color *= m.color / pdf;
 	}
 	pathSegment.ray.direction = wi;
-	pathSegment.ray.origin = intersect + wi * 0.001f;
+	pathSegment.ray.origin = intersect + normal * 0.001f;
 }

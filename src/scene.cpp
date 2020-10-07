@@ -141,6 +141,13 @@ int Scene::loadCamera() {
 
     camera.view = glm::normalize(camera.lookAt - camera.position);
 
+	float tanHalfFovy = tan(glm::radians(fovy / 2));
+	float len = glm::length(camera.lookAt - camera.position);
+	float aspect = (float)camera.resolution.x / (float)camera.resolution.y;
+	camera.V = camera.up * len * tanHalfFovy;
+	camera.H = camera.right * len * aspect * tanHalfFovy;
+
+
     //set up render camera stuff
     int arraylen = camera.resolution.x * camera.resolution.y;
     state.image.resize(arraylen);
