@@ -9,12 +9,12 @@
 #include "gltf-loader.h" // get example namespace
 
 Scene::Scene(string filename) {
-    cout << "Reading scene from " << filename << " ..." << endl;
-    cout << " " << endl;
+    std::cout << "Reading scene from " << filename << " ..." << endl;
+    std::cout << " " << endl;
     char* fname = (char*)filename.c_str();
     fp_in.open(fname);
     if (!fp_in.is_open()) {
-        cout << "Error reading from file - aborting!" << endl;
+        std::cout << "Error reading from file - aborting!" << endl;
         throw;
     }
     while (fp_in.good()) {
@@ -24,13 +24,13 @@ Scene::Scene(string filename) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             if (strcmp(tokens[0].c_str(), "MATERIAL") == 0) {
                 loadMaterial(tokens[1]);
-                cout << " " << endl;
+                std::cout << " " << endl;
             } else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
                 loadGeom(tokens[1]);
-                cout << " " << endl;
+                std::cout << " " << endl;
             } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
                 loadCamera();
-                cout << " " << endl;
+                std::cout << " " << endl;
             }
         }
     }
@@ -39,10 +39,10 @@ Scene::Scene(string filename) {
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
-        cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
+        std::cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
         return -1;
     } else {
-        cout << "Loading Geom " << id << "..." << endl;
+        std::cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
 
@@ -50,15 +50,15 @@ int Scene::loadGeom(string objectid) {
         utilityCore::safeGetline(fp_in, line);
         if (!line.empty() && fp_in.good()) {
             if (strcmp(line.c_str(), "sphere") == 0) {
-                cout << "Creating new sphere..." << endl;
+                std::cout << "Creating new sphere..." << endl;
                 newGeom.type = SPHERE;
             } else if (strcmp(line.c_str(), "cube") == 0) {
-                cout << "Creating new cube..." << endl;
+                std::cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
             // Jack12
             else if (strcmp(line.c_str(), "gltf_mesh") == 0) {
-                cout << "Creating new gltf mesh..." << endl;
+                std::cout << "Creating new gltf mesh..." << endl;
                 newGeom.type = GLTF_MESH;
             }
 
@@ -69,7 +69,7 @@ int Scene::loadGeom(string objectid) {
         if (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             newGeom.materialid = atoi(tokens[1].c_str());
-            cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+            std::cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
         }
 
         //load transformations
@@ -122,7 +122,11 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
     // ref https://github.com/syoyo/tinygltf/blob/master/examples/raytrace/main.cc, 
     // ref https://github.com/taylornelms15/Project3-CUDA-Path-Tracer/blob/master/src/scene.cpp
     bool flag = false;
-    flag = example::LoadGLTF(file_path, 1.0f, &gltf_meshes, &gltf_materials,&gltf_textures);
+    flag = example::LoadGLTF(file_path, 
+        1.0f, 
+        &gltf_meshes, 
+        &gltf_materials,
+        &gltf_textures);
 
     if (!flag) {
         std::cout << "Failed to load glTF file "
@@ -137,7 +141,7 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             std::vector<Triangle> cur_triangles;
             glm::vec3 maxVal_vec(-INFINITY, -INFINITY, -INFINITY);
             glm::vec3 minVal_vec(INFINITY, INFINITY, INFINITY);
-
+            std::cout << cur_mesh->faces.size() << " faces." << std::endl;
             for (int i = 0; i < cur_mesh->faces.size(); i+=3) {
                 
                 Triangle cur_triangle;
@@ -209,7 +213,7 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
 
             // create bbox
             Geom cur_bbox;
-            //cur_bbox = parent_geom;
+            cur_bbox = parent_geom;
             cur_bbox.type = BBOX;
             cur_bbox.scale = maxVal_vec - minVal_vec;
             cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
@@ -233,7 +237,7 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
 }
 
 int Scene::loadCamera() {
-    cout << "Loading Camera ..." << endl;
+    std::cout << "Loading Camera ..." << endl;
     RenderState &state = this->state;
     Camera &camera = state.camera;
     float fovy;
@@ -296,7 +300,7 @@ int Scene::loadCamera() {
     state.image.resize(arraylen);
     std::fill(state.image.begin(), state.image.end(), glm::vec3());
 
-    cout << "Loaded camera!" << endl;
+    std::cout << "Loaded camera!" << std::endl;
     return 1;
 }
 

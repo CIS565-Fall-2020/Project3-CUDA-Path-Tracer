@@ -5,6 +5,7 @@
 
 #include "sceneStructs.h"
 #include "utilities.h"
+#include "cfg.h"
 
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
@@ -187,7 +188,7 @@ __host__ __device__ float meshIntersectionTest(
     /// check bbox then triangles
     /// 
     float t = -1.0f;
-#if bbox
+#if usebbox
     // got no idea what this would do, but anyway...
     bool bbox_outside = true;
     t = boxIntersectionTest(bbox, r, intersectionPoint, normal, bbox_outside);
