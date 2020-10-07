@@ -79,7 +79,7 @@ EMITTANCE   0
 MATERIAL 7
 TYPE	    GLOSSY
 RGB         .85 .85 .35
-SPECEX      0.8
+SPECEX      1.5
 SPECRGB     .85 .85 .35
 REFL        1
 REFR        0

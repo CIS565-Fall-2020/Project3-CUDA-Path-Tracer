@@ -106,6 +106,7 @@ struct OctNode {
     glm::vec3 maxCorner;
     glm::vec3 minCorner;
     std::vector<Geom> geoms;
+    int numGeoms;
 
     // children ids
     int upFarLeft;
@@ -116,12 +117,6 @@ struct OctNode {
     int downFarRight;
     int downNearLeft;
     int downNearRight;
-};
-
-struct Octree {
-    int rootId; // root id
-    glm::vec3 maxCorner;
-    glm::vec3 minCorner;
 };
 
 struct keep_path

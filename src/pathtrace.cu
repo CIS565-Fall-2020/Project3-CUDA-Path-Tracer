@@ -17,6 +17,7 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
+#define MAX_QUEUE_DEPTH 512
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -85,9 +86,9 @@ static ShadeableIntersection * dev_intersections = NULL;
 static ShadeableIntersection* dev_first_bounce = NULL;
 static PathSegment* dev_first_bounce_paths = NULL;
 
-static Octree octree;
 static OctNode* dev_octnodes = NULL;
 static OctNode* hst_octnodes = NULL;
+static Geom* dev_octnode_geoms = NULL;
 static int octNodeId = 1; // id counter for octNode
 static bool useOctree = false;
 
@@ -285,7 +286,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<Geo
 
 void setupOctree() {
     
-    if (hst_scene->geoms.size() > 0 && useOctree) {
+    if (hst_scene->geoms.size() > 0) {
         int depth = 3;
         int maxGeom = 3;
         int maxNumNodes = 0;
@@ -308,10 +309,10 @@ void setupOctree() {
         root.minCorner = minPos;
         setupOctreeRecursive(depth - 1, maxGeom, root, rootGeoms);
         hst_octnodes[0] = root;
-        // For testing - print the hst_octnodes
-        /*for (int i = 0; i < octNodeId; ++i) {
-            std::cout << hst_octnodes[i].id << std::endl;
-        }*/
+    }
+    else {
+        // Do not use octree
+        useOctree = false;
     }
 }
 
@@ -346,17 +347,24 @@ void pathtraceInit(Scene *scene, bool octree) {
 
     // Setup the Octree
     useOctree = octree;
-    setupOctree();
-    cudaMalloc(&dev_octnodes, octNodeId * sizeof(OctNode));
-    cudaMemcpy(dev_octnodes, hst_octnodes, octNodeId * sizeof(OctNode), cudaMemcpyHostToDevice);
+    if (octree) {
+        setupOctree();
+        cudaMalloc(&dev_octnodes, octNodeId * sizeof(OctNode));
+        cudaMemcpy(dev_octnodes, hst_octnodes, octNodeId * sizeof(OctNode), cudaMemcpyHostToDevice);
+        cudaMalloc(&dev_octnode_geoms, octNodeId * scene->geoms.size() * sizeof(Geom));
+        cudaMemset(dev_octnode_geoms, 0, octNodeId * scene->geoms.size() * sizeof(Geom));
+        int index = 0;
+        for (int i = 0; i < octNodeId; ++i) {
+            cudaMemcpy(dev_octnode_geoms + index, hst_octnodes[i].geoms.data(), hst_octnodes[i].geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
+            index += scene->geoms.size();
+        }
+    }
 
     checkCUDAError("pathtraceInit");
 }
 
 void pathtraceFree() {
     octNodeId = 1; // reset octnode id counter
-    free(hst_octnodes);
-
     cudaFree(dev_image);  // no-op if dev_image is null
   	cudaFree(dev_paths);
     cudaFree(dev_current_paths);
@@ -367,6 +375,7 @@ void pathtraceFree() {
     cudaFree(dev_first_bounce);
     cudaFree(dev_first_bounce_paths);
     cudaFree(dev_octnodes);
+    cudaFree(dev_octnode_geoms);
     checkCUDAError("pathtraceFree");
 }
 
@@ -417,10 +426,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.remainingBounces = traceDepth;
 	}
 }
-// TODO:
-// computeIntersections handles generating ray intersections ONLY.
-// Generating new rays is handled in your shader(s).
-// Feel free to modify the code below.
+
 __global__ void computeIntersections(
 	int depth
 	, int num_paths
@@ -488,6 +494,205 @@ __global__ void computeIntersections(
 			intersections[path_index].surfaceNormal = normal;
 		}
 	}
+}
+
+__host__ __device__ bool octNodeBoundsTest(
+    OctNode* node,
+    Ray& ray,
+    glm::vec3& invDir
+)
+{
+    float t0 = 0;
+    float t1 = FLT_MAX;
+    for (int i = 0; i < 3; ++i) {
+        float near = (node->minCorner[i] - ray.origin[i]) * invDir[i];
+        float far = (node->maxCorner[i] - ray.origin[i]) * invDir[i];
+        if (near > far) {
+            int tempFar = far;
+            far = near;
+            near = tempFar;
+        }
+        t0 = near > t0 ? near : t0;
+        t1 = far < t1 ? far : t1;
+        if (t0 > t1) return false;
+    }
+    return true;
+}
+
+__host__ __device__ float octNodeIntersectionTest(
+    Geom geom, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside
+)
+{
+    float t;
+    if (geom.type == CUBE)
+    {
+        t = boxIntersectionTest(geom, r, intersectionPoint, normal, outside);
+    }
+    else if (geom.type == SPHERE)
+    {
+        t = sphereIntersectionTest(geom, r, intersectionPoint, normal, outside);
+    }
+    else if (geom.type == TRIANGLE)
+    {
+        t = triangleIntersectionTest(geom, r, intersectionPoint, normal, outside);
+    }
+    return t;
+}
+
+__global__ void computeOctreeIntersections(
+    int depth
+    , int num_paths
+    , PathSegment* pathSegments
+    , ShadeableIntersection* intersections
+    , OctNode* octreeNodes
+    , Geom* octreeGeoms
+    , int num_geoms
+    )
+{
+    int path_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (path_index < num_paths)
+    {
+        PathSegment pathSegment = pathSegments[path_index];
+
+        float t;
+        glm::vec3 intersect_point;
+        glm::vec3 normal;
+        float t_min = FLT_MAX;
+        int hit_geom_index = -1;
+        int hit_geom_material = -1;
+        bool outside = true;
+
+        glm::vec3 tmp_intersect;
+        glm::vec3 tmp_normal;
+
+        // Find set of geometry to test against from octree
+        int invDir_x = pathSegment.ray.direction.x != 0 ? 1.f / pathSegment.ray.direction.x : 0.f;
+        int invDir_y = pathSegment.ray.direction.y != 0 ? 1.f / pathSegment.ray.direction.y : 0.f;
+        int invDir_z = pathSegment.ray.direction.z != 0 ? 1.f / pathSegment.ray.direction.z : 0.f;
+        glm::vec3 invDir(invDir_x, invDir_y, invDir_z);
+
+        bool at_leaf_node = false;
+        int cur_node = 0;
+        int node_queue[MAX_QUEUE_DEPTH]; // node queue
+        node_queue[cur_node] = 0;
+        int nodes_to_visit = 1;
+        int queue_ptr = 1;
+
+        while (!at_leaf_node) {
+            if (nodes_to_visit == 0) {
+                // no nodes left - no intersection found
+                t = -1;
+                break;
+            }
+            OctNode* node = &octreeNodes[node_queue[cur_node]];
+            nodes_to_visit--; // decrease nodes_to_visit
+            bool in_bounds = octNodeBoundsTest(node, pathSegment.ray, invDir);
+            if (in_bounds) {
+                // Ray is in bounds of this node - add children to visit next
+                // If the current node is a leaf, get its geometry and run intersection test against them
+                if (node->numGeoms > 0) {
+                    // Leaf node - run intersection test
+                    at_leaf_node = true;
+                    int geom_start_idx = node->id * num_geoms;
+                    for (int i = 0; i < node->numGeoms; ++i) {
+                        Geom& geom = octreeGeoms[geom_start_idx + i];
+                        int type = geom.type;
+                        type += 0;
+                        if (geom.type == CUBE)
+                        {
+                            t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                        }
+                        else if (geom.type == SPHERE)
+                        {
+                            t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                        }
+                        else if (geom.type == TRIANGLE)
+                        {
+                            t = triangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                        }
+
+                        if (t > 0.0f && t_min > t)
+                        {
+                            t_min = t;
+                            hit_geom_index = i;
+                            hit_geom_material = geom.materialid;
+                            intersect_point = tmp_intersect;
+                            normal = tmp_normal;
+                        }
+                    }
+
+                    if (hit_geom_index == -1)
+                    {
+                        intersections[path_index].t = -1.0f;
+                    }
+                    else
+                    {
+                        //The ray hits something
+                        intersections[path_index].t = t_min;
+                        intersections[path_index].materialId = hit_geom_material;
+                        intersections[path_index].surfaceNormal = normal;
+                    }
+                }
+                else {
+                    // Node is not a leaf - add its existing children to the queue
+                    if (node->upFarLeft > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->upFarLeft;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->upFarRight > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->upFarRight;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->upNearLeft > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->upNearLeft;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->upNearRight > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->upNearRight;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->downFarLeft > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->downFarLeft;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->downFarRight > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->downFarRight;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->downNearLeft > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->downNearLeft;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                    if (node->downNearRight > 0) {
+                        nodes_to_visit++;
+                        node_queue[queue_ptr] = node->downNearRight;
+                        queue_ptr++;
+                        if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
+                    }
+                }
+            }
+            // move to next index
+            cur_node++;
+            if (cur_node == MAX_QUEUE_DEPTH) cur_node = 0;
+        }
+        //delete[] node_queue;
+    }
 }
 
 // LOOK: "fake" shader demonstrating what you might do with the info in
@@ -664,16 +869,31 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
         }
     }
     else {
-        computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
-            depth
-            , num_paths
-            , dev_paths
-            , dev_geoms
-            , hst_scene->geoms.size()
-            , dev_intersections
-            );
-        checkCUDAError("trace one bounce");
-        cudaDeviceSynchronize();
+        if (useOctree) {
+            computeOctreeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+                depth
+                , num_paths
+                , dev_paths
+                , dev_intersections
+                , dev_octnodes
+                , dev_octnode_geoms
+                , hst_scene->geoms.size()
+                );
+            checkCUDAError("trace one bounce from octree");
+            cudaDeviceSynchronize();
+        }
+        else {
+            computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+                depth
+                , num_paths
+                , dev_paths
+                , dev_geoms
+                , hst_scene->geoms.size()
+                , dev_intersections
+                );
+            checkCUDAError("trace one bounce");
+            cudaDeviceSynchronize();
+        }
         if (iter == 1 && depth == 0 && cacheFirstBounce) {
             // cache first bounce
             cudaMemcpy(dev_first_bounce, dev_intersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
