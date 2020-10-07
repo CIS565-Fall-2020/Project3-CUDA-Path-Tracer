@@ -2,6 +2,8 @@
 
 #include "intersections.h"
 
+#define STRATIFIEDSAMPLING 1
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -9,36 +11,58 @@
  */
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
-        glm::vec3 normal, thrust::default_random_engine &rng) {
-    thrust::uniform_real_distribution<float> u01(0, 1);
+  glm::vec3 normal, thrust::default_random_engine& rng) {
+  thrust::uniform_real_distribution<float> u01(0, 1);
 
-    float up = sqrt(u01(rng)); // cos(theta)
-    float over = sqrt(1 - up * up); // sin(theta)
-    float around = u01(rng) * TWO_PI;
+  float jitterX = u01(rng);
+  float jitterY = u01(rng);
 
-    // Find a direction that is not the normal based off of whether or not the
-    // normal's components are all equal to sqrt(1/3) or whether or not at
-    // least one component is less than sqrt(1/3). Learned this trick from
-    // Peter Kutz.
+#ifdef STRATIFIEDSAMPLING
+  float numGridStratifiedSampling = 100.f;
+  float gridSize = 1.f / (float)numGridStratifiedSampling;
+  thrust::uniform_real_distribution<float>u0GridSize(0, gridSize);
+  thrust::uniform_int_distribution<int> ui0GridCount(0, numGridStratifiedSampling);
+ 
+  // Choose grid
+  float gridX = ui0GridCount(rng) / numGridStratifiedSampling;
+  float gridY = ui0GridCount(rng) / numGridStratifiedSampling;
 
-    glm::vec3 directionNotNormal;
-    if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
-        directionNotNormal = glm::vec3(1, 0, 0);
-    } else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
-        directionNotNormal = glm::vec3(0, 1, 0);
-    } else {
-        directionNotNormal = glm::vec3(0, 0, 1);
-    }
+  // Choose jitter within grid
+  jitterX = u0GridSize(rng) + gridX;
+  jitterY = u0GridSize(rng) + gridY;
 
-    // Use not-normal direction to generate two perpendicular directions
-    glm::vec3 perpendicularDirection1 =
-        glm::normalize(glm::cross(normal, directionNotNormal));
-    glm::vec3 perpendicularDirection2 =
-        glm::normalize(glm::cross(normal, perpendicularDirection1));
+#endif
 
-    return up * normal
-        + cos(around) * over * perpendicularDirection1
-        + sin(around) * over * perpendicularDirection2;
+
+  float up = sqrt(jitterX); // cos(theta)
+  float over = sqrt(1 - up * up); // sin(theta)
+  float around = jitterY * TWO_PI;
+
+  // Find a direction that is not the normal based off of whether or not the
+  // normal's components are all equal to sqrt(1/3) or whether or not at
+  // least one component is less than sqrt(1/3). Learned this trick from
+  // Peter Kutz.
+
+  glm::vec3 directionNotNormal;
+  if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
+    directionNotNormal = glm::vec3(1, 0, 0);
+  }
+  else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+    directionNotNormal = glm::vec3(0, 1, 0);
+  }
+  else {
+    directionNotNormal = glm::vec3(0, 0, 1);
+  }
+
+  // Use not-normal direction to generate two perpendicular directions
+  glm::vec3 perpendicularDirection1 =
+    glm::normalize(glm::cross(normal, directionNotNormal));
+  glm::vec3 perpendicularDirection2 =
+    glm::normalize(glm::cross(normal, perpendicularDirection1));
+
+  return up * normal
+    + cos(around) * over * perpendicularDirection1
+    + sin(around) * over * perpendicularDirection2;
 }
 
 /**
@@ -47,11 +71,11 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  * A perfect specular surface scatters in the reflected ray direction.
  * In order to apply multiple effects to one surface, probabilistically choose
  * between them.
- * 
+ *
  * The visual effect you want is to straight-up add the diffuse and specular
  * components. You can do this in a few ways. This logic also applies to
  * combining other types of materias (such as refractive).
- * 
+ *
  * - Always take an even (50/50) split between a each effect (a diffuse bounce
  *   and a specular bounce), but divide the resulting color of either branch
  *   by its probability (0.5), to counteract the chance (0.5) of the branch
@@ -68,16 +92,16 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
-        glm::vec3 intersect,
-        glm::vec3 normal,
-        const Material &m,
-        thrust::default_random_engine &rng) {
-    // TODO: implement this.
-    // A basic implementation of pure-diffuse shading will just call the
-    // calculateRandomDirectionInHemisphere defined above.
+  PathSegment& pathSegment,
+  glm::vec3 intersect,
+  glm::vec3 normal,
+  const Material& m,
+  thrust::default_random_engine& rng) {
+  // TODO: implement this.
+  // A basic implementation of pure-diffuse shading will just call the
+  // calculateRandomDirectionInHemisphere defined above.
   pathSegment.color *= m.color;
-  pathSegment.ray.origin = intersect + 0.0001f * normal;
+  pathSegment.ray.origin = intersect + 0.001f * normal;
   if (m.hasRefractive == 0.f && m.hasReflective == 0.f) {
     pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
   }

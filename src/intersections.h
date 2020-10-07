@@ -144,7 +144,16 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
 	return glm::length(r.origin - intersectionPoint);
 }
-
+/// <summary>
+/// 
+/// </summary>
+/// <param name="tris"></param>
+/// <param name="mesh"></param>
+/// <param name="r"></param>
+/// <param name="intersectionPoint"></param>
+/// <param name="normal"></param>
+/// <param name="outside"></param>
+/// <returns></returns>
 __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, Ray r,
 	glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
 
@@ -152,24 +161,26 @@ __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, 
 	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
 	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
-	float t_min = INFINITY;
+	glm::vec3 bary_min = glm::vec3(0.f, 0.f, INFINITY);
+	Triangle tri_min;
 	for (int i = mesh.triangleIdxStart; i <= mesh.triangleIdxEnd; i++) {
 		Triangle tri = tris[i];
 		glm::vec3 bary;
 		if (glm::intersectRayTriangle(ro, rd, tri.v[0], tri.v[1], tri.v[2], bary)) {
-			float t = bary.z;
-			if (t < t_min) {
-				t_min = t;
-				normal = glm::normalize(glm::cross(tri.v[1] - tri.v[0], tri.v[2] - tri.v[0]));
+			if (bary.z < bary_min.z) {
+				bary_min = bary;
+				tri_min = tri;
 			}
 		}
 	}
-	if (t_min == INFINITY) {
+	if (bary_min.z == INFINITY) {
 		return -1;
 	}
 
 	outside = glm::dot(normal, rd) <= 0;
-	intersectionPoint = ro + rd * t_min;
+
+	intersectionPoint = bary_min.z * rd + ro;// tri_min.v[0] * bary_min.x + tri_min.v[1] * bary_min.y + tri_min.v[2] * (1.f - bary_min.x - bary_min.y);
+	normal = tri_min.n[0] * bary_min.x + tri_min.n[1] * bary_min.y + tri_min.n[2] * (1.f - bary_min.x - bary_min.y);
 
 	intersectionPoint = multiplyMV(mesh.transform, glm::vec4(intersectionPoint, 1.f));
 	normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(normal, 0.0f)));

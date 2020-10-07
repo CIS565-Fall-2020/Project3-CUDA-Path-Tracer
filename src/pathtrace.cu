@@ -20,7 +20,9 @@
 
 #define ANTIALIASING 1
 #define TIMEPATHTRACE 0 // Measure performance
-#define DEPTHOFFIELD 0
+#define DEPTHOFFIELD 1
+#define MOTIONBLUR 1
+
 #define SORTPATHSBYMATERIAL 1 // Improve performance
 #define CACHEFIRSTINTERSECTIONS 0 // Improve performance
 
@@ -88,6 +90,7 @@ static ShadeableIntersection* dev_intersections = NULL;
 static ShadeableIntersection* dev_firstIntersections = NULL; // Cache first bounce of first iter to be re-use in other iters
 static Triangle* dev_tris = NULL; // Store triangle information for meshes
 static std::chrono::steady_clock::time_point timePathTrace; // Measure performance
+static float motionBlurFactor = 1.f; //The higher this is, the blurrier the "motion" is
 
 // Depth of field
 static float lensRadius = 0.5f;
@@ -384,7 +387,7 @@ __global__ void updateRaysForDepthOfField(
 
   // Sample point on lens
   thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
-  thrust::uniform_real_distribution<float> urd(-1, 1);
+  thrust::uniform_real_distribution<float> urd(-0.5, 0.5);
   float sampleX = urd(rng);
   float sampleY = urd(rng);
   glm::vec2 sample = glm::vec2(sampleX, sampleY);
@@ -393,6 +396,9 @@ __global__ void updateRaysForDepthOfField(
 
   //Compute point on plane of focus
   Ray rayCopy = pathSegments[index].ray;
+  if (rayCopy.direction.z == 0) {
+    rayCopy.direction.z += 0.0001f;
+  }
   float ft = glm::abs(focalDist / rayCopy.direction.z);
   glm::vec3 pFocus = rayCopy.origin + rayCopy.direction * ft;
 
