@@ -13,7 +13,6 @@ public:
 	glm::vec3 center;
 	glm::vec3 bp0; // top left bounding point
 	glm::vec3 bp1;
-	int index;
 	vector<int> childrenIndices;
 	vector<int> geomIndices;
 

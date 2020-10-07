@@ -71,6 +71,7 @@ int main(int argc, char** argv) {
 		const char *gltfFile = argv[i];
 		scene->loadGltf(gltfFile);
 	}
+	scene->buildOctree();
 
     // Initialize CUDA and GL components
     init();

@@ -41,6 +41,9 @@ Scene::Scene(string filename) {
             }
         }
     }
+	// set up bounding box
+	pMin = glm::vec3(FLT_MAX);
+	pMax = glm::vec3(FLT_MIN);
 }
 
 void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 pTran) {
@@ -220,6 +223,9 @@ void Scene::buildOctreeNode(OctreeNode &node, int depth) {
 	}
 	int startNodeIdx = octree.size();
 	
+	for (int i = 0; i < 8; i++) {
+		node.childrenIndices[i] = startNodeIdx + i;
+	}
 	glm::vec3 c = node.center;
 	glm::vec3 v0 = node.bp0;
 	float dx = c[0] - v0[0];
@@ -246,7 +252,6 @@ void Scene::buildOctreeNode(OctreeNode &node, int depth) {
 
 	// iterate
 	for (int i = 0; i < 8; i++) {
-		node.childrenIndices.push_back(startNodeIdx + i);
 		buildOctreeNode(octree[startNodeIdx + i], depth + 1);
 	}
 }

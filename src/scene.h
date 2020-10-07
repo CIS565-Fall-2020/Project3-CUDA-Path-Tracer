@@ -37,6 +37,7 @@ public:
     RenderState state;
 
 	std::vector<OctreeNode> octree;
+	std::vector<int> geom_indices;
 	glm::vec3 pMin;
 	glm::vec3 pMax;
 };

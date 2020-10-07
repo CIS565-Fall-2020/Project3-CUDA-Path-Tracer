@@ -170,7 +170,7 @@ float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 	if (t0 < 0.f) {
 		return -1;
 	}
-	if (node.childrenIndices.size() > 0) {
+	if (node.childrenIndices[0] > 0) {
 		glm::vec3 tmp_intersect2;
 		glm::vec3 tmp_normal2;
 		bool tmp_outside2 = true;
@@ -220,6 +220,7 @@ float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 		normal = tmp_normal;
 		outside = tmp_outside;
 		index = tmp_idx;
+		return t_min;
 	}
 	else {
 		return -1;
