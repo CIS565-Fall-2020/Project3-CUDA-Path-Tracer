@@ -62,7 +62,7 @@ EMITTANCE   0
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS	500
+ITERATIONS	5000
 DEPTH       16
 FILE        cornell
 EYE         0.0 5 10.5
@@ -123,7 +123,7 @@ SCALE       .01 10 10
 // gltf_test
 OBJECT 6
 gltf_mesh
-material 4
+material 5
 PATH		../gltf_mesh/kirby/scene.gltf
 //PATH		../gltf_mesh/Duck.glb
 //PATH		../gltf_mesh/sunzaine/Suzanne.gltf
@@ -132,5 +132,5 @@ PATH		../gltf_mesh/kirby/scene.gltf
 TRANS       -1 4 -1
 ROTAT     90 180 90
 //ROTAT		0 0 0
-SCALE       1 1 1 
+SCALE       1.5 1.5 1.5 
 //SCALE       0.5 0.5 0.5 
