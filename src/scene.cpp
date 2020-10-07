@@ -7,6 +7,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 #include <map>
 
 #define TINYGLTF_IMPLEMENTATION
@@ -75,6 +76,8 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 		gTran = pTran * local;
 	}
 
+	glm::mat4 gTranNorm = glm::inverseTranspose(gTran);
+
 	if (node.mesh >= 0) {
 		const tinygltf::Mesh &mesh = model.meshes[node.mesh];
 
@@ -123,7 +126,7 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 					for (int i = 0; i < count; i++) {
 						const float* n = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
 						glm::vec4 norm = glm::vec4(n[0], n[1], n[2], 1.0f);
-						norm = gTran * norm;
+						norm = gTranNorm * norm;
 						vertex_normals.push_back(glm::vec3(norm));
 					}
 				}
