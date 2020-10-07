@@ -73,6 +73,7 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    src/octree.h
     external/include/stb_image.h
     external/include/stb_image_write.h
     external/include/json.hpp
@@ -88,6 +89,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/octree.cpp
     )
 
 list(SORT headers)
