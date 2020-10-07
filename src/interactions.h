@@ -171,7 +171,6 @@ __host__ __device__ void calculateRefract(PathSegment& pathSegment,
         r.direction = refractedDir;
     }
 }
-
 __host__ __device__ void calculateGlass(PathSegment& pathSegment,
     glm::vec3 intersect,
     glm::vec3 normal,

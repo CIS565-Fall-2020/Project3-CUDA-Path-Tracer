@@ -152,7 +152,7 @@ __global__ void generateStratifiedSamples(glm::vec2* samples, int sqrtSamples, i
 
 // Lens effect taken from http://www.pbr-book.org/3ed-2018/Camera_Models/Projective_Camera_Models.html
 
-#define ANTI_ALIASING 1
+#define ANTI_ALIASING 0
 __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;

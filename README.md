@@ -13,7 +13,7 @@ In addition to building a GPU-based pathtracer, this project involved implementi
 
 - Reflective and refractive materials
 - Depth of field based on a thin lens camera
-- Sthochastic Anti-Aliasing
+- Stochastic Anti-Aliasing
 - OBJ Loading
 - Procedural Shapes
 - Procedural Textures
@@ -24,23 +24,31 @@ This pathtracer draws upon the [Physically-Based Rendering textbook](http://www.
 
 ### Materials
 
-![]("img/presentable/materials_guide.png")
+![](img/presentable/materials_guide.png)
 
-In this pathtracer, three basic material types exist: **diffuse**, **reflective**, and **refractive**. Their interactions with rays of light are handled by bidirectional scattering distribution functions, or BSDFs.
+In this pathtracer, three basic material types exist: **diffuse**, **reflective**, and **refractive**. Their interactions with rays of light are handled by bidirectional scattering distribution functions, or BSDFs, based on the directions of the input and output rays (thus *bi-directional*). The BSDF for each material type handles their light rays differently:
 
-In the spirit of the PBR textbook, materials are handled using BSDF "flags" that are parsed from the scene file. When an object has more than one flag tagged, it is. For a compound reflective and refractive, I simply handled with a Fresnel glass effect using Schlick's approximation.
+- *Diffuse*: samples a hemisphere of space around the intersection normal that is incident to the surface. Chooses a random direction in said hemisphere for the new direction of the ray.
+- *Reflective*: reflects the light ray about the surface normal. 
+- *Refractive*: refracts the ray through the material according to Snell's law, pictured above.
 
-Purely refractive on the left, and glass in the middle and right.
+In the spirit of the PBR textbook, materials are handled using BSDF "flags" that are parsed from the scene file. When an object has more than one material flag, all rays that hit it will choose randomly between the flagged materials, sample the randomly chosen material, then divide its contribution by the probability of choosing it (to upscale its contribution). This allows for mixed materials, such as a half specular, half diffuse material.
 
-![]("img/presentable/glassmaterials.png")
+Here, a compound reflective and refractive material is implemented as a [Fresnel](https://www.dorian-iten.com/fresnel/) effect. In contrast to the purely refractive material, the Fresnel glass accounts for the material's reflectivity. For comparison, these renders below feature a purely refractive sphere on the left, and glass spheres in the middle and right.
+
+![](img/presentable/glassmaterials.png)
+
+Instead of directly calculating the Fresnel components, Schlick's approximation based on [this raytracer's implementation](https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/refraction).
 
 ### Depth of Field
 
-![]("img/presentable/dof.png")
+The basic implementation of a pathtracer interprets the world through a pinhole camera (i.e. a camera without any sort of "lens"). This results in an image where everything is in equal focus. To simulate a thin lens camera that can focus on objects on a plane some focal distance away, the intial rays are jittered around on a circular space, and their directions are then refocused to a point on the focal distance plane.
+
+![](img/presentable/dof.png)
 
 ### Stochastic Anti-Aliasing
 
-
+Shoot through each specific pixel - color calculated strictly for that pixel and that ray's direction, doesn't account for surrounding light rays therefore no smoothing. We can jitter the initial ray's direction 
 
 ### OBJ Loading
 
