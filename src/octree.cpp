@@ -27,18 +27,35 @@ bool OctreeNode::intersectTriangle(const Geom &geom) const {
 	float dy = center[1] - bp0[1];
 	float dz = center[2] - bp0[2];
 
+	vector<glm::vec3> test_axis;
+	// Box normals and triangle edges (9 cases)
 	for (const auto &v : { e0, e1, e2 }) {
 		for (const auto &u : { n0, n1, n2 }) {
 			glm::vec3 axis = glm::cross(u, v);
-			float p0 = glm::dot(vt0, axis);
-			float p1 = glm::dot(vt1, axis);
-			float p2 = glm::dot(vt2, axis);
-			float r = dx * abs(glm::dot(n0, axis)) + dy * abs(glm::dot(n1, axis)) + dz * abs(glm::dot(n2, axis));
-			if (max(max(p0, p1), p2) > r || min(min(p0, p1), p2) < -r) {
-				// can be separated
-				return false;
-			}
+			test_axis.push_back(axis);
 		}
 	}
+
+	// Box normals as axis (3 cases)
+	test_axis.push_back(n0);
+	test_axis.push_back(n1);
+	test_axis.push_back(n2);
+
+	// triangle normal (1 case)
+	test_axis.push_back(geom.normal);
+
+	// iterate through all axis
+	for (const auto &axis : test_axis) {
+		float p0 = glm::dot(vt0, axis);
+		float p1 = glm::dot(vt1, axis);
+		float p2 = glm::dot(vt2, axis);
+		float r = dx * abs(glm::dot(n0, axis)) + dy * abs(glm::dot(n1, axis)) + dz * abs(glm::dot(n2, axis));
+		if (max(max(p0, p1), p2) < -r || min(min(p0, p1), p2) > r) {
+			// can be separated
+			return false;
+		}
+	}
+
+	return true;
 }
 
