@@ -94,9 +94,8 @@ static float* dev_gltf_vertices = nullptr;
 static unsigned int* dev_gltf_faces = nullptr;
 static unsigned int* dev_gltf_verts_offset = nullptr;
 static unsigned int* dev_gltf_faces_offset = nullptr;
-
 static float* dev_gltf_bbox_verts = nullptr;
-static int total_gltf_meshes = 0;
+
 
 cudaEvent_t iter_event_start = nullptr;
 cudaEvent_t iter_event_end = nullptr;
@@ -178,15 +177,29 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		int index = x + (y * cam.resolution.x);
 		PathSegment& segment = pathSegments[index];
 
-		segment.ray.origin = cam.position;
 		segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
-
-		// TODO: implement antialiasing by jittering the ray
+		segment.ray.origin = cam.position;
 		segment.ray.direction = glm::normalize(cam.view
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 		);
+		// TODO: implement antialiasing by jittering the ray
 
+		if (cam.lensRadius > 0)
+		{
+			// Set up the RNG
+			thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+			thrust::uniform_real_distribution<float> u01(0, 1);
+
+			// Sample point on lens
+			glm::vec2 pLens = cam.lensRadius * ConcentricSampleDisk(glm::vec2(u01(rng), u01(rng)));
+			// Compute point on plane of focus
+			glm::vec3 pFocus = segment.ray.origin + cam.focalLength / segment.ray.direction.z * segment.ray.direction;
+			// Update ray for effect of lens
+			segment.ray.origin += glm::vec3(pLens.x, pLens.y, 0);
+			segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+		}
+		
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}
@@ -202,8 +215,7 @@ __global__ void computeIntersections(int depth,
 									 Geom* geoms, 
 									 int geoms_size, 
 									 ShadeableIntersection* intersections,
-								     int total_meshes,
-									 unsigned int* faces,
+								     unsigned int* faces,
 									 float* vertices,
 									 unsigned int* num_faces,
 									 unsigned int* num_vertices,
@@ -258,7 +270,7 @@ __global__ void computeIntersections(int depth,
 				if (bbox_hit)
 				{
 					t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside,
-											 total_meshes, faces, vertices, num_faces, num_vertices, bbox_verts);
+											 faces, vertices, num_faces, num_vertices, bbox_verts);
 				}
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
@@ -444,7 +456,6 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 				dev_geoms,
 				hst_scene->geoms.size(),
 				dev_intersections,
-				total_gltf_meshes,
 				dev_gltf_faces,
 				dev_gltf_vertices，
 				dev_gltf_faces_offset,
@@ -467,7 +478,6 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 			dev_geoms,
 			hst_scene->geoms.size(),
 			dev_intersections,
-			total_gltf_meshes,
 			dev_gltf_faces,
 			dev_gltf_vertices，
 			dev_gltf_faces_offset,

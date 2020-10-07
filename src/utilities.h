@@ -16,6 +16,8 @@
 #define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476f
 #define EPSILON           0.00001f
 #define INV_PI            0.31830988618379067154f
+#define PI_OVER_2         1.57079632679489661923f
+#define PI_OVER_4         0.78539816339744830961f
 
 namespace utilityCore {
     extern float clamp(float f, float min, float max);
@@ -25,5 +27,5 @@ namespace utilityCore {
     extern std::vector<std::string> tokenizeString(std::string str);
     __host__ __device__ extern glm::mat4 buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale);
     extern std::string convertIntToString(int number);
-    extern std::istream& safeGetline(std::istream& is, std::string& t); // Thanks to http://stackoverflow.com/a/6089413
+    extern std::istream& safeGetline(std::istream& is, std::string& t); // Thanks to http://stackoverflow.com/a/6089413'
 }
