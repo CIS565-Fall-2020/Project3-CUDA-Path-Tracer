@@ -172,7 +172,8 @@ void diffuseReflection(
     //pathSegment.color *= m.color * costheta;
     pathSegment.color *= m.color;
     //pathSegment.color = glm::normalize(normal);
-    pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
+   // pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
+    pathSegment.ray.origin = intersect + normal * 0.01f;
 }
 
 __host__ __device__
