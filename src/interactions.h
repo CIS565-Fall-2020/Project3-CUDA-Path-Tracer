@@ -112,11 +112,77 @@ void scatterRay(
         float diffuse = glm::dot(normal, L);
         float ambient = 0.2;
         float lux = diffuse + ambient;
-        color = mat.color * lux / (1.f - mat.hasReflective);
-        color = mat.color * pathSegment.throughput;
+        color = pathSegment.throughput * mat.color * lux / (1.f - mat.hasReflective);
+        // color = mat.color * pathSegment.throughput;
+        color = mat.color;
 
+        // update throughput
         pathSegment.throughput *= color * glm::abs(glm::dot(pathSegment.ray.direction, normal)) / TWO_PI;
+        // update light bounce direction
+        pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    }
 
+    pathSegment.color = color;
+    pathSegment.remainingBounces--;
+    // pathSegment.remainingBounces = 0;
+}
+
+
+// Ray Tracer Code...
+// Also make sure to uncomment Option 1 in shadeFakeMaterial
+/*
+__host__ __device__
+void scatterRay(
+    const Camera& cam,
+    thrust::default_random_engine& rng,
+    PathSegment& pathSegment,
+    ShadeableIntersection& intersection,
+    Material& mat,
+    const int* lights,
+    int lightsNum,
+    const Geom* geoms,
+    Material* materials)
+{
+    // TODO: implement this.
+    // A basic implementation of pure-diffuse shading will just call the
+    // calculateRandomDirectionInHemisphere defined above.
+    glm::vec3 color;
+    glm::vec3 normal = intersection.surfaceNormal;
+    glm::vec3 wi = -pathSegment.ray.direction;
+    pathSegment.ray.origin = intersection.intersectPos;
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float randMat = u01(rng);
+
+    // computing which light to sample from
+    // and its relevant features
+    float rL = u01(rng) * lightsNum;
+    int randLight = (int)rL;
+    glm::vec3 L = geoms[lights[randLight]].translation - pathSegment.ray.origin;
+    L = glm::normalize(L);
+
+    // used 2nd suggestion for determining which material to sample
+    if (randMat <= mat.hasReflective) {
+        // specular calculation
+        glm::vec3 r = glm::reflect(pathSegment.ray.direction, normal);
+        glm::vec3 v = glm::normalize(intersection.intersectPos);
+        color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(r, v), mat.specular.exponent) / mat.hasReflective;
+        // glm::vec3 v = glm::normalize(cam.position - intersection.intersectPos);
+        // color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(r, v), mat.specular.exponent) / mat.hasReflective;
+        color = mat.specular.color;
+        pathSegment.ray.direction = r;
+    }
+    else {
+        // diffuse calculation
+        float diffuse = glm::dot(normal, L);
+        float ambient = 0.2;
+        float lux = diffuse + ambient;
+        color = pathSegment.throughput * mat.color * lux / (1.f - mat.hasReflective);
+        // color = mat.color * pathSegment.throughput;
+
+        // update throughput
+        pathSegment.throughput *= color * glm::abs(glm::dot(pathSegment.ray.direction, normal)) / TWO_PI;
+        // update light bounce direction
         pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
     }
 
@@ -124,3 +190,4 @@ void scatterRay(
     pathSegment.remainingBounces--;
     pathSegment.remainingBounces = 0;
 }
+*/

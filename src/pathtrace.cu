@@ -261,6 +261,9 @@ __global__ void shadeFakeMaterial(
 
 			// If the material indicates that the object was a light, "light" the ray
 			if (material.emittance > 0.0f) {
+				// Raytracer:
+				// pathSegments[idx].color *= (material.color * 1.5f);
+				// pathSegments[idx].color *= (material.color * material.emittance * pathSegments[idx].throughput);
 				pathSegments[idx].color *= (material.color * material.emittance);
 				pathSegments[idx].remainingBounces = 0;
 			}
