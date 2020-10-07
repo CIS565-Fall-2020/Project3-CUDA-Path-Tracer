@@ -195,8 +195,8 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r, glm::vec2& uv,
     float temp_s1, temp_s2, temp_s3;
     intersectionPoint = r.origin;
 
-    if (InteresectBoundingBox(mesh.bounding_box_down_corner, mesh.bounding_box_upper_corner, rt)) {
-    // if (true) {
+    // if (InteresectBoundingBox(mesh.bounding_box_down_corner, mesh.bounding_box_upper_corner, rt)) {
+    if (true) {
     // if(false){
         for (int idx_idx = 0; idx_idx < mesh.indices_num; idx_idx += 3) {
             int tri_idx1 = mesh.dev_mesh_indices[idx_idx];

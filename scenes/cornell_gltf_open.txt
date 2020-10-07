@@ -76,40 +76,8 @@ TRANS       0 0 0
 ROTAT       0 0 0
 SCALE       10 .01 10
 
-// Ceiling
-OBJECT 2
-cube
-material 1
-TRANS       0 10 0
-ROTAT       0 0 90
-SCALE       .01 10 10
-
-// Back wall
-OBJECT 3
-cube
-material 1
-TRANS       0 5 -5
-ROTAT       0 90 0
-SCALE       .01 10 10
-
-// Left wall
-OBJECT 4
-cube
-material 2
-TRANS       -5 5 0
-ROTAT       0 0 0
-SCALE       .01 10 10
-
-// Right wall
-OBJECT 5
-cube
-material 3
-TRANS       5 5 0
-ROTAT       0 0 0
-SCALE       .01 10 10
-
 // glTF duck
-OBJECT 6
+OBJECT 2
 mesh
 C:\\JiaruiYan\\MasterDegreeProjects\\CIS565\\Proj3\\Project3-CUDA-Path-Tracer\\read_models\\duck\\Duck.gltf
 material 1

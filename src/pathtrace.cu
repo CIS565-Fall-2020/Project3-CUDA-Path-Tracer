@@ -19,8 +19,8 @@
 #include "interactions.h"
 
 #define MATERIAL_SORT
-// #define CACHE_BOUNCE    // Determine whether cache the first bounce or do the stochastic sampling
-#define THIN_LENS_CAMERA
+#define CACHE_BOUNCE    // Determine whether cache the first bounce or do the stochastic sampling
+// #define THIN_LENS_CAMERA
 
 #define ERRORCHECK 1
 
@@ -908,7 +908,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 	while (!iterationComplete) {
-        // std::cout << "Num of path:" << num_paths << std::endl;
+        std::cout << "Depth:" << depth << std::endl;
+        std::cout << "Num of path:" << num_paths << std::endl << std::endl;
 	    // clean shading chunks
 	    cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
@@ -1012,7 +1013,7 @@ void directlight_pathtrace(uchar4* pbo, int frame, int iter) {
 
         // tracing
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-        computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+        computeIntersections <<<numblocksPathSegmentTracing, blockSize1d >> > (
             depth
             , num_paths
             , dev_paths

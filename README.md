@@ -24,6 +24,10 @@ CUDA Path Tracer
 
 * Direct lighting
 
+* Path continuation/termination using Stream Compaction
+
+* Material sort
+
 ## Result
 
 ![pic 1](./img/title_image.png)
@@ -76,10 +80,6 @@ As you can see from the rendering before, there are some relatively unclear imag
 
 ![pic 1](./img/integrators.png)
 
-## Blooper
-
-![pic 1](./img/blooper.png)
-
 ## Performance analysis
 
 ### Why material sort can affect rendering performance
@@ -94,6 +94,32 @@ The experiments are conducted on the same number of iterations which is 3000 ite
 ![pic 1](./img/Performance.PNG)
 
 As we can see from the graph above, with more depth, the performance is natually going to be bad. Besides, the experiments using first bounce cache always perform better than their counterparts that don't use it. 
+
+### Performance gain for bounding box of the mesh
+
+The experiments are confucted on the duck scenario with different iterations. The integrator here is naive integrator.
+
+![pic 1](./img/BoundingBoxPerformance.PNG)
+
+As we can see from the analysis above, with more iterations the performance gain of the bounding box is more appearant. This is caused by the fact that for each iteration the bounding box can contribute a little bit performance gain. Therefore, after several iterations, the gain would be appearant.
+
+### Effects of stream compaction within a single iteration
+
+Here, I am going to explore the effect of stream compaction within a single iteration. This method is benefical to the perforamnce, because it can significantly reduce the number of tested path within an iteration. Here is a plot to illustrate it. 
+
+![pic 1](./img/RemainLightNum.PNG)
+
+As we can see from the plot above, the number of remaining light that pass the stream compation early termination would be smaller and smaller. Finally, there will be no light that needs interestion or shading tests. So, we can conclude that with stream compaction can be really helpful to the scenarios that require several depth. 
+
+### Different effects of an open scene and a closed scene under stream compaction
+
+For different scene, the early termination may has different effect. For an open scene, a light is easier to bounce out of the scene than an closed scene. Therefore, we can expect that even though the number of light at first would be same, the number of remaining light in the open scene would be less than the counterpart number in the closed scene. Here is the graph illustrates this.
+
+![pic 1](./img/RemainLightNumDiffScene.PNG)
+
+## Blooper
+
+![pic 1](./img/blooper.png)
 
 ## Third party software
 
