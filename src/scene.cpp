@@ -162,8 +162,12 @@ int Scene::loadGeom(string objectid) {
                 }
             }
             else if (strcmp(line.c_str(), "sdf1") == 0) {
-                cout << "Creating new sdf model..." << endl;
+                cout << "Creating new sdf1 model..." << endl;
                 newGeom.type = SDF1;
+            }
+            else if (strcmp(line.c_str(), "sdf2") == 0) {
+                cout << "Creating new sdf2 model..." << endl;
+                newGeom.type = SDF2;
             }
         }
 

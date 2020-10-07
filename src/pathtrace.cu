@@ -18,7 +18,7 @@
 #include "interactions.h"
 #include "timer.h"
 
-#define DEPTH_OF_FIELD 1
+#define DEPTH_OF_FIELD 0
 #define BOUNDING_BOX 1
 #define ANTIALIASING 1
 #define SORT_MATERIAL 1
@@ -212,7 +212,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
             - cam.up * cam.pixelLength.y * (y_antialias - (float)cam.resolution.y * 0.5f)
         );
 
-#if DEPTH_OF_FIELD && !CACHE_FIRST_ISECT
+#if DEPTH_OF_FIELD
         float lensRadius = 0.5f;
         float focalDistance = 11.f;
 
@@ -290,7 +290,7 @@ __global__ void computeIntersections(
                 t = meshTriangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal);
 #endif
             }
-            else if (geom.type == SDF1) {
+            else if (geom.type == SDF1 || geom.type == SDF2) {
                 t = sdfIntersection(geom, pathSegment.ray, tmp_intersect, tmp_normal);
             }
 
@@ -428,7 +428,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     while (!iterationComplete) {
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
-        if (CACHE_FIRST_ISECT && !ANTIALIASING && depth == 0 && iter != 1) {
+        if (CACHE_FIRST_ISECT && !ANTIALIASING && !DEPTH_OF_FIELD && depth == 0 && iter != 1) {
             // if it is the firts bounce of the noot first intersection, get the saved intersections
             thrust::copy(thrust::device, dev_first_intersections, dev_first_intersections + num_paths_start, dev_intersections);
 
@@ -448,7 +448,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             cudaDeviceSynchronize();
 
             // if it is the first bounce of the first iteration, store the intersections
-            if (CACHE_FIRST_ISECT && !ANTIALIASING && depth == 0 && iter == 1) {
+            if (CACHE_FIRST_ISECT && !ANTIALIASING && !DEPTH_OF_FIELD && depth == 0 && iter == 1) {
                 thrust::copy(thrust::device, dev_intersections, dev_intersections + num_paths_start, dev_first_intersections);
             }
             else if (SORT_MATERIAL) {
