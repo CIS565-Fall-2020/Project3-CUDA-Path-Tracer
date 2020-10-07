@@ -218,9 +218,9 @@ int Scene::loadCamera() {
         {
             state.imageName = tokens[1];
         }
-        else if (strcmp(tokens[0].c_str(), "FOCALLENGTH") == 0)
+        else if (strcmp(tokens[0].c_str(), "FOCALDIST") == 0)
         {
-            camera.focalLength = atof(tokens[1].c_str());
+            camera.focalDist = atof(tokens[1].c_str());
         }
         else if (strcmp(tokens[0].c_str(), "LENSRADIUS") == 0)
         {

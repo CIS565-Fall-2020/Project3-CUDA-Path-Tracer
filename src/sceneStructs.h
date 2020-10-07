@@ -56,8 +56,17 @@ struct Camera {
 	glm::vec2 fov;
 	glm::vec2 pixelLength;
 
-	float focalLength = 0;
+	float focalDist = 0;
     float lensRadius = 0;
+
+	__host__ __device__ Ray rayCast(float x, float y) const
+	{
+		Ray ray;
+		ray.origin = position;
+		ray.direction = glm::normalize(view - right * pixelLength.x * (x - (float)resolution.x * 0.5f) -
+									   up * pixelLength.y * (y - (float)resolution.y * 0.5f));
+		return ray;
+	}
 };
 
 struct RenderState {
@@ -120,13 +129,13 @@ __host__ __device__ inline void setGeomTransform(Geom* geom, const glm::mat4& tr
 }
 
 
-__host__ __device__ inline glm::vec2 ConcentricSampleDisk(const glm::vec2& u)
+__host__ __device__ inline glm::vec2 concentricSampleDisk(const glm::vec2& u)
 {
 	// Map uniform random numbers to [-1, 1]^2
 	glm::vec2 uOffset = 2.f * u - glm::vec2(1, 1);
 
 	// Handle degeneracy at the origin
-	if (uOffset.x == 0 && uOffset.y == 0)
+	if (uOffset.x == 0.f && uOffset.y == 0.f)
 		return glm::vec2(0);
 
 	// Apply concentric mapping to point
@@ -141,5 +150,6 @@ __host__ __device__ inline glm::vec2 ConcentricSampleDisk(const glm::vec2& u)
 		r = uOffset.y;
 		theta = PI_OVER_2 - PI_OVER_4 * (uOffset.x / uOffset.y);
 	}
+
 	return r * glm::vec2(std::cos(theta), std::sin(theta));
 }

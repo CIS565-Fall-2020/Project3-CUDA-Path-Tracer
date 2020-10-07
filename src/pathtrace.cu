@@ -18,8 +18,10 @@
 
 #define ERRORCHECK 1
 #define RECORDEDITERATION 100
-#define CACHEFIRSTBOUNCE true
+#define CACHEFIRSTBOUNCE false
 #define BOUNDINGBOXINTERSECTIONTEST true
+#define DEPTHOFFIELD false
+#define ANTIALIASING true
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -175,31 +177,35 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	if (x < cam.resolution.x && y < cam.resolution.y) 
 	{
 		int index = x + (y * cam.resolution.x);
+
 		PathSegment& segment = pathSegments[index];
-
 		segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
-		segment.ray.origin = cam.position;
-		segment.ray.direction = glm::normalize(cam.view
-			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
-		);
-		// TODO: implement antialiasing by jittering the ray
+		
+		// Set up the RNG
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, traceDepth);
+		thrust::uniform_real_distribution<float> u01(0, 1);
 
+#if ANTIALIASING
+		// Do antialiasing by jittering the ray
+		segment.ray = cam.rayCast(x + u01(rng), y + u01(rng));
+#else
+		segment.ray = cam.rayCast(x, y);
+#endif // ANTIALIASING
+		
+
+#if DEPTHOFFIELD
 		if (cam.lensRadius > 0)
 		{
-			// Set up the RNG
-			thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
-			thrust::uniform_real_distribution<float> u01(0, 1);
-
 			// Sample point on lens
-			glm::vec2 pLens = cam.lensRadius * ConcentricSampleDisk(glm::vec2(u01(rng), u01(rng)));
+			glm::vec2 pLens = cam.lensRadius * concentricSampleDisk(glm::vec2(u01(rng), u01(rng)));
 			// Compute point on plane of focus
-			glm::vec3 pFocus = segment.ray.origin + cam.focalLength / segment.ray.direction.z * segment.ray.direction;
+			glm::vec3 pFocus = segment.ray.origin + cam.focalDist * segment.ray.direction;
 			// Update ray for effect of lens
 			segment.ray.origin += glm::vec3(pLens.x, pLens.y, 0);
-			segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+			segment.ray.direction = glm::normalize(pFocus - segment.ray.origin); 
 		}
-		
+#endif // DEPTHOFFIELD
+
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}

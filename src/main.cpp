@@ -84,8 +84,10 @@ void saveImage() {
 	// output image file
 	image img(width, height);
 
-	for (int x = 0; x < width; x++) {
-		for (int y = 0; y < height; y++) {
+	for (int x = 0; x < width; x++) 
+	{
+		for (int y = 0; y < height; y++)
+		{
 			int index = x + (y * width);
 			glm::vec3 pix = renderState->image[index];
 			img.setPixel(width - 1 - x, y, glm::vec3(pix) / samples);
@@ -94,7 +96,7 @@ void saveImage() {
 
 	std::string filename = renderState->imageName;
 	std::ostringstream ss;
-	ss << filename << "." << startTimeString << "." << samples << "samp";
+	ss << "../img/rendered_images/" << filename << "." << startTimeString << "." << samples << "samp";
 	filename = ss.str();
 
 	// CHECKITOUT

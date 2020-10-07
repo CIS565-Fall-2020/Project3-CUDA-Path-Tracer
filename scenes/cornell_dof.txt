@@ -54,13 +54,12 @@ RES         800 800
 FOVY        45
 ITERATIONS  5000
 DEPTH       8
-FOCALLENGTH 30
-LENSRADIUS  1.5
+FOCALDIST   11.5
+LENSRADIUS  0.3
 FILE        cornell
-EYE         0.0 5 10.5
+EYE         0.0 5 9
 LOOKAT      0 5 0
 UP          0 1 0
-
 
 
 // Ceiling light
@@ -116,5 +115,29 @@ OBJECT 6
 sphere
 MATERIAL 4
 TRANS       -1 4 -1
+ROTAT       0 0 0
+SCALE       3 3 3
+
+// Sphere
+OBJECT 7
+sphere
+MATERIAL 4
+TRANS       1 6 1
+ROTAT       0 0 0
+SCALE       3 3 3
+
+// Sphere
+OBJECT 8
+sphere
+MATERIAL 4
+TRANS       3 8 3
+ROTAT       0 0 0
+SCALE       3 3 3
+
+// Sphere
+OBJECT 9
+sphere
+MATERIAL 4
+TRANS       -3 2 -3
 ROTAT       0 0 0
 SCALE       3 3 3
