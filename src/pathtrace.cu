@@ -76,6 +76,8 @@ static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
 static ShadeableIntersection * dev_intersections_first_bounce = NULL;
+static glm::vec2 * dev_samples = NULL;
+static int numSamples;
 
 static bool firstBounceStored = false;
 static bool firstBounceUsed = false;
@@ -101,6 +103,9 @@ void pathtraceInit(Scene *scene) {
 
     // TODO: initialize any extra device memory you need
     cudaMalloc(&dev_intersections_first_bounce, pixelcount * sizeof(ShadeableIntersection));
+    
+    cudaMalloc(&dev_samples, scene->state.iterations * sizeof(glm::vec2));
+    numSamples = scene->state.iterations;
 
     checkCUDAError("pathtraceInit");
 }
@@ -112,8 +117,28 @@ void pathtraceFree() {
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
   	cudaFree(dev_intersections_first_bounce);
+    cudaFree(dev_samples);
 
     checkCUDAError("pathtraceFree");
+}
+
+// number samples must be a square number
+__global__ void generateStratifiedSamples(glm::vec2* samples, int sqrtSamples, int iter) {
+    int indexX = blockIdx.x * blockDim.x + threadIdx.x;
+    int indexY = blockIdx.y * blockDim.y + threadIdx.y;
+    if (indexX >= sqrtSamples || indexY >= sqrtSamples) {
+        return;
+    }
+
+    int index = indexY * sqrtSamples + indexX;
+    float invSqrt = 1 / (float)sqrtSamples;
+
+    thrust::default_random_engine & rng = makeSeededRandomEngine(iter, index, 0);
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    
+    glm::vec2 sample = glm::vec2(indexX + u01(rng), indexY + u01(rng));
+    sample *= invSqrt;
+    samples[index] = sample;
 }
 
 /**
@@ -127,6 +152,7 @@ void pathtraceFree() {
 
 // Lens effect taken from http://www.pbr-book.org/3ed-2018/Camera_Models/Projective_Camera_Models.html
 
+#define ANTI_ALIASING 1
 #define THIN_LENS 0
 __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
 {
@@ -140,33 +166,42 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         segment.ray.origin = cam.position;
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
+        #if ANTI_ALIASING
         // TODO: implement antialiasing by jittering the ray
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, iter);
+        thrust::uniform_real_distribution<float> u01(-0.5, 0.5);
+        glm::vec2 point = glm::vec2(x + u01(rng), y + u01(rng));
+        segment.ray.direction = glm::normalize(cam.view
+            - cam.right * cam.pixelLength.x * ((float)point.x - (float)cam.resolution.x * 0.5f)
+            - cam.up * cam.pixelLength.y * ((float)point.y - (float)cam.resolution.y * 0.5f)
+        );
+        #else 
         segment.ray.direction = glm::normalize(cam.view
             - cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
             - cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
         );
+        #endif
 
         segment.pixelIndex = index;
         segment.remainingBounces = traceDepth;
 
         #if THIN_LENS
-        #define lens_radius 1.0f
-        #define focal_dist -8.0f
+        #define lens_radius 0.3f
+        #define focal_dist -2.0f
 
         // Get a jittered (randomly generated) sample on 
         // the disk-shaped lens
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
-        glm::vec3 sample = sampleDiskConcentric(rng);
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        glm::vec3 sample = sampleDiskConcentric(glm::vec2(u01(rng), u01(rng)));
         glm::vec3 lensSample = lens_radius * sample;
         glm::vec3 newOrigin = segment.ray.origin + lensSample;
 
         // Compute focal point
-        glm::vec3 focal_point = segment.ray.origin + focal_dist * segment.ray.direction / segment.ray.direction.z;
+        glm::vec3 focalPoint = segment.ray.origin + focal_dist * segment.ray.direction / segment.ray.direction.z;
 
-        float oldX = segment.ray.direction.x;
-        float oldY = segment.ray.direction.y;
         segment.ray.origin = newOrigin;
-        segment.ray.direction = glm::normalize(focal_point - newOrigin);
+        segment.ray.direction = glm::normalize(focalPoint - newOrigin);
         
         #endif
 		
@@ -306,7 +341,9 @@ __global__ void shadeBSDFs(
     int num_paths,
     ShadeableIntersection* shadeableIntersections,
     PathSegment* pathSegments,
-    Material* materials
+    Material* materials,
+    glm::vec2* samples,
+    int numSamples
 ) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= num_paths) {
@@ -316,7 +353,7 @@ __global__ void shadeBSDFs(
     PathSegment &path = pathSegments[index];
     ShadeableIntersection &intersection = shadeableIntersections[index];
     if (intersection.t > 0.0f) {
-        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, path.remainingBounces);
         thrust::uniform_real_distribution<float> u01(0, 1);
         Material &material = materials[intersection.materialId];
         Ray &r = path.ray;
@@ -337,7 +374,7 @@ __global__ void shadeBSDFs(
 
         // Find new ray
         glm::vec3 intersectionPoint = r.origin + intersection.t * r.direction;
-        scatterRay(path, intersectionPoint, intersection.surfaceNormal, material, rng);
+        scatterRay(path, intersectionPoint, intersection.surfaceNormal, material, rng, samples, numSamples);
     }
     else {
         path.remainingBounces = 0;
@@ -372,14 +409,15 @@ struct intersection_comp {
         return i1.materialId < i2.materialId;
     }
 };
-
+    
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
 
-#define SORT_BY_MATERIAL 0
+#define SORT_BY_MATERIAL 1
 #define CACHE_FIRST_BOUNCE 1
+#define USE_SAMPLES 1
 
 using Common::PerformanceTimer;
 PerformanceTimer& timer()
@@ -388,13 +426,23 @@ PerformanceTimer& timer()
     return timer;
 }
 
-#define numIterations 1000
+#define numIterations -1
 static float averageIterTime = 0.0f;
 
 void pathtrace(uchar4 *pbo, int frame, int iter) {
+    #if USE_SAMPLES
+    if (iter <= 1) {
+        int sqrtIter = sqrt(numSamples);
+        dim3 blockDimSamples(32, 32, 1);
+        int numBlocksSamples = ceil((float)sqrtIter / blockDimSamples.x);
+        generateStratifiedSamples << < numBlocksSamples, blockDimSamples >> > (dev_samples, sqrtIter, iter);
+    }
+    #endif
+
     if (iter <= numIterations) {
         timer().startCpuTimer();
     }
+
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -449,7 +497,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
 
-    #if CACHE_FIRST_BOUNCE
+    #if CACHE_FIRST_BOUNCE && ANTI_ALIASING == 0 && THIN_LENS == 0
     firstBounceUsed = false;
     if (iter <= 1) {
         cudaMemset(dev_intersections_first_bounce, 0, pixelcount * sizeof(ShadeableIntersection));
@@ -466,7 +514,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	// tracing
 	dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-    #if CACHE_FIRST_BOUNCE
+    #if CACHE_FIRST_BOUNCE && ANTI_ALIASING == 0 && THIN_LENS == 0
     if ((iter <= 1 && !firstBounceStored) || firstBounceUsed) {
         computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
             depth
@@ -511,6 +559,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     depth++;
     #endif
 
+
 	// TODO:
 	// --- Shading Stage ---
 	// Shade path segments based on intersections and generate new rays by
@@ -525,9 +574,12 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         num_paths,
         dev_intersections,
         dev_paths,
-        dev_materials);
+        dev_materials,
+        dev_samples,
+        numSamples);
 
-    #if CACHE_FIRST_BOUNCE
+
+    #if CACHE_FIRST_BOUNCE && ANTI_ALIASING == 0 && THIN_LENS == 0
     if (!firstBounceStored) {
         cudaMemcpy(dev_intersections_first_bounce, dev_intersections, pixelcount * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
         firstBounceStored = true;

@@ -143,45 +143,41 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     return glm::length(r.origin - intersectionPoint);
 }
 
-// Based on https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution.
+// Based on 461 ray-tracing notes and 
 // Assumes that the geometry passed in has been confirmed to be
 // a triangle.
-__host__ __device__ float triangleIntersectionTest(Geom tri, Ray r,
+
+__host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
-    glm::vec3 p1 = tri.triangleData.point1;
-    glm::vec3 p2 = tri.triangleData.point2;
-    glm::vec3 p3 = tri.triangleData.point3;
+
+    glm::vec3 p1 = triangle.tri.point1.pos;
+    glm::vec3 p2 = triangle.tri.point2.pos;
+    glm::vec3 p3 = triangle.tri.point3.pos;
     glm::vec3 p1p2 = p2 - p1;
     glm::vec3 p1p3 = p3 - p1;
 
-    normal = glm::cross(p1p2, p1p3);
-    normal = glm::normalize(normal);
-    float area2 = glm::length(normal);
+    normal = triangle.tri.point1.nor;
 
-    // Step 1: finding P
+    // Step 1: finding t on a plane
+    float t = glm::dot(normal, p1 - r.origin) / glm::dot(normal, r.direction);
 
-    float normalDotRayDir = glm::dot(normal, r.direction);
-    if (fabsf(normalDotRayDir) < 0.0001f) {
-        return -1.0f;
-    }
-    
-    float dot = glm::dot(normal, p1);
+    if (t < 0) return -1.0f;
 
-    float t = (glm::dot(normal, r.origin) + dot) / normalDotRayDir;
-
-    if (t < 0) return 1.0f;
+    // Step 2: determine if in plane using barycentric
 
     glm::vec3 p = r.origin + t * r.direction;
 
-    glm::vec3 perpToTri;
-    perpToTri = glm::cross(p1p2, p - p1);
-    if (glm::dot(normal, perpToTri) < 0) return -1.0f;
+    float S = 0.5f * glm::length(glm::cross(p1p2, p1p3));
+    float S1 = 0.5f * glm::length(glm::cross(p2 - p, p3 - p)) / S;
+    float S2 = 0.5f * glm::length(glm::cross(p3 - p, p1 - p)) / S;
+    float S3 = 0.5f * glm::length(glm::cross(p1 - p, p2 - p)) / S;
 
-    perpToTri = glm::cross(p3 - p2, p - p2);
-    if (glm::dot(normal, perpToTri) < 0) return -1.0f;
+    // S1 > 0 && S2 > 0 && S3 > 0 && 
+    if (S1 <= 1 && S2 <= 1 && S3 <= 1 && fabsf(S1 + S2 + S3 - 1) <= 0.001f) {
+        intersectionPoint = p;
+        outside = glm::dot(r.direction, normal) <= 0;
+        return t;
+    }
 
-    perpToTri = glm::cross(p1 - p3, p - p3);
-    if (glm::dot(normal, perpToTri) < 0) return -1.0f;
-
-    return t;
+    return -1.0f;
 }

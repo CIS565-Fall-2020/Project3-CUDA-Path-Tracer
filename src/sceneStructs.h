@@ -18,6 +18,18 @@ struct Ray {
     glm::vec3 direction;
 };
 
+struct TrianglePoint {
+    glm::vec3 pos;
+    glm::vec3 nor;
+    glm::vec2 uv;
+};
+
+struct Triangle {
+    TrianglePoint point1;
+    TrianglePoint point2;
+    TrianglePoint point3;
+};
+
 struct Geom {
     enum GeomType type;
     int materialid;
@@ -27,12 +39,7 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
-    struct {
-        glm::vec3 point1;
-        glm::vec3 point2;
-        glm::vec3 point3;
-        glm::vec3 normal;
-    } triangleData;
+    Triangle tri;
 };
 
 struct Material {

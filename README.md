@@ -7,8 +7,6 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/liujanine/), [personal website](https://www.janineliu.com/).
 * Tested on: Windows 10, i7-10750H CPU @ 2.60GHz 16GB, GeForce RTX 2070 8192 MB (personal computer)
 
-## CUDA Pathtracer
-
 This project revolved around a GPU-based pathtracer, its optimizations, and several distinct features.
 
 ## Performance Analysis Methods
@@ -24,7 +22,7 @@ To improve performance, I implemented some optimizations with the intent to make
 * material sorting, and
 * first bounce caching.
 
-These measurements are taken from the pathtracing process on the default Cornell Box image, show below. A chart of the performance changes as a result of these optimizatios is shown at the end of the section.
+These measurements are taken from the pathtracing process on the default Cornell Box image, show below. A chart of the performance changes as a result of these optimizations is shown at the end of the section.
 
 ![](img/presentable/diffuse.png)
 
@@ -63,6 +61,11 @@ For the most part, using this optimization shaves off around 0.5ms from the aver
 The performance of all the optimizations combined is shown below.
 
 ![](img/graphs/optimization_graph.png)
+
+## Features
+
+## Refractive Materials
+## Depth of Field
 
 ## Bugs and Bloopers
 ### Stream Compaction-less Issues
