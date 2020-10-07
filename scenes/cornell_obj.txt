@@ -115,11 +115,11 @@ SCALE       .01 10 10
 
 // Cube
 OBJECT 6
-../objs/cube.obj
+../objs/heart.obj
 material 4
 TRANS       0 0 0
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       1 1 1
 
 // Dog
 //OBJECT 6

@@ -7,24 +7,66 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/liujanine/), [personal website](https://www.janineliu.com/).
 * Tested on: Windows 10, i7-10750H CPU @ 2.60GHz 16GB, GeForce RTX 2070 8192 MB (personal computer)
 
-This project revolved around a GPU-based pathtracer, its optimizations, and several distinct features.
+Pathtracing is a rendering technique that traces numerous rays of light through a 3D scene. Rays start from the camera, pass through the space of the screen, and bounce between objects in the world; these bounces are determined by the properties of the materials they intersect.
 
-## Performance Analysis Methods
+In addition to building a GPU-based pathtracer, this project involved implementing optimizations and other features, including:
 
-Using the Performance Timer class provided in the [previous assignment](https://github.com/j9liu/Project2-Stream-Compaction/), I surrounded my `pathtrace` call with calls to start and stop the CPU timer. I then took the average of all these iterations to determine what the average iteration time would be. To save time, I limited the number of these recorded iterations to 20% of the total number of samples.
+- Reflective and refractive materials
+- Depth of field based on a thin lens camera
+- Sthochastic Anti-Aliasing
+- OBJ Loading
+- Procedural Shapes
+- Procedural Textures
 
-For the Stream Compaction section, I simply collected data for the first iteration of the pathtracing process.
+This pathtracer draws upon the [Physically-Based Rendering textbook](http://www.pbr-book.org/) for reference.
 
-## Optimizations
+## Features
+
+### Materials
+
+![]("img/presentable/materials_guide.png")
+
+In this pathtracer, three basic material types exist: **diffuse**, **reflective**, and **refractive**. Their interactions with rays of light are handled by bidirectional scattering distribution functions, or BSDFs.
+
+In the spirit of the PBR textbook, materials are handled using BSDF "flags" that are parsed from the scene file. When an object has more than one flag tagged, it is. For a compound reflective and refractive, I simply handled with a Fresnel glass effect using Schlick's approximation.
+
+Purely refractive on the left, and glass in the middle and right.
+
+![]("img/presentable/glassmaterials.png")
+
+### Depth of Field
+
+![]("img/presentable/dof.png")
+
+### Stochastic Anti-Aliasing
+
+
+
+### OBJ Loading
+
+To allow arbitrary meshes to be rendered by the pathtracer, the TinyObj loader was used to parse OBJ files as geometry in the scene. These are broken into triangles of the same material.
+
+### Procedural Shapes
+
+### Procedural Textures
+
+## Performance Analysis
+
+### Optimizations
 
 To improve performance, I implemented some optimizations with the intent to make each pathtracing iteration faster. These optimizations include:
 * stream compaction,
 * material sorting, and
 * first bounce caching.
 
-These measurements are taken from the pathtracing process on the default Cornell Box image, show below. A chart of the performance changes as a result of these optimizations is shown at the end of the section.
+The measurements for these performance changes are taken from the pathtracing process on the default Cornell Box image, show below. A chart of the performance changes as a result of these optimizations is shown at the end of the section.
 
 ![](img/presentable/diffuse.png)
+
+### Methods
+Using the Performance Timer class provided in the [previous assignment](https://github.com/j9liu/Project2-Stream-Compaction/), I surrounded my `pathtrace` call with calls to start and stop the CPU timer. I then took the average of all these iterations to determine what the average iteration time would be. To save time, I limited the number of these recorded iterations to 20% of the total number of samples.
+
+For the Stream Compaction section, I simply collected data for the first iteration of the pathtracing process.
 
 ### Stream Compaction
 
@@ -61,11 +103,6 @@ For the most part, using this optimization shaves off around 0.5ms from the aver
 The performance of all the optimizations combined is shown below.
 
 ![](img/graphs/optimization_graph.png)
-
-## Features
-
-## Refractive Materials
-## Depth of Field
 
 ## Bugs and Bloopers
 ### Stream Compaction-less Issues

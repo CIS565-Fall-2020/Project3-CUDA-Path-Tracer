@@ -149,6 +149,8 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
 __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    glm::vec3 ro = multiplyMV(triangle.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(triangle.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     glm::vec3 p1 = triangle.tri.point1.pos;
     glm::vec3 p2 = triangle.tri.point2.pos;
@@ -156,10 +158,9 @@ __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
     glm::vec3 p1p2 = p2 - p1;
     glm::vec3 p1p3 = p3 - p1;
 
-    normal = triangle.tri.point1.nor;
-
+    normal = glm::cross(p1p2, p1p3);
     // Step 1: finding t on a plane
-    float t = glm::dot(normal, p1 - r.origin) / glm::dot(normal, r.direction);
+    float t = glm::dot(normal, p1 - ro) / glm::dot(normal, rd);
 
     if (t < 0) return -1.0f;
 
@@ -174,9 +175,15 @@ __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
 
     // S1 > 0 && S2 > 0 && S3 > 0 && 
     if (S1 <= 1 && S2 <= 1 && S3 <= 1 && fabsf(S1 + S2 + S3 - 1) <= 0.001f) {
-        intersectionPoint = p;
+        intersectionPoint = multiplyMV(triangle.transform, glm::vec4(p, 1.0f));
+        normal = triangle.tri.point1.nor;
+        normal = glm::normalize(multiplyMV(triangle.invTranspose, glm::vec4(normal, 0.0f)));
+        //normal = S1 / S * triangle.tri.point3.nor
+        //       + S2 / S * triangle.tri.point1.nor
+        //       + S3 / S * triangle.tri.point2.nor;
         outside = glm::dot(r.direction, normal) <= 0;
-        return t;
+
+        return glm::length(intersectionPoint - r.origin);
     }
 
     return -1.0f;

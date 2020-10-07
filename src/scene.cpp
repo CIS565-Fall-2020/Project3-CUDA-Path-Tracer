@@ -125,82 +125,9 @@ int Scene::loadObj(std::vector<Geom>& triangles, int materialId, glm::mat4 trans
             }
         }
     }
-    
+
     return 1;
 }
-//
-//int scene::loadobj(std::vector<geom>& triangles, int materialid, glm::mat4 transform, string filename) {
-//    std::vector<glm::vec3> positions;
-//    std::vector<glm::vec3> normals;
-//    char* fname = (char*)filename.c_str();
-//    
-//    fp_obj_in.open(fname);
-//    if (!fp_obj_in.is_open()) {
-//        cout << "error reading from file - aborting!" << endl;
-//        throw;
-//    }
-//
-//    string line;
-//    int counter = 0;
-//    cout << "reading obj file: " << filename << endl;
-//    while (fp_obj_in.good()) {
-//        utilitycore::safegetline(fp_obj_in, line);
-//        if (!line.empty()) {
-//            vector<string> tokens = utilitycore::tokenizestring(line);
-//            if (strcmp(tokens[0].c_str(), "v") == 0) {
-//                float x = atof(tokens[1].c_str()), 
-//                      y = atof(tokens[2].c_str()),
-//                      z = atof(tokens[3].c_str());
-//                positions.push_back(glm::vec3(x, y, z));
-//            }
-//            else if (strcmp(tokens[0].c_str(), "f") == 0) {
-//                vector<int> posindices;
-//                for (int i = 1; i < tokens.size(); i++) {
-//                    string s = tokens[i];
-//                    handleface(tokens[i], posindices);
-//                }
-//                geom triangle;
-//                triangle.type = triangle;
-//                triangle.tri.point1 = glm::vec3(transform * glm::vec4(positions[posindices[0] - 1], 1.0f));
-//                triangle.tri.point2 = glm::vec3(transform * glm::vec4(positions[posindices[1] - 1], 1.0f));
-//                triangle.tri.point3 = glm::vec3(transform * glm::vec4(positions[posindices[2] - 1], 1.0f));
-//
-//                glm::vec3 side1 = triangle.tri.point2 - triangle.tri.point1;
-//                glm::vec3 side2 = triangle.tri.point3 - triangle.tri.point1;
-//
-//               // glm::vec3 normal1 = normals[posindices[0] - 1];
-//              //  glm::vec3 normal2 = normals[posindices[1] - 1];
-//               // glm::vec3 normal3 = normals[posindices[2] - 1];
-//
-//                triangle.tri.normal = glm::normalize(glm::cross(side1, side2));
-//                triangle.materialid = materialid;
-//                triangle.transform = transform;
-//                triangle.inversetransform = glm::inverse(triangle.transform);
-//                triangle.invtranspose = glm::inversetranspose(triangle.transform);
-//                triangles.push_back(triangle);
-//
-//                if(tokens.size() == 5) {
-//                    geom triangle2;
-//                    triangle2.type = triangle;
-//                    triangle2.tri.point1 = glm::vec3(transform * glm::vec4(positions[posindices[2] - 1], 1.0f));
-//                    triangle2.tri.point2 = glm::vec3(transform * glm::vec4(positions[posindices[3] - 1], 1.0f));
-//                    triangle2.tri.point3 = glm::vec3(transform * glm::vec4(positions[posindices[0] - 1], 1.0f));
-//                    triangle2.tri.normal = triangle.tri.normal;
-//                    triangle2.materialid = materialid;
-//                    triangle2.transform = transform;
-//                    triangle2.inversetransform = triangle.inversetransform;
-//                    triangle2.invtranspose = triangle.invtranspose;
-//                    triangles.push_back(triangle2);
-//                }
-//
-//                if (tokens.size() > 5) {
-//                    cout << "error: encountered an n-gon face" << endl;
-//                }
-//            }
-//        }
-//    }
-//    return 1;
-//}
 
 #define LOADOBJ 1
 
@@ -278,7 +205,6 @@ int Scene::loadGeom(string objectid) {
         }
     }
     else {
-
         geoms.push_back(newGeom);
     }
 	return 1;
@@ -387,6 +313,12 @@ int Scene::loadCamera() {
             camera.lookAt = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
         } else if (strcmp(tokens[0].c_str(), "UP") == 0) {
             camera.up = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        }
+        else if (strcmp(tokens[0].c_str(), "LENSRADIUS") == 0) {
+            camera.lensRadius = atof(tokens[1].c_str());
+        }
+        else if (strcmp(tokens[0].c_str(), "FOCALDIST") == 0) {
+            camera.focalDist = atof(tokens[1].c_str());
         }
 
         utilityCore::safeGetline(fp_in, line);

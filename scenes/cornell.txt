@@ -47,9 +47,9 @@ MATERIAL 4
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
-DIFF	    1
-REFL        0
-REFR        0
+DIFF	    0
+REFL        1
+REFR        1
 REFRIOR     3.2
 EMITTANCE   0
 

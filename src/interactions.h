@@ -249,6 +249,7 @@ void scatterRay(
     float probThresholdDiffuse = -1.0f;
     float probThresholdReflect = -1.0f;
     float probThresholdRefract = -1.0f;
+    float probThresholdGlass   = -1.0f; // consider this both reflect and refract
 
     const unsigned int bsdf_diffuse = 1 << 0;
     const unsigned int bsdf_reflection = 1 << 1;
@@ -291,8 +292,8 @@ void scatterRay(
         probThresholdRefract = 1.0f;
         break;
     case bsdf_reflection | bsdf_refraction:
-        probThresholdReflect = 0.5f;
-        probThresholdRefract = 1.0f;
+        probThresholdGlass = 1.0f;
+        numFlags = 1;
         break;
     case bsdf_diffuse | bsdf_reflection | bsdf_refraction:
         probThresholdDiffuse = 0.333f;
@@ -315,6 +316,9 @@ void scatterRay(
         calculateReflect(pathSegment, intersect, normal, m, rng);
     }
     else if (random <= probThresholdRefract) {
+        calculateRefract(pathSegment, intersect, normal, m, rng);
+    }
+    else if (random <= probThresholdGlass) {
         calculateGlass(pathSegment, intersect, normal, m, rng);
     }
 
