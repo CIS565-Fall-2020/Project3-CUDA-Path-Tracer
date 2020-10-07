@@ -16,8 +16,8 @@
 #include "interactions.h"
 
 // #define SORT_MATERIALS
-// #define CACHE_FIRST_BOUNCE
-//  #define RAY_TERMINATION
+#define CACHE_FIRST_BOUNCE
+#define RAY_TERMINATION
 
 // #define PERF_RAY_TERMINATION
 

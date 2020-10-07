@@ -72,33 +72,32 @@ __host__ __device__ void scatterRay(PathSegment &pathSegment,
   glm::vec3 dir, col(1.f);
   glm::vec3 oldDir = pathSegment.ray.direction;
 
-  if (m.hasRefractive) {
-    float eta = 1.f / m.indexOfRefraction;
-    glm::vec3 unitDir = glm::normalize(oldDir);
-    float cosTheta = std::fmin(glm::dot(-unitDir, normal), 1.f);
-    float sinTheta = sqrtf(1.f - cos * cos);
-    
-    if (cosTheta < 0) { eta = m.indexOfRefraction }
+  if (m.hasRefractive) {                                  // Refreaction
+      float eta = 1.0f / m.indexOfRefraction;
+      float unit_projection = glm::dot(pathSegment.ray.direction, normal);
+      if (unit_projection > 0) {
+          eta = 1.0f / eta;
+      }
 
-    // Schlick's approximation
-    float R0 = (1.f - eta) / (1.f + eta);
-    R0 = R0 * R0;
-    float R = R0 + (1 - R0) * powf(1 - cosTheta, 5.0f);
-    bool totalReflection = eta * sinTheta > 1.f;
-    if (totalReflection || u01(rng) > R) {
-      // Reflecting Light
-      dir = glm::reflect(pathSegment.ray.direction, normal);
-      col *= m.specular.color;      
-    } else {
-      // Refracting Light
-      dir = glm::refract(pathSegment.ray.direction, normal, eta);
-      normal = -normal;
-      col *= m.color;
-    }
+      // Schlick's approximation
+      float R0 = powf((1.0f - eta) / (1.0f + eta), 2.0f);
+      float R = R0 + (1 - R0) * powf(1 - glm::abs(unit_projection), 5.0f);
+      if (R < u01(rng)) {
+          // Refracting Light
+          dir = glm::refract(pathSegment.ray.direction, normal, eta);
+          normal = -normal;
+          col *= m.color;
+      }
+      else {
+          // Reflecting Light
+          dir = glm::reflect(pathSegment.ray.direction, normal);
+          col *= m.specular.color;
+      }
 
-  } else if (u01(rng) < m.hasReflective) {
+  }
+  else if (u01(rng) < m.hasReflective) {
     // Specular
-    dir = glm::reflect(pathSegment.ray.direction, normal);
+    dir = glm::reflect(oldDir, normal);
     col *= m.specular.color;
   } else {
     // Diffuse
