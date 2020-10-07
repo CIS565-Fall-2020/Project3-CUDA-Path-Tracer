@@ -26,4 +26,5 @@ namespace utilityCore {
     // Jack12 add
     // ref https://github.com/syoyo/tinygltf/blob/master/examples/glview/glview.cc
     //extern std::string GetFilePathExtension(const std::string& FileName);
+   // __host__ __device__ glm::mat4 utilityCore::device_buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale);
 }

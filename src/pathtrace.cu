@@ -10,6 +10,10 @@
 #include "scene.h"
 #include "glm/glm.hpp"
 #include "glm/gtx/norm.hpp"
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+
 #include "utilities.h"
 #include "pathtrace.h"
 #include "intersections.h"
@@ -212,9 +216,11 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 		segment.ray.origin = cam.position;
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
-
+        
 		// TODO: implement antialiasing by jittering the ray
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> du(0.0, 0.5);
+        segment.ray.time = du(rng);
 #if camera_jittering
         
         //thrust::uniform_real_distribution<float> u01(0, 1);
@@ -250,6 +256,15 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	}
 }
 
+__host__ __device__
+glm::mat4 dev_buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale) {
+    glm::mat4 translationMat = glm::translate(glm::mat4(), translation);
+    glm::mat4 rotationMat = glm::rotate(glm::mat4(), rotation.x * (float)PI / 180, glm::vec3(1, 0, 0));
+    rotationMat = rotationMat * glm::rotate(glm::mat4(), rotation.y * (float)PI / 180, glm::vec3(0, 1, 0));
+    rotationMat = rotationMat * glm::rotate(glm::mat4(), rotation.z * (float)PI / 180, glm::vec3(0, 0, 1));
+    glm::mat4 scaleMat = glm::scale(glm::mat4(), scale);
+    return translationMat * rotationMat * scaleMat;
+}
 // TODO:
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
@@ -286,6 +301,16 @@ __global__ void computeIntersections(
 		for (int i = 0; i < geoms_size; i++)
 		{
 			Geom & geom = geoms[i];
+#if motion_blur
+            glm::mat4 inv_transform_cache = geom.inverseTransform;
+            glm::mat4 inv_transpose_cache = geom.invTranspose;
+            glm::vec3 new_translate = pathSegment.ray.time * geom.velocity + geom.translation;
+            glm::mat4 new_transform = dev_buildTransformationMatrix(new_translate, geom.rotation, geom.scale);
+            geom.inverseTransform = glm::inverse(new_transform);
+            // forget to update invTranspose
+            /// ty john marcao
+            geom.invTranspose = glm::inverseTranspose(new_transform);
+#endif
 
 			if (geom.type == CUBE)
 			{
@@ -316,6 +341,11 @@ __global__ void computeIntersections(
 				intersect_point = tmp_intersect;
 				normal = tmp_normal;
 			}
+
+#if motion_blur
+            geom.inverseTransform = inv_transform_cache;
+            geom.invTranspose = inv_transpose_cache;
+#endif
 		}
 
 		if (hit_geom_index == -1)

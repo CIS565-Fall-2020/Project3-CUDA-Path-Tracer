@@ -91,6 +91,10 @@ int Scene::loadGeom(string objectid) {
                 cur_path = tokens[1];
                 
             }
+            // motion blur
+            else if (strcmp(tokens[0].c_str(), "VELO") == 0) {
+                newGeom.velocity = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+            }
 
             utilityCore::safeGetline(fp_in, line);
         }
@@ -657,8 +661,8 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 int idx_f2 = i + 2;
 
                 int idx_v0 = cur_mesh->faces[idx_f0];
-                int idx_v1 = cur_mesh->faces[idx_f2];
-                int idx_v2 = cur_mesh->faces[idx_f1];
+                int idx_v1 = cur_mesh->faces[idx_f1];
+                int idx_v2 = cur_mesh->faces[idx_f2];
 
                 cur_triangle.v0 = glm::vec3(
                     cur_mesh -> vertices[3 * idx_v0],
@@ -679,21 +683,21 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 );
 
                 cur_triangle.n0 = glm::vec3(
-                    cur_mesh->facevarying_normals[3 * idx_v0],
-                    cur_mesh->facevarying_normals[3 * idx_v0 + 1],
-                    cur_mesh->facevarying_normals[3 * idx_v0 + 2]
+                    cur_mesh->facevarying_normals[3 * i],
+                    cur_mesh->facevarying_normals[3 * i + 1],
+                    cur_mesh->facevarying_normals[3 * i + 2]
                 );
 
                 cur_triangle.n1 = glm::vec3(
-                    cur_mesh->facevarying_normals[3 * idx_v1],
-                    cur_mesh->facevarying_normals[3 * idx_v1 + 1],
-                    cur_mesh->facevarying_normals[3 * idx_v1 + 2]
+                    cur_mesh->facevarying_normals[3 * i + 3],
+                    cur_mesh->facevarying_normals[3 * i + 4],
+                    cur_mesh->facevarying_normals[3 * i + 5]
                 );
 
                 cur_triangle.n2 = glm::vec3(
-                    cur_mesh->facevarying_normals[3 * idx_v2],
-                    cur_mesh->facevarying_normals[3 * idx_v2 + 1],
-                    cur_mesh->facevarying_normals[3 * idx_v2 + 2]
+                    cur_mesh->facevarying_normals[3 * i + 6],
+                    cur_mesh->facevarying_normals[3 * i + 7],
+                    cur_mesh->facevarying_normals[3 * i + 8]
                 );
 
                 //cur_triangle.norm = glm::triangleNormal()
