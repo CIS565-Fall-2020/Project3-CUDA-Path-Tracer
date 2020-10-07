@@ -21,5 +21,6 @@ public:
 	OctreeNode(glm::vec3 &v0, glm::vec3 &v1);
 
 	bool intersectTriangle (const Geom &geom) const;
-	bool intersectRay(const Ray &ray) const;
+	float intersectRay(const Ray &ray, 
+		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) const;
 };

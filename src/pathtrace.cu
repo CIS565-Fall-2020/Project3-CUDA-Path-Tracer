@@ -312,7 +312,14 @@ __global__ void computeIntersections(
 	}
 #ifdef USE_OCTREE
 	// TODO: use octree for meshes
-
+	int idx;
+	t = octreeIntersectionTest(octree_nodes[0], pathSegment.ray, tmp_intersect, tmp_normal, outside, idx, geoms, octree_nodes);
+	if (t > 0.0f && t_min > t) {
+		t_min = t;
+		hit_geom_index = idx;
+		intersect_point = tmp_intersect;
+		normal = tmp_normal;
+	}
 #endif
 	
 	if (hit_geom_index == -1)

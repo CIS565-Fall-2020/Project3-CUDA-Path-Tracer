@@ -61,7 +61,8 @@ bool OctreeNode::intersectTriangle(const Geom &geom) const {
 	return true;
 }
 
-bool OctreeNode::intersectRay(const Ray &ray) const {
+float OctreeNode::intersectRay(const Ray &ray,
+		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) const {
 	Geom box;
 	box.type = CUBE;
 	box.translation = center;
@@ -73,5 +74,5 @@ bool OctreeNode::intersectRay(const Ray &ray) const {
 	box.inverseTransform = glm::inverse(box.transform);
 	box.invTranspose = glm::inverseTranspose(box.transform);
 
-	return false;
+	return -1;
 }
