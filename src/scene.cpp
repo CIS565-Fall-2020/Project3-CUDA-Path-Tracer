@@ -241,9 +241,9 @@ bool Scene::myGLTFloader(
             const auto& indices = *indicesArrayPtr;
 
             if (indicesArrayPtr) {
-                std::cout << "indices: ";
+                std::cout << "indices: omit by annotaion by Jack12";
                 for (size_t i(0); i < indicesArrayPtr->size(); ++i) {
-                    std::cout << indices[i] << " ";
+                    //std::cout << indices[i] << " ";
                     loadedMesh.faces.push_back(indices[i]);
                 }
                 std::cout << '\n';
@@ -328,8 +328,8 @@ bool Scene::myGLTFloader(
 
                                 for (size_t i{ 0 }; i < positions.size(); ++i) {
                                     const auto v = positions[i];
-                                    std::cout << "positions[" << i << "]: (" << v.x << ", "
-                                        << v.y << ", " << v.z << ")\n";
+                                    //std::cout << "positions[" << i << "]: (" << v.x << ", "
+                                        //<< v.y << ", " << v.z << ")\n";
 
                                     loadedMesh.vertices.push_back(v.x * scale);
                                     loadedMesh.vertices.push_back(v.y * scale);

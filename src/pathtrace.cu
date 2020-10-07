@@ -299,7 +299,7 @@ __global__ void computeIntersections(
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
-            else if (geom.type == GLTF_MESH) {
+            else if (geom.type == BBOX) {
                 t = meshIntersectionTest(
                     geom,
                     models,
