@@ -2,7 +2,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>
-
 #include "sceneStructs.h"
 #include "utilities.h"
 
@@ -85,11 +84,9 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
     }
 
     if (tmax >= tmin && tmax > 0) {
-        outside = true;
         if (tmin <= 0) {
             tmin = tmax;
             tmin_n = tmax_n;
-            outside = false;
         }
         intersectionPoint = multiplyMV(box.transform, glm::vec4(getPointOnRay(q, tmin), 1.0f));
         if (box.moving) {
@@ -145,10 +142,8 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
         return -1;
     } else if (t1 > 0 && t2 > 0) {
         t = min(t1, t2);
-        outside = true;
     } else {
         t = max(t1, t2);
-        outside = false;
     }
 
     glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
@@ -157,9 +152,6 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
         intersectionPoint += r.time * (sphere.target - sphere.translation);
     }
     normal = glm::normalize(multiplyMV(sphere.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
-    if (!outside) {
-        normal = -normal;
-    }
 
     return glm::length(r.origin - intersectionPoint);
 }
@@ -191,11 +183,13 @@ __host__ __device__ bool boundingIntersectionTest(Ray r, glm::vec3 leftBottom, g
     return false;
 }
 
-__host__ __device__ float triangleIntersect(const Ray& r, Triangle &tri, glm::vec3 &normal)
+__host__ __device__ float triangleIntersect(const Ray& r, Triangle &tri, glm::vec3 &normal, bool &outside)
 {
     //1. Ray-plane intersection
     float t = glm::dot(tri.n1, (tri.p1 - r.origin)) / glm::dot(tri.n1, r.direction);
-    if (t < 0) return -1;
+    if (t < 0) {
+        return -1;
+    }
 
     glm::vec3 P = r.origin + t * r.direction;
     //2. Barycentric test
@@ -243,19 +237,28 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
     bool isFound = false;
     glm::vec3 objspaceIntersection;
     glm::vec3 nnormal;
+    int minId = -1;
+    glm::vec3 minBary;
     for (int i = mesh.startIndex; i <= mesh.endIndex; i++) {
-        glm::vec3 tmp_intersect;
-        glm::vec3 tmp_normal;
-        float t = triangleIntersect(rt, triangles[i], tmp_normal);
-        if (t > 0 && t_min > t) {
-            t_min = t;
-            nnormal = tmp_normal;
-            isFound = true;
+        glm::vec3 tvec;
+        if (glm::intersectRayTriangle(rt.origin, rt.direction, triangles[i].p1, triangles[i].p2, triangles[i].p3, tvec)) {
+            float t = tvec.z;
+            if (t > 0 && t_min > t) {
+                t_min = t;
+                minId = i;
+                minBary = tvec;
+            }
         }
     }
 
-    if (!isFound) {
+    if (minId < 0) {
         return -1;
+    }
+    
+    normal = triangles[minId].n1 * minBary.x + triangles[minId].n2 * minBary.y + triangles[minId].n3 * minBary.z;
+
+    if (glm::dot(normal, rt.direction) > 0) {
+        normal = -normal;
     }
 
     objspaceIntersection = getPointOnRay(rt, t_min);
@@ -263,7 +266,7 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
     if (mesh.moving) {
         intersectionPoint += r.time * (mesh.target - mesh.translation);
     }
-    normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(nnormal, 0.f)));
+    normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(normal, 0.f)));
 
     return glm::length(r.origin - intersectionPoint);
 }

@@ -17,6 +17,8 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
     bool loadObj(string filename, Geom &geom);
+    void buildRandomScene();
+    void addSphereByMaterial(Geom &geom, int id, glm::vec3 trans, float radius);
 public:
     Scene(string filename);
     ~Scene();

@@ -25,6 +25,7 @@
 #define DEPTH_OF_FIELD_ENABLE 0
 #define ANTIALIASING 0
 #define MOTION_BLUR_ENABLE 0
+#define AMBIENT_LIGHT_ENABLE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -179,12 +180,15 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 
+#if DEPTH_OF_FIELD_ENABLE || MOTION_BLUR_ENABLE
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+#endif
+
 #if DEPTH_OF_FIELD_ENABLE
 		// depth of field
-		float lensRadius = 0.8f;
-		float focalDistance = 10.0f;
+		float lensRadius = 0.05f;
+		float focalDistance = 12.0f;
 
-		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
 		thrust::uniform_real_distribution<float> u01(-1, 1);
 		float p0 = u01(rng);
 		float p1 = u01(rng);
@@ -198,8 +202,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.ray.direction = glm::normalize(target - segment.ray.origin);
 #endif
 
-#if MOTION_BLUR_ENABLE 
-		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+#if MOTION_BLUR_ENABLE
 		thrust::uniform_real_distribution<float> u02(0.0f, 1.0f);
 		segment.ray.time = u02(rng);
 #endif
@@ -372,12 +375,22 @@ __global__ void shadeBSDFMaterial(
 				pathSegments[idx].remainingBounces--;
 				// if the last bounce is not the light source, it should not be shaded
 				if (pathSegments[idx].remainingBounces <= 0) {
+#if AMBIENT_LIGHT_ENABLE
+					float t = 0.5 * (glm::normalize(pathSegments[idx].ray.direction).y + 1.0);
+					pathSegments[idx].color *= (1.0f - t) * glm::vec3(1.0, 1.0, 1.0) + t * glm::vec3(0.5, 0.7, 1.0);
+#else
 					pathSegments[idx].color = glm::vec3(0.0f);
+#endif // AMBIENT_LIGHT_ENABLE	
 				}
 			}
 		}
 		else {
+#if AMBIENT_LIGHT_ENABLE
+			float t = 0.5 * (glm::normalize(pathSegments[idx].ray.direction).y + 1.0);
+			pathSegments[idx].color *= (1.0f - t) * glm::vec3(1.0, 1.0, 1.0) + t * glm::vec3(0.5, 0.7, 1.0);
+#else
 			pathSegments[idx].color = glm::vec3(0.0f);
+#endif // AMBIENT_LIGHT_ENABLE
 			pathSegments[idx].remainingBounces = 0;
 		}
 	}
