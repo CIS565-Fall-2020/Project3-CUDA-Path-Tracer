@@ -121,10 +121,10 @@ SCALE       .01 10 10
 
 
 // gltf_test
-//OBJECT 6
+OBJECT 6
 gltf_mesh
 material 3
-PATH		../gltf_mesh/Box.glb
+PATH		../gltf_mesh/kirby/scene.gltf
 TRANS       -1 4 -1
 ROTAT       0 0 0
-SCALE       5 5 5
+SCALE       1 1 1

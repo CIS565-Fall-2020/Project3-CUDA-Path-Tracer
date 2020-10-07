@@ -62,7 +62,7 @@ set(GLM_ROOT_DIR "external")
 find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 include_directories(${EXTERNAL}/include/raytrace)
-include_directories(scenes)
+#include_directories(scenes)
 
 set(headers
     src/main.h
@@ -97,15 +97,15 @@ set(sources
  #   scenes/cornell_dof_example.txt
   #  scenes/cornell_fresnel.txt
    # )
-file(GLOB scenestxt scenes/*.txt)
+#file(GLOB scenestxt scenes/*.txt)
 
 list(SORT headers)
 list(SORT sources)
-list(SORT scenestxt)
+#list(SORT scenestxt)
 
 source_group(Headers FILES ${headers})
 source_group(Sources FILES ${sources})
-source_group(Scenes FILES ${scenestxt})
+#source_group(Scenes FILES ${scenestxt})
 
 #add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
 

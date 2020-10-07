@@ -12,4 +12,4 @@
 
 #define stratified_sampling 0
 
-#define usebbox 0
+#define usebbox 1

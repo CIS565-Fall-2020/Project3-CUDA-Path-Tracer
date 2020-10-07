@@ -720,8 +720,11 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             Geom cur_bbox;
             cur_bbox = parent_geom;
             cur_bbox.type = BBOX;
-            cur_bbox.scale = maxVal_vec - minVal_vec;
+            
+            cur_bbox.scale = (maxVal_vec - minVal_vec) * parent_geom.scale;
             cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
+            cur_bbox.translation = glm::vec3(parent_geom.transform * glm::vec4(cur_bbox.translation, 1.0f));
+            
             cur_bbox.rotation = glm::vec3(0.0f);
 
             cur_bbox.transform = utilityCore::buildTransformationMatrix(
