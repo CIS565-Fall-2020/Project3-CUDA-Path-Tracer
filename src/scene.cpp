@@ -650,15 +650,15 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             for (int i = 0; i < cur_mesh->faces.size(); i+=3) {
                 
                 Triangle cur_triangle;
-                cur_model.self_geom.type = GLTF_MESH;
+                
 
                 int idx_f0 = i;
                 int idx_f1 = i + 1;
                 int idx_f2 = i + 2;
 
                 int idx_v0 = cur_mesh->faces[idx_f0];
-                int idx_v1 = cur_mesh->faces[idx_f1];
-                int idx_v2 = cur_mesh->faces[idx_f2];
+                int idx_v1 = cur_mesh->faces[idx_f2];
+                int idx_v2 = cur_mesh->faces[idx_f1];
 
                 cur_triangle.v0 = glm::vec3(
                     cur_mesh -> vertices[3 * idx_v0],
@@ -699,7 +699,7 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 //cur_triangle.norm = glm::triangleNormal()
                 cur_triangles.emplace_back(cur_triangle);
                 // store geom info from .txt
-                cur_model.self_geom = parent_geom;
+                
                 // assign bounding box
                 //TODO check correctness for this
                 minVal_vec = glm::min(minVal_vec, cur_triangle.v0);
@@ -710,10 +710,12 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 maxVal_vec = glm::max(maxVal_vec, cur_triangle.v1);
                 maxVal_vec = glm::max(maxVal_vec, cur_triangle.v2);
             }
+            cur_model.self_geom.type = GLTF_MESH;
+            cur_model.self_geom = parent_geom;
             // insert cur triangeles
             cur_model.triangle_idx = this->triangles.size();
             cur_model.triangle_count = cur_triangles.size();
-            this->gltf_models.emplace_back(cur_model);
+            //this->gltf_models.emplace_back(cur_model);
             this->triangles.insert(this -> triangles.end(), cur_triangles.begin(), cur_triangles.end());
 
             // create bbox

@@ -168,9 +168,9 @@ __host__ __device__ float triangleIntersectionTest(
         intersectionPoint = multiplyMV(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
         // intepolate normal
         normal =
-            intersectionPoint.x * triangle.v0 +
-            intersectionPoint.y * triangle.v1 +
-            (1.0f - intersectionPoint.x - intersectionPoint.y) * triangle.v2;
+            intersectionPoint.x * triangle.v1 +
+            intersectionPoint.y * triangle.v2 +
+            (1.0f - intersectionPoint.x - intersectionPoint.y) * triangle.v0;
         normal = multiplyMV(supp_geom.transform, glm::vec4(normal, 0.0f));
     }
     return t;
