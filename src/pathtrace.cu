@@ -18,10 +18,11 @@
 #include "interactions.h"
 #include "timer.h"
 
+#define DEPTH_OF_FIELD 1
 #define BOUNDING_BOX 1
 #define ANTIALIASING 1
 #define SORT_MATERIAL 1
-#define CACHE_FIRST_ISECT 1
+#define CACHE_FIRST_ISECT 0
 
 PerformanceTimer& timer()
 {
@@ -106,7 +107,7 @@ void pathtraceInit(Scene* scene) {
     cudaMalloc(&dev_paths, pixelcount * sizeof(PathSegment));
     for (int i = 0; i < scene->geoms.size(); i++)
     {
-        
+
         Geom& geom = scene->geoms[i];
         cudaMalloc(&geom.dev_triangles, geom.triangles_size * sizeof(Triangle));
         cudaMemcpy(geom.dev_triangles, (scene->triangles[i]).data(), geom.triangles_size * sizeof(Triangle), cudaMemcpyHostToDevice);
@@ -146,10 +147,31 @@ void pathtraceFree() {
 
     // TODO: clean up any extra device memory you created
 #if CACHE_FIRST_ISECT
-     cudaFree(dev_first_intersections);
+    cudaFree(dev_first_intersections);
 #endif
 
     checkCUDAError("pathtraceFree");
+}
+
+__host__ __device__ glm::vec2 ConcentricSampleDisk(const glm::vec2& u) {
+    glm::vec2 uOffset = 2.f * u - glm::vec2(1, 1);
+
+    if (uOffset.x == 0 && uOffset.y == 0) {
+        return glm::vec2(0, 0);
+    }
+
+    float theta, r;
+
+    if (glm::abs(uOffset.x) > glm::abs(uOffset.y)) {
+        r = uOffset.x;
+        theta = 0.785398f * (uOffset.y / uOffset.x);
+    }
+    else {
+        r = uOffset.y;
+        theta = 1.570796f - 0.785398f * (uOffset.x / uOffset.y);
+    }
+    return r * glm::vec2(glm::cos(theta), glm::sin(theta));
+
 }
 
 /**
@@ -175,14 +197,13 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         float x_antialias = x;
         float y_antialias = y;
 
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, traceDepth);
+        thrust::uniform_real_distribution<float> u01(-0.5f, 0.5f);
+
 #if ANTIALIASING
         float offset = 0.5f;
-        thrust::default_random_engine rngX = makeSeededRandomEngine(iter, index, traceDepth);
-        thrust::uniform_real_distribution<float> u01X(-0.5f, 0.5f);
-        thrust::default_random_engine rngY = makeSeededRandomEngine(iter + 3, index, traceDepth);
-        thrust::uniform_real_distribution<float> u01Y(-0.5f, 0.5f);
-        x_antialias += u01X(rngX);
-        y_antialias += u01Y(rngY);
+        x_antialias += u01(rng);
+        y_antialias += u01(rng);
 #endif
 
         // TODO: implement antialiasing by jittering the ray
@@ -190,6 +211,22 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
             - cam.right * cam.pixelLength.x * (x_antialias - (float)cam.resolution.x * 0.5f)
             - cam.up * cam.pixelLength.y * (y_antialias - (float)cam.resolution.y * 0.5f)
         );
+
+#if DEPTH_OF_FIELD && !CACHE_FIRST_ISECT
+        float lensRadius = 0.5f;
+        float focalDistance = 11.f;
+
+        thrust::default_random_engine rngDOF = makeSeededRandomEngine(iter, index, traceDepth);
+        thrust::uniform_real_distribution<float> uDOF(0, 1);
+
+        glm::vec2 pLens = lensRadius * ConcentricSampleDisk(glm::vec2(uDOF(rngDOF), uDOF(rngDOF)));
+
+        float ft = glm::abs(focalDistance / segment.ray.direction.z);
+        glm::vec3 pFocus = segment.ray.origin + segment.ray.direction * ft;
+
+        segment.ray.origin += glm::vec3(pLens.x, pLens.y, 0);
+        segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+#endif
 
         segment.pixelIndex = index;
         segment.remainingBounces = traceDepth;
