@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>
-
+#include <thrust/device_vector.h>
 #include "sceneStructs.h"
 #include "utilities.h"
 
@@ -142,3 +142,181 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+
+__host__ __device__ bool InteresectBoundingBox(glm::vec3 min, glm::vec3 max, Ray r) {
+    glm::vec3 bounds[2] = {min, max};
+    glm::vec3 invdir = 1.f / r.direction;
+    int sign[3] = {(invdir.x < 0), (invdir.y < 0), (invdir.z < 0)};
+    float tmin, tmax, tymin, tymax, tzmin, tzmax;
+    tmin = (bounds[sign[0]].x - r.origin.x) * invdir.x;
+    tmax = (bounds[1 - sign[0]].x - r.origin.x) * invdir.x;
+    tymin = (bounds[sign[1]].y - r.origin.y) * invdir.y;
+    tymax = (bounds[1 - sign[1]].y - r.origin.y) * invdir.y;
+
+    if ((tmin > tymax) || (tymin > tmax))
+        return false;
+    if (tymin > tmin)
+        tmin = tymin;
+    if (tymax < tmax)
+        tmax = tymax;
+
+    tzmin = (bounds[sign[2]].z - r.origin.z) * invdir.z;
+    tzmax = (bounds[1 - sign[2]].z - r.origin.z) * invdir.z;
+
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return false;
+    if (tzmin > tmin)
+        tmin = tzmin;
+    if (tzmax < tmax)
+        tmax = tzmax;
+
+    return true;
+}
+
+__host__ __device__ float meshIntersectionTest(Geom mesh, Ray r, glm::vec2& uv,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    // printf("mesh.indices_num:%d\n", mesh.indices_num);
+    glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+    float t_intersect[100];
+    int t_intersect_size = 0;
+
+    Ray rt;
+    rt.origin = ro;
+    rt.direction = rd;
+
+    // float t_pos_min = FLT_MAX;
+    // float t_neg_max = -1000;
+    float t_min = FLT_MAX;
+    glm::vec3 curr_normal(0.f);
+    int tri_v1_idx, tri_v2_idx, tri_v3_idx;
+    int temp_idxidx;
+    float temp_s1, temp_s2, temp_s3;
+    intersectionPoint = r.origin;
+
+    if (InteresectBoundingBox(mesh.bounding_box_down_corner, mesh.bounding_box_upper_corner, rt)) {
+    // if (true) {
+    // if(false){
+        for (int idx_idx = 0; idx_idx < mesh.indices_num; idx_idx += 3) {
+            int tri_idx1 = mesh.dev_mesh_indices[idx_idx];
+            int tri_idx2 = mesh.dev_mesh_indices[idx_idx + 1];
+            int tri_idx3 = mesh.dev_mesh_indices[idx_idx + 2];
+            glm::vec3 tri_vert1(mesh.dev_mesh_positions[tri_idx1 * 3], mesh.dev_mesh_positions[tri_idx1 * 3 + 1], mesh.dev_mesh_positions[tri_idx1 * 3 + 2]);
+            glm::vec3 tri_vert2(mesh.dev_mesh_positions[tri_idx2 * 3], mesh.dev_mesh_positions[tri_idx2 * 3 + 1], mesh.dev_mesh_positions[tri_idx2 * 3 + 2]);
+            glm::vec3 tri_vert3(mesh.dev_mesh_positions[tri_idx3 * 3], mesh.dev_mesh_positions[tri_idx3 * 3 + 1], mesh.dev_mesh_positions[tri_idx3 * 3 + 2]);
+            glm::vec3 baryPosition(0.f);
+            if (glm::intersectRayTriangle(rt.origin, rt.direction, tri_vert1, tri_vert2, tri_vert3, baryPosition)) {
+                float t = baryPosition.z;
+                /*
+                float s1 = baryPosition[0];
+                float s2 = baryPosition[1];
+                float s3 = baryPosition[2];
+                float s = s1 + s2 + s3;
+                glm::vec3 intersect_pos = (s1 / s) * tri_vert1 + (s2 / s) * tri_vert2 + (s3 / s) * tri_vert3;
+                glm::vec3 OriToIntersect = intersect_pos - rt.origin;
+                float t = glm::l2Norm(OriToIntersect);  // abs(t);
+                if (glm::dot(OriToIntersect, rt.direction) < 0) {
+                    t = -t;
+                }
+                */
+
+                if (t_intersect_size < 100) {
+                    t_intersect[t_intersect_size] = t;
+                    t_intersect_size++;
+                }
+                else {
+                    printf("mesh temp t intersect is not big enough.\n");
+                }
+                
+                if (t < t_min && t > 0.f) {
+                    t_min = t;
+                    curr_normal = glm::normalize(glm::cross(tri_vert3 - tri_vert1, tri_vert2 - tri_vert1));
+                    tri_v1_idx = tri_idx1;
+                    tri_v2_idx = tri_idx2;
+                    tri_v3_idx = tri_idx3;
+                    temp_s1 = baryPosition[0];
+                    temp_s2 = baryPosition[1];
+                    temp_s3 = baryPosition[2];
+                    temp_idxidx = idx_idx;
+                }
+            }
+        }
+        if (t_min != FLT_MAX) {
+            glm::vec3 objspaceIntersection = getPointOnRay(rt, t_min);
+
+            // Calculate UV:
+            
+            if (mesh.hasTexture) {
+                glm::vec3 v1(mesh.dev_mesh_positions[tri_v1_idx * 3], mesh.dev_mesh_positions[tri_v1_idx * 3 + 1], mesh.dev_mesh_positions[tri_v1_idx * 3 + 2]);
+                glm::vec3 v2(mesh.dev_mesh_positions[tri_v2_idx * 3], mesh.dev_mesh_positions[tri_v2_idx * 3 + 1], mesh.dev_mesh_positions[tri_v2_idx * 3 + 2]);
+                glm::vec3 v3(mesh.dev_mesh_positions[tri_v3_idx * 3], mesh.dev_mesh_positions[tri_v3_idx * 3 + 1], mesh.dev_mesh_positions[tri_v3_idx * 3 + 2]);
+                // glm::vec2 uv1(mesh.dev_uvs[tri_v1_idx * 2], mesh.dev_uvs[tri_v1_idx * 2 + 1]);
+                // glm::vec2 uv2(mesh.dev_uvs[tri_v2_idx * 2], mesh.dev_uvs[tri_v2_idx * 2 + 1]);
+                // glm::vec2 uv3(mesh.dev_uvs[tri_v3_idx * 2], mesh.dev_uvs[tri_v3_idx * 2 + 1]);
+                glm::vec2 uv1(mesh.dev_uvs[temp_idxidx * 2], mesh.dev_uvs[temp_idxidx * 2 + 1]);
+                glm::vec2 uv2(mesh.dev_uvs[(temp_idxidx + 1) * 2], mesh.dev_uvs[(temp_idxidx + 1) * 2 + 1]);
+                glm::vec2 uv3(mesh.dev_uvs[(temp_idxidx + 2) * 2], mesh.dev_uvs[(temp_idxidx + 2) * 2 + 1]);
+
+                /*
+                glm::vec2 uv2Touv1 = uv1 - uv2;
+                glm::vec2 uv2Touv3 = uv3 - uv2;
+                uv2 = uv2 + 0.01f * uv2Touv1 + 0.01f * uv2Touv3;
+                uv3 = uv3 + 0.01f * uv2Touv1 - 0.01f * uv2Touv3;
+                uv1 = uv1 + 0.01f * uv2Touv3 - 0.01f * uv2Touv1;
+                uv1 = uv1 - glm::floor(uv1);
+                uv2 = uv2 - glm::floor(uv2);
+                uv3 = uv3 - glm::floor(uv3);
+                */
+
+                glm::vec3 V1ToV2 = v2 - v1;
+                glm::vec3 V1ToV3 = v3 - v1;
+                float total_area = 0.5f * glm::l2Norm(glm::cross(V1ToV2, V1ToV3));
+                glm::vec3 CToV1 = v1 - objspaceIntersection;
+                glm::vec3 CToV2 = v2 - objspaceIntersection;
+                glm::vec3 CToV3 = v3 - objspaceIntersection;
+                float s1 = 0.5f * glm::l2Norm(glm::cross(CToV2, CToV3));
+                float s2 = 0.5f * glm::l2Norm(glm::cross(CToV1, CToV3));
+                float s3 = 0.5f * glm::l2Norm(glm::cross(CToV1, CToV2));
+                total_area = s1 + s2 + s3;
+                
+                uv = (s1 / total_area) * uv1 + (s2 / total_area) * uv2 + (s3 / total_area) * uv3;
+                uv = uv - glm::floor(uv);
+                // uv = glm::vec2(0.75, 0.75);
+                // uv = uv1 / 3.f + uv2 / 3.f + uv3 / 3.f;
+            }
+            else {
+                uv = glm::vec2(0.f);
+            }
+            
+
+            intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+            normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(curr_normal, 0.f)));
+
+            if (glm::dot(normal, intersectionPoint - r.origin) > 0) {
+                normal = -normal;
+            }
+
+            // Determine outside or inside
+            int negative_counter = 0;
+            for (int i = 0; i < t_intersect_size; ++i) {
+                if (t_intersect[i] < 0) {
+                    ++negative_counter;
+                }
+            }
+
+            if (negative_counter % 2 == 0) {
+                outside = true;
+                // printf("outside\n");
+            }
+            else {
+                outside = false;
+                printf("inside\n");
+                printf("negative counter:%d\n\n", negative_counter);
+            }
+        }
+    }
+    // printf("\n");
+    return glm::length(r.origin - intersectionPoint);
+}
+

@@ -14,6 +14,7 @@ static double lastX;
 static double lastY;
 
 static bool camchanged = true;
+static bool mesh_init = false;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
 
@@ -167,13 +168,20 @@ void runCuda() {
         camchanged = false;
       }
 
+    
+
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
     // If the camera is moved, then the dev_path would be freeed;
     // They would be either activated when it is first initialized. 
+    // Init mesh:
+    if (mesh_init == false) {
+        meshInit(scene);
+        mesh_init = true;
+    }
     if (iteration == 0) {
-        pathtraceFree();
+        pathtraceFree(scene);
         pathtraceInit(scene);
     }
 
@@ -184,7 +192,8 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        // pathtrace(pbo_dptr, frame, iteration);
+        directlight_pathtrace(pbo_dptr, frame, iteration);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
@@ -192,7 +201,7 @@ void runCuda() {
         timer.stop();
         std::cout << "Milliseconds: " << timer.elapsedMilliseconds() << std::endl;
         saveImage();
-        pathtraceFree();
+        pathtraceFree(scene);
         cudaDeviceReset();
         exit(EXIT_SUCCESS);
     }
@@ -208,12 +217,27 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
       case GLFW_KEY_S:
         saveImage();
         break;
-      case GLFW_KEY_SPACE:
+      case GLFW_KEY_SPACE:{
         camchanged = true;
         renderState = &scene->state;
         Camera &cam = renderState->camera;
         cam.lookAt = ogLookAt;
-        break;
+        break; 
+      }
+      case GLFW_KEY_F: {
+          camchanged = true;
+          Camera& cam = renderState->camera;
+          cam.focal_length += 0.1;
+          printf("focal length:%f\n", cam.focal_length);
+          break;
+      }
+      case GLFW_KEY_G: {
+          camchanged = true;
+          Camera& cam = renderState->camera;
+          cam.focal_length -= 0.1;
+          printf("focal length:%f\n", cam.focal_length);
+          break;
+      }
       }
     }
 }

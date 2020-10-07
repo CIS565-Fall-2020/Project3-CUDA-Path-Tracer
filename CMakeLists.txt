@@ -84,6 +84,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/gltf-loader.cc
     )
 
 list(SORT headers)
