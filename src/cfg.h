@@ -11,3 +11,5 @@
 #define dof 0
 
 #define stratified_sampling 0
+
+#define bbox 1

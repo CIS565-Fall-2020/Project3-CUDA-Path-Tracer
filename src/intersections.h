@@ -143,6 +143,92 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     return glm::length(r.origin - intersectionPoint);
 }
 
+__host__ __device__ float triangleIntersectionTest(
+    const Triangle& triangle,
+    const Geom& supp_geom,
+    const Ray& r,
+    glm::vec3& intersectionPoint,
+    glm::vec3& normal
+) {
+    Ray q;
+    q.origin    =                multiplyMV(supp_geom.inverseTransform, glm::vec4(r.origin   , 1.0f));
+    q.direction = glm::normalize(multiplyMV(supp_geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float t = -1;
+    if (glm::intersectRayTriangle(
+        q.origin,
+        q.direction,
+        triangle.v0,
+        triangle.v1,
+        triangle.v2,
+        intersectionPoint)) {
+        t = intersectionPoint.z;
+        // transform to world space
+        intersectionPoint = multiplyMV(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
+        // intepolate normal
+        normal =
+            intersectionPoint.x * triangle.v0 +
+            intersectionPoint.y * triangle.v1 +
+            (1.0f - intersectionPoint.x - intersectionPoint.y) * triangle.v2;
+        normal = multiplyMV(supp_geom.transform, glm::vec4(normal, 0.0f));
+    }
+    return t;
+}
+
+__host__ __device__ float meshIntersectionTest(
+    const Geom &bbox,
+    GLTF_Model* models,
+    Triangle* triangles,
+    const Ray &r,
+    glm::vec3& intersectionPoint,
+    glm::vec3& normal,
+    bool& outside) {
+    ///
+    /// check bbox then triangles
+    /// 
+    float t = -1.0f;
+#if bbox
+    // got no idea what this would do, but anyway...
+    bool bbox_outside = true;
+    t = boxIntersectionTest(bbox, r, intersectionPoint, normal, bbox_outside);
+    if (t < 0) {
+        return -1;
+    }
+#else
+#endif
+    // intersect with triangle
+    GLTF_Model cur_model = models[bbox.mesh_idx];
+    int start_idx = cur_model.triangle_idx;
+    int end_idx = cur_model.triangle_count + start_idx;
+
+    glm::vec3 tmp_intersection;
+    glm::vec3 tmp_normal;
+
+    float t_min = INFINITY;
+    for (int idx = start_idx; idx < end_idx; idx++) {
+        const Triangle& cur_triangle = triangles[idx];
+        float t_tmp = -1.0f;
+        t_tmp = triangleIntersectionTest(
+            cur_triangle, 
+            cur_model.self_geom,
+            r,
+            tmp_intersection,
+            tmp_normal);
+        if (t_tmp > 0.0f && t_tmp < t_min) {
+            t_min = t_tmp;
+            intersectionPoint = tmp_intersection;
+            normal = tmp_normal;
+        }
+    }
+    if (t_min > 0.0 && t_min < INFINITY) {
+        t = t_min;
+    }
+    else {
+        t = -1.0f;
+    }
+    return t;
+}
+
 // Jack12 add intersections helper function here
 __global__ void construct_materialIDs(int num_paths, ShadeableIntersection* intersections, int * materialID) {
 

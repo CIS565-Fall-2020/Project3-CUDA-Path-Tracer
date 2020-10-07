@@ -29,6 +29,8 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    // for triangle index
+    int mesh_idx;
 };
 
 struct Triangle {
@@ -40,13 +42,19 @@ struct Triangle {
     glm::vec3 n1;
     glm::vec3 n2;
 
+    glm::vec2 uv0;
+    glm::vec2 uv1;
+    glm::vec2 uv2;
+
     glm::vec3 norm;
 };
 
 struct GLTF_Model {
+    // do not waste memory on all the same
     Geom self_geom;
-    Geom bbox_geom;
-    std::vector<Triangle> triangles;
+    // to index from triangleslist
+    int triangle_idx;
+    int triangle_count;
 };
 
 struct Material {

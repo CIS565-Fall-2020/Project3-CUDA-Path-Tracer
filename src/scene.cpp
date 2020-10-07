@@ -115,7 +115,6 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
     // ref https://github.com/syoyo/tinygltf/blob/master/examples/glview/glview.cc
     std::cout << "read gltf mesh from " << file_path << std::endl;
 
-    std::vector<Geom> trianges;
     // ty gktf-loader
     std::vector<example::Material> gltf_materials;
     std::vector<example::Mesh<float> > gltf_meshes;
@@ -135,13 +134,14 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
         std::cout << "there has " << gltf_meshes.size() << " meshes." << std::endl;
         for (auto cur_mesh = gltf_meshes.begin(); cur_mesh != gltf_meshes.end(); cur_mesh++) {
             GLTF_Model cur_model;
+            std::vector<Triangle> cur_triangles;
             glm::vec3 maxVal_vec(-INFINITY, -INFINITY, -INFINITY);
             glm::vec3 minVal_vec(INFINITY, INFINITY, INFINITY);
 
             for (int i = 0; i < cur_mesh->faces.size(); i+=3) {
                 
                 Triangle cur_triangle;
-                cur_model.self_geom.type = TRIANGLE;
+                cur_model.self_geom.type = GLTF_MESH;
 
                 int idx_f0 = i;
                 int idx_f1 = i + 1;
@@ -188,10 +188,11 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 );
 
                 //cur_triangle.norm = glm::triangleNormal()
-                cur_model.triangles.emplace_back(cur_triangle);
+                cur_triangles.emplace_back(cur_triangle);
+                // store geom info from .txt
                 cur_model.self_geom = parent_geom;
                 // assign bounding box
-                //TODO
+                //TODO check correctness for this
                 minVal_vec = glm::min(minVal_vec, cur_triangle.v0);
                 minVal_vec = glm::min(minVal_vec, cur_triangle.v1);
                 minVal_vec = glm::min(minVal_vec, cur_triangle.v2);
@@ -200,19 +201,30 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 maxVal_vec = glm::max(maxVal_vec, cur_triangle.v1);
                 maxVal_vec = glm::max(maxVal_vec, cur_triangle.v2);
             }
-            cur_model.bbox_geom = parent_geom;
-            cur_model.bbox_geom.type = BBOX;
-            cur_model.bbox_geom.scale = maxVal_vec - minVal_vec;
-            cur_model.bbox_geom.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
-            cur_model.bbox_geom.rotation = glm::vec3(0.0f);
+            // insert cur triangeles
+            cur_model.triangle_idx = this->triangles.size();
+            cur_model.triangle_count = cur_triangles.size();
+            this->gltf_models.emplace_back(cur_model);
+            this->triangles.insert(this -> triangles.end(), cur_triangles.begin(), cur_triangles.end());
 
-            cur_model.bbox_geom.transform = utilityCore::buildTransformationMatrix(
-                cur_model.bbox_geom.translation, 
-                cur_model.bbox_geom.rotation, 
-                cur_model.bbox_geom.scale);
+            // create bbox
+            Geom cur_bbox;
+            //cur_bbox = parent_geom;
+            cur_bbox.type = BBOX;
+            cur_bbox.scale = maxVal_vec - minVal_vec;
+            cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
+            cur_bbox.rotation = glm::vec3(0.0f);
 
-            cur_model.bbox_geom.inverseTransform = glm::inverse(cur_model.bbox_geom.transform);
-            cur_model.bbox_geom.invTranspose = glm::inverseTranspose(cur_model.bbox_geom.transform);
+            cur_bbox.transform = utilityCore::buildTransformationMatrix(
+                cur_bbox.translation,
+                cur_bbox.rotation,
+                cur_bbox.scale);
+
+            cur_bbox.inverseTransform = glm::inverse(cur_bbox.transform);
+            cur_bbox.invTranspose = glm::inverseTranspose(cur_bbox.transform);
+            // use this to index gltf_models
+            cur_bbox.mesh_idx = this->gltf_models.size();
+            this->geoms.emplace_back(cur_bbox);
 
             this->gltf_models.emplace_back(cur_model);
         }

@@ -28,6 +28,7 @@ public:
     ~Scene();
 
     std::vector<Geom> geoms;
+    std::vector<Triangle> triangles;
     std::vector<GLTF_Model> gltf_models;
 
     std::vector<Material> materials;
