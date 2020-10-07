@@ -88,6 +88,7 @@ void scatterRay(
 	
 	if (m.hasRefractive) {
 		float cos_theta = glm::dot(-pathSegment.ray.direction, normal);
+		float sin_theta = glm::sqrt(1 - cos_theta * cos_theta);
 		float ratio = m.indexOfRefraction;
 		if (!intersection.outside) {
 			ratio = 1.f / ratio;
@@ -95,15 +96,24 @@ void scatterRay(
 		glm::vec3 dir_refr = glm::refract(pathSegment.ray.direction, intersection.surfaceNormal, ratio);
 		float r0 = (1.f - ratio) * (1.f - ratio) / (1.f + ratio) / (1.f + ratio);
 		float r = r0 + (1.f - r0) * glm::pow(1.f - cos_theta, 5); // reflectance
-		if (choice > r) {
-			// refract
-			pathSegment.ray.direction = dir_refr;
-			pathSegment.color *= m.color;
-		}
-		else {
-			// reflect
+		if (ratio * sin_theta > 1.0f) {
+			// must reflect
 			pathSegment.ray.direction = dir_spec;
 			pathSegment.color *= m.specular.color;
+		}
+		else {
+			// can refract
+			if (choice > r) {
+				// refract
+				pathSegment.ray.direction = dir_refr;
+				pathSegment.ray.origin = intersect - 0.001f * normal;
+				pathSegment.color *= m.color;
+			}
+			else {
+				// reflect
+				pathSegment.ray.direction = dir_spec;
+				pathSegment.color *= m.specular.color;
+			}
 		}
 		return;
 	}

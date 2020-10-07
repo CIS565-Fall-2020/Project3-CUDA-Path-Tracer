@@ -45,7 +45,7 @@ SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
 REFR        1
-REFRIOR     1
+REFRIOR     1.5
 EMITTANCE   0
 
 // Camera
