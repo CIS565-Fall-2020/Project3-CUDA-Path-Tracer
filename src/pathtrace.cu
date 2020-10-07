@@ -533,20 +533,31 @@ __host__ __device__ bool octNodeBoundsTest(
     glm::vec3& invDir
 )
 {
-    float t0 = 0;
-    float t1 = FLT_MAX;
-    for (int i = 0; i < 3; ++i) {
-        float near = (node.minCorner[i] - ray.origin[i]) * invDir[i];
-        float far = (node.maxCorner[i] - ray.origin[i]) * invDir[i];
-        if (near > far) {
-            int tempFar = far;
-            far = near;
-            near = tempFar;
-        }
-        t0 = near > t0 ? near : t0;
-        t1 = far < t1 ? far : t1;
-        if (t0 > t1) return false;
+    float t0x = (node.minCorner.x - ray.origin.x) * invDir.x;
+    float t1x = (node.maxCorner.x - ray.origin.x) * invDir.x;
+    if (t0x > t1x) {
+        float temp = t0x;
+        t0x = t1x;
+        t1x = temp;
     }
+    float t0y = (node.minCorner.y - ray.origin.y) * invDir.y;
+    float t1y = (node.maxCorner.y - ray.origin.y) * invDir.y;
+    if (t0y > t1y) {
+        float temp = t0y;
+        t0y = t1y;
+        t1y = temp;
+    }
+    if ((t0x > t1y) || (t0y > t1x)) return false;
+    if (t0y > t0x) t0x = t0y;
+    if (t1y < t1x) t1x = t1y;
+    float t0z = (node.minCorner.z - ray.origin.z) * invDir.z;
+    float t1z = (node.maxCorner.z - ray.origin.z) * invDir.z;
+    if (t0z > t1z) {
+        float temp = t0z;
+        t0z = t1z;
+        t1z = temp;
+    }
+    if ((t0x > t1z) || (t0z > t1x)) return false;
     return true;
 }
 
@@ -571,7 +582,6 @@ __global__ void computeOctreeIntersections(
         glm::vec3 normal;
         float t_min = FLT_MAX;
         int hit_geom_index = -1;
-        int hit_geom_material = -1;
         bool outside = true;
 
         glm::vec3 tmp_intersect;
@@ -587,10 +597,11 @@ __global__ void computeOctreeIntersections(
         for (int i = 0; i < treeDepth; ++i) {
             OctNode& node = octreeNodes[current_node];
             // Check if you are at leaf node
-            if (node.numGeoms > 0) {
+            if (node.numGeoms > 0 && node.geomStartIdx >= 0) {
                 // At leaf node - get the geometry and do the intersection test
+                int start = node.geomStartIdx;
                 for (int i = 0; i < node.numGeoms; ++i) {
-                    Geom& geom = geoms[geomIndices[node.geomStartIdx + i]];
+                    Geom& geom = geoms[geomIndices[start + i]];
 
                     if (geom.type == CUBE)
                     {
@@ -608,8 +619,7 @@ __global__ void computeOctreeIntersections(
                     if (t > 0.0f && t_min > t)
                     {
                         t_min = t;
-                        hit_geom_index = i;
-                        hit_geom_material = geom.materialid;
+                        hit_geom_index = geomIndices[start + i];
                         intersect_point = tmp_intersect;
                         normal = tmp_normal;
                     }
@@ -618,49 +628,49 @@ __global__ void computeOctreeIntersections(
             }
             else {
                 if (node.upFarLeft > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.upFarLeft], pathSegment.ray, invDir)) {
                         current_node = node.upFarLeft;
                         continue;
                     }
                 }
                 if (node.upFarRight > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.upFarRight], pathSegment.ray, invDir)) {
                         current_node = node.upFarRight;
                         continue;
                     }
                 }
                 if (node.upNearLeft > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.upNearLeft], pathSegment.ray, invDir)) {
                         current_node = node.upNearLeft;
                         continue;
                     }
                 }
                 if (node.upNearRight > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.upNearRight], pathSegment.ray, invDir)) {
                         current_node = node.upNearRight;
                         continue;
                     }
                 }
                 if (node.downFarLeft > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.downFarLeft], pathSegment.ray, invDir)) {
                         current_node = node.downFarLeft;
                         continue;
                     }
                 }
                 if (node.downFarRight > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.downFarRight], pathSegment.ray, invDir)) {
                         current_node = node.downFarRight;
                         continue;
                     }
                 }
                 if (node.downNearLeft > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.downNearLeft], pathSegment.ray, invDir)) {
                         current_node = node.downNearLeft;
                         continue;
                     }
                 }
                 if (node.downNearRight > 0) {
-                    if (octNodeBoundsTest(node, pathSegment.ray, invDir)) {
+                    if (octNodeBoundsTest(octreeNodes[node.downNearRight], pathSegment.ray, invDir)) {
                         current_node = node.downNearRight;
                         continue;
                     }
@@ -678,7 +688,7 @@ __global__ void computeOctreeIntersections(
         {
             //The ray hits something
             intersections[path_index].t = t_min;
-            intersections[path_index].materialId = hit_geom_material;
+            intersections[path_index].materialId = geoms[hit_geom_index].materialid;
             intersections[path_index].surfaceNormal = normal;
         }
     }
