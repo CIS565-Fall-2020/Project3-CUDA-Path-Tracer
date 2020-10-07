@@ -24,8 +24,8 @@ glm::vec3 calculateRandomDirectionInHemisphere(
   thrust::uniform_int_distribution<int> ui0GridCount(0, numGridStratifiedSampling);
  
   // Choose grid
-  float gridX = ui0GridCount(rng) / numGridStratifiedSampling;
-  float gridY = ui0GridCount(rng) / numGridStratifiedSampling;
+  float gridX = (float)ui0GridCount(rng) / (float) numGridStratifiedSampling;
+  float gridY = (float)ui0GridCount(rng) / (float)numGridStratifiedSampling;
 
   // Choose jitter within grid
   jitterX = u0GridSize(rng) + gridX;

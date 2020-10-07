@@ -20,7 +20,7 @@
 
 #define ANTIALIASING 1
 #define TIMEPATHTRACE 0 // Measure performance
-#define DEPTHOFFIELD 1
+#define DEPTHOFFIELD 0
 #define MOTIONBLUR 1
 
 #define SORTPATHSBYMATERIAL 1 // Improve performance
