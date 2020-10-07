@@ -77,6 +77,7 @@ static Material* dev_materials = NULL;
 static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 static int* dev_lights = NULL;
+static int lightsNum = -1;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -100,6 +101,7 @@ void pathtraceInit(Scene* scene) {
 	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 	// TODO: initialize any extra device memeory you need
+	lightsNum = scene->lights.size();
 	cudaMalloc(&dev_lights, scene->lights.size() * sizeof(int));
 	cudaMemcpy(dev_lights, scene->lights.data(), scene->lights.size() * sizeof(int), cudaMemcpyHostToDevice);
 
@@ -230,13 +232,15 @@ __global__ void computeIntersections(
 // Your shaders should handle that - this can allow techniques such as
 // bump mapping.
 __global__ void shadeFakeMaterial(
-	int iter
-	, int num_paths
-	, const Camera& cam
-	, ShadeableIntersection* shadeableIntersections
-	, PathSegment* pathSegments
-	, Material* materials
-	, const int* lights
+	int iter,
+	int num_paths,
+	const Camera& cam,
+	ShadeableIntersection* shadeableIntersections,
+	PathSegment* pathSegments,
+	Material* materials,
+	const int* lights,
+	int lightsNum,
+	Geom* geoms
 )
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -262,7 +266,7 @@ __global__ void shadeFakeMaterial(
 			// like what you would expect from shading in a rasterizer like OpenGL.
 			// TODO: replace this! you should be able to start with basically a one-liner
 			else {
-				scatterRay(cam, pathSegments[idx], intersection, material, rng);
+				scatterRay(cam, rng, pathSegments[idx], intersection, material, lights, lightsNum, geoms, materials);
 				//float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
 				//pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
 				//pathSegments[idx].color *= u01(rng); // apply some noise because why not
@@ -287,6 +291,8 @@ __global__ void finalGather(int nPaths, glm::vec3* image, PathSegment* iteration
 	{
 		PathSegment iterationPath = iterationPaths[index];
 		image[iterationPath.pixelIndex] += iterationPath.color;
+		/*if (glm::length(image[iterationPath.pixelIndex]) > 1.f)
+			image[iterationPath.pixelIndex] = glm::normalize(image[iterationPath.pixelIndex]);*/
 	}
 }
 
@@ -303,7 +309,7 @@ struct is_terminated {
 void pathtrace(uchar4* pbo, int frame, int iter) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera& cam = hst_scene->state.camera;
-	float2 res = { cam.resolution.x, cam.resolution.y };
+	float2 res = { float(cam.resolution.x), float(cam.resolution.y) };
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
 	// const int pixelcount = 256;
 
@@ -369,12 +375,12 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 		float3 dim = { numblocksPathSegmentTracing.x, numblocksPathSegmentTracing.y, numblocksPathSegmentTracing.z };
 		computeIntersections<<<numblocksPathSegmentTracing, blockSize1d>>>(
-			depth
-			, num_paths
-			, dev_paths
-			, dev_geoms
-			, hst_scene->geoms.size()
-			, dev_intersections
+			depth,
+			num_paths,
+			dev_paths,
+			dev_geoms,
+			hst_scene->geoms.size(),
+			dev_intersections
 			);
 		checkCUDAError("trace one bounce");
 		cudaDeviceSynchronize();
@@ -390,7 +396,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		// TODO: compare between directly shading the path segments and shading
 		// path segments that have been reshuffled to be contiguous in memory.
 
-		std::cout << depth << std::endl;
 		shadeFakeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			iter,
 			num_paths,
@@ -398,7 +403,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			dev_intersections,
 			dev_paths,
 			dev_materials,
-			dev_lights
+			dev_lights,
+			lightsNum,
+			dev_geoms
 			);
 		checkCUDAError("shading fake material");
 
