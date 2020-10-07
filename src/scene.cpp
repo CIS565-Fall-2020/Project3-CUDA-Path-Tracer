@@ -245,7 +245,7 @@ void Scene::buildOctreeNode(OctreeNode &node, int depth) {
 		}
 	}
 
-	// add children indices and iterate
+	// iterate
 	for (int i = 0; i < 8; i++) {
 		node.childrenIndices.push_back(startNodeIdx + i);
 		buildOctreeNode(octree[startNodeIdx + i], depth + 1);
@@ -261,6 +261,7 @@ void Scene::buildOctree() {
 		}
 	}
 	octree.push_back(root);
+	buildOctreeNode(octree[0], 1);
 }
 
 int Scene::loadGeom(string objectid) {

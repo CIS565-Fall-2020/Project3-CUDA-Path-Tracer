@@ -20,7 +20,5 @@ public:
 	OctreeNode();
 	OctreeNode(glm::vec3 &v0, glm::vec3 &v1);
 
-	bool intersectTriangle(const Geom &geom);
-	void subdivide();
-	void fillChildrenIndices();
+	bool intersectTriangle (const Geom &geom) const;
 };
