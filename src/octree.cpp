@@ -1,5 +1,7 @@
 #include "octree.h"
 #include <algorithm>
+#include "utilities.h"
+#include "glm/gtc/matrix_inverse.hpp"
 
 OctreeNode::OctreeNode()
 {}
@@ -59,3 +61,17 @@ bool OctreeNode::intersectTriangle(const Geom &geom) const {
 	return true;
 }
 
+bool OctreeNode::intersectRay(const Ray &ray) const {
+	Geom box;
+	box.type = CUBE;
+	box.translation = center;
+	box.rotation = glm::vec3(0.0f);
+	box.scale = bp1 - bp0;
+
+	box.transform = utilityCore::buildTransformationMatrix(
+		box.translation, box.rotation, box.scale);
+	box.inverseTransform = glm::inverse(box.transform);
+	box.invTranspose = glm::inverseTranspose(box.transform);
+
+	return false;
+}

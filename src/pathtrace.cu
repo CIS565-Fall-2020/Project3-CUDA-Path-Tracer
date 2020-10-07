@@ -24,6 +24,7 @@
 #define SORTBYMAT 0
 #define CACHE 0
 #define DEPTH_OF_FIELD 0
+#define USE_OCTREE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -90,6 +91,7 @@ static int *dev_path_idxes = NULL;
 static int *dev_path_mats = NULL;
 static ShadeableIntersection *dev_intersections_cache = NULL;
 static bool state_updated = true;
+static OctreeNode *dev_octree = NULL;
 
 // Predicate for thust__remove_if
 struct path_is_end {
@@ -141,6 +143,9 @@ void pathtraceInit(Scene *scene) {
 
 	state_updated = true;
 
+	cudaMalloc(&dev_octree, scene->octree.size() * sizeof(OctreeNode));
+	cudaMemcpy(dev_octree, scene->octree.data(), scene->octree.size() * sizeof(OctreeNode), cudaMemcpyHostToDevice);
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -153,6 +158,7 @@ void pathtraceFree() {
     // TODO: clean up any extra device memory you created
 	cudaFree(dev_path_idxes);
 	cudaFree(dev_path_mats);
+	cudaFree(dev_octree);
 
     checkCUDAError("pathtraceFree");
 }
@@ -222,13 +228,12 @@ __global__ void computeIntersections(
 	int depth
 	, int num_paths
 	, PathSegment *pathSegments
-	, int *pathIndexes
-	, int *pathMats
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
 	, ShadeableIntersection * cached_intersections
 	, bool state_changed
+	, OctreeNode *octree_nodes
 	)
 {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -272,6 +277,7 @@ __global__ void computeIntersections(
 		{
 			t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 		}
+#ifndef USE_OCTREE
 		else if (geom.type == TRIANGLE) {
 			glm::vec3 baryRes;
 			bool ret = glm::intersectRayTriangle(pathSegment.ray.origin, pathSegment.ray.direction,
@@ -291,6 +297,7 @@ __global__ void computeIntersections(
 				t = -1.0f;
 			}
 		}
+#endif
 		// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 		// Compute the minimum t from the intersection tests to determine what
@@ -303,12 +310,14 @@ __global__ void computeIntersections(
 			normal = tmp_normal;
 		}
 	}
+#ifdef USE_OCTREE
+	// TODO: use octree for meshes
 
-	// TODO: use octree
+#endif
+	
 	if (hit_geom_index == -1)
 	{
 		intersections[path_index].t = -1.0f;
-		pathMats[index] = -1;
 	}
 	else
 	{
@@ -317,7 +326,6 @@ __global__ void computeIntersections(
 		intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 		intersections[path_index].surfaceNormal = normal;
 		intersections[path_index].outside = outside;
-		pathMats[index] = geoms[hit_geom_index].materialid;
 	}
 #if CACHE
 	if (depth == 0) {
@@ -467,8 +475,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	int num_paths_const = num_paths;
 
 	dim3 numblocksInit = (num_paths + blockSize1d - 1) / blockSize1d;
-	//fillPathSegmentPtrs <<<numblocksInit, blockSize1d>>> (num_paths, dev_paths, dev_path_ptrs);
-	fillPathIndexes <<<numblocksInit, blockSize1d>>> (num_paths, dev_path_idxes);
+	//fillPathIndexes <<<numblocksInit, blockSize1d>>> (num_paths, dev_path_idxes);
 	
 	thrust::device_ptr<int> dev_thrust_pathIdxes(dev_path_idxes);
 	thrust::device_ptr<int> dev_thrust_pathMats(dev_path_mats);
@@ -488,13 +495,12 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			depth
 			, num_paths
 			, dev_paths
-			, dev_path_idxes
-			, dev_path_mats
 			, dev_geoms
 			, hst_scene->geoms.size()
 			, dev_intersections
 			, dev_intersections_cache
 			, state_updated
+			, dev_octree
 			);
 		checkCUDAError("trace one bounce");
 		cudaDeviceSynchronize();
