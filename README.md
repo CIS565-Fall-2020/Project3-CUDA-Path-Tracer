@@ -28,7 +28,7 @@ CUDA Path Tracer
 
 * Material sort
 
-## Result
+## Result (Small Yellow Duck)
 
 ![pic 1](./img/title_image.png)
 
