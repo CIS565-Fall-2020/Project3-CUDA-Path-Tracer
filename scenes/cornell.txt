@@ -164,17 +164,8 @@ TRANS       -2 4 -2
 ROTAT       25 90 42
 SCALE       2 2 2
 
-// Mesh duck glass
-OBJECT 8
-mesh
-../scenes/duck/duck.gltf
-material 7
-TRANS       0 1 2
-ROTAT       0 -45 0
-SCALE       0.03 0.03 0.03
-
 // Wall
-OBJECT 9
+OBJECT 8
 cube
 material 0
 TRANS    0 5 10.8

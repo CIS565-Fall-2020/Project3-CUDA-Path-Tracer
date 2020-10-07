@@ -196,12 +196,15 @@ int Scene::loadGeom(string objectid) {
                 triangle.transform = newGeom.transform;
                 triangle.inverseTransform = newGeom.inverseTransform;
                 triangle.invTranspose = newGeom.invTranspose;
-                triangle.max_point = glm::vec3(triangle.transform * glm::vec4(glm::vec3(glm::max(triangle.v0.x, glm::max(triangle.v1.x, triangle.v2.x)),
-                                                                                        glm::max(triangle.v0.y, glm::max(triangle.v1.y, triangle.v2.y)),
-                                                                                        glm::max(triangle.v0.z, glm::max(triangle.v1.z, triangle.v2.z))), 1.f));
-                triangle.min_point = glm::vec3(triangle.transform * glm::vec4(glm::vec3(glm::min(triangle.v0.x, glm::min(triangle.v1.x, triangle.v2.x)),
-                                                                                        glm::min(triangle.v0.y, glm::min(triangle.v1.y, triangle.v2.y)),
-                                                                                        glm::min(triangle.v0.z, glm::min(triangle.v1.z, triangle.v2.z))), 1.f));
+                glm::vec3 v0t = glm::vec3(triangle.transform * glm::vec4(triangle.v0, 1.f));
+                glm::vec3 v1t = glm::vec3(triangle.transform * glm::vec4(triangle.v1, 1.f));
+                glm::vec3 v2t = glm::vec3(triangle.transform * glm::vec4(triangle.v2, 1.f));
+                triangle.max_point = glm::vec3(glm::max(v0t.x, glm::max(v1t.x, v2t.x)),
+                                               glm::max(v0t.y, glm::max(v1t.y, v2t.y)),
+                                               glm::max(v0t.z, glm::max(v1t.z, v2t.z)));
+                triangle.min_point = glm::vec3(glm::min(v0t.x, glm::min(v1t.x, v2t.x)),
+                                               glm::min(v0t.y, glm::min(v1t.y, v2t.y)),
+                                               glm::min(v0t.z, glm::min(v1t.z, v2t.z)));
                 geoms.push_back(triangle);
                 num_triangles++;
             }
@@ -209,8 +212,20 @@ int Scene::loadGeom(string objectid) {
         }
         else {
             if (newGeom.type == CUBE || newGeom.type == SPHERE) {
-                newGeom.max_point = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(0.5f), 1.f));
-                newGeom.min_point = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(-0.5f), 1.f));
+                glm::vec3 v0t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(0.5f), 1.f));
+                glm::vec3 v1t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(0.5f, 0.5f, -0.5f), 1.f));
+                glm::vec3 v2t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(0.5f, -0.5f, -0.5f), 1.f));
+                glm::vec3 v3t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(-0.5f, 0.5f, -0.5f), 1.f));
+                glm::vec3 v4t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(0.5f, -0.5f, 0.5f), 1.f));
+                glm::vec3 v5t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(-0.5f, 0.5f, 0.5f), 1.f));
+                glm::vec3 v6t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(-0.5f, -0.5f, 0.5f), 1.f));
+                glm::vec3 v7t = glm::vec3(newGeom.transform * glm::vec4(glm::vec3(-0.5f), 1.f));
+                newGeom.max_point = glm::vec3(glm::max(v0t.x, glm::max(v1t.x, glm::max(v2t.x, glm::max(v3t.x, glm::max(v4t.x, glm::max(v5t.x, glm::max(v6t.x, v7t.x))))))),
+                                              glm::max(v0t.y, glm::max(v1t.y, glm::max(v2t.y, glm::max(v3t.y, glm::max(v4t.y, glm::max(v5t.y, glm::max(v6t.y, v7t.y))))))),
+                                              glm::max(v0t.z, glm::max(v1t.z, glm::max(v2t.z, glm::max(v3t.z, glm::max(v4t.z, glm::max(v5t.z, glm::max(v6t.z, v7t.z))))))));
+                newGeom.min_point = glm::vec3(glm::min(v0t.x, glm::min(v1t.x, glm::min(v2t.x, glm::min(v3t.x, glm::min(v4t.x, glm::min(v5t.x, glm::min(v6t.x, v7t.x))))))),
+                                              glm::min(v0t.y, glm::min(v1t.y, glm::min(v2t.y, glm::min(v3t.y, glm::min(v4t.y, glm::min(v5t.y, glm::min(v6t.y, v7t.y))))))),
+                                              glm::min(v0t.z, glm::min(v1t.z, glm::min(v2t.z, glm::min(v3t.z, glm::min(v4t.z, glm::min(v5t.z, glm::min(v6t.z, v7t.z))))))));
             }
             geoms.push_back(newGeom);
         }
