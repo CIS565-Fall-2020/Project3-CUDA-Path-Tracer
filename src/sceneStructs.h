@@ -40,6 +40,8 @@ struct Geom {
     int materialid;
     int faceNum;
     int offset;
+    int posOffset;
+    int posNum;
     int boundingIdx;
     glm::vec3 translation;
     glm::vec3 rotation;
@@ -87,7 +89,7 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
-    float lensRadius = 0.1f;
+    float lensRadius = 0.5f;
     float focalDistance = 10.0f;
 };
 

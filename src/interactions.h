@@ -2,6 +2,7 @@
 
 #include "intersections.h"
 #include "utilities.h"
+#include "macros.h"
 
 #define XBASE 3
 #define YBASE 5
@@ -29,6 +30,18 @@ __host__ __device__ glm::vec3 squareLightSample(
     glm::vec3 interPos,
     glm::mat4 transform)
 {
+#ifdef HALTON
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float xGrid = u01(rng);
+    float yGrid = u01(rng);
+
+    float xHalton = haltonSequence((int)(yGrid * YRES) * XRES + (int)(xGrid * XRES), XBASE);
+    float yHalton = haltonSequence((int)(yGrid * YRES) * XRES + (int)(xGrid * XRES), YBASE);
+
+    glm::vec3 pointOnLight = glm::vec3(transform * glm::vec4(xHalton - 0.5f, -0.500f, yHalton - 0.5f, 1.0f));
+
+    return pointOnLight - interPos;
+#else
     thrust::uniform_real_distribution<float> u01(0, 1);
     float xGrid = u01(rng);
     float yGrid = u01(rng);
@@ -36,6 +49,7 @@ __host__ __device__ glm::vec3 squareLightSample(
     glm::vec3 pointOnLight = glm::vec3(transform * glm::vec4(xGrid - 0.5f, -0.500f, yGrid - 0.5f, 1.0f));
 
     return pointOnLight - interPos;
+#endif
 }
 
 

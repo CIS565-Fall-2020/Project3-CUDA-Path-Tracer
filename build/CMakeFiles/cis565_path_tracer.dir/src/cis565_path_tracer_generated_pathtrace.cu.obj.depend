@@ -818,6 +818,7 @@ SET(CUDA_NVCC_DEPEND
  "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/macros.h"
  "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/material.h"
  "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/mesh.h"
+ "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/octree.h"
  "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu"
  "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.h"
  "E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/scene.h"

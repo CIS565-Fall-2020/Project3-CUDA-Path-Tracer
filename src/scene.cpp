@@ -18,6 +18,9 @@ Scene::Scene(string filename) {
 
     faceCount = 0;
     meshCount = 0;
+    posCount = 0;
+
+    octree = Octree();
 
     while (fp_in.good()) {
         string line;
@@ -36,6 +39,8 @@ Scene::Scene(string filename) {
             }
         }
     }
+
+    octree.pointerize();
 
     for (int i = 0; i < geoms.size(); i++) 
     {
@@ -100,14 +105,17 @@ int Scene::loadGeom(string objectid) {
                 meshes.push_back(curMesh);
 
                 int curFaceNum = 0;
-                newGeom.offset = faceCount;
+                int curPosNum = 0;
 
                 for (int i = 0; i < curMesh.size(); i++) 
                 {
                     Geom curGeom;
                     curGeom.type = MESH;
                     curGeom.offset = curFaceNum;
+                    curGeom.posOffset = curPosNum;
                     curGeom.faceNum = curMesh.at(i).faces.size() / 3;
+                    curGeom.posNum = curMesh.at(i).vertices.size();
+
                     curGeom.materialid = curMesh.at(i).material_ids + materials.size();
 
                     glm::vec3 curTranslation = glm::vec3(curMesh.at(i).localTranslate[0], 
@@ -133,10 +141,12 @@ int Scene::loadGeom(string objectid) {
                     boundingBoxes.push_back(bb);
 
                     curFaceNum += curMesh.at(i).faces.size() / 3;
+                    curPosNum += curMesh.at(i).vertices.size();
 
                     meshGeoms.push_back(curGeom);
                 }
                 faceCount += curFaceNum;
+                posCount += curPosNum;
                 //newGeom.faceNum = curFaceNum;
             }
         }
@@ -217,6 +227,9 @@ int Scene::loadGeom(string objectid) {
             geoms.push_back(newGeom);
         }
         
+        //Insert into octree
+        octree.insertPrim(geoms.size() - 1, newGeom);
+
         return 1;
     }
 }

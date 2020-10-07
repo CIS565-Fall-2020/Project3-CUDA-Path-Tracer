@@ -6,9 +6,9 @@
 #include <iostream>
 #include "glm/glm.hpp"
 #include "utilities.h"
-#include "sceneStructs.h"
 #include "mesh.h"
 #include "material.h"
+#include "octree.h"
 
 
 
@@ -33,7 +33,9 @@ public:
     std::vector<example::Material> gltfMaterials;
     std::vector<example::Texture> gltfTextures;
     std::vector<BoundingBox> boundingBoxes;
+    Octree octree;
     RenderState state;
     int faceCount;
+    int posCount;
     int meshCount;
 };

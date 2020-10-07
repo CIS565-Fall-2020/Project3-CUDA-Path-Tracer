@@ -91,6 +91,8 @@ static std::vector<cudaArray*> cudaTextureData;
 static glm::vec2* dev_texDim = NULL;
 static cudaTextureObject_t* dev_cudaTextures = NULL;
 static example::Material* dev_gltfMateiral = NULL;
+static Octree* dev_octree = NULL;
+static OctreeNode* dev_octreeNode = NULL;
 static int lightLen = 0;
 
 cudaTextureObject_t texTest;
@@ -142,28 +144,36 @@ void pathtraceInit(Scene *scene) {
     cudaMalloc(&dev_gltfMateiral, scene->gltfMaterials.size() * sizeof(example::Material));
     cudaMemcpy(dev_gltfMateiral, scene->gltfMaterials.data(), scene->gltfMaterials.size() * sizeof(example::Material), cudaMemcpyHostToDevice);
 
+    cudaMalloc(&dev_octree, sizeof(scene->octree));
+    cudaMemcpy(dev_octree, &scene->octree, sizeof(scene->octree), cudaMemcpyHostToDevice);
+
+    cudaMalloc(&dev_octreeNode, sizeof(OctreeNode) * scene->octree.nodeData.size());
+    cudaMemcpy(dev_octreeNode, scene->octree.nodeData.data(), sizeof(OctreeNode) * scene->octree.nodeData.size(), cudaMemcpyHostToDevice);
+
     // TODO: initialize any extra device memeory you need
     cudaMalloc(&dev_mesh_idx, scene->faceCount * 3 * sizeof(int));
-    cudaMalloc(&dev_mesh_pos, scene->faceCount * 3 * 3 * sizeof(float));
+    cudaMalloc(&dev_mesh_pos, scene->posCount * sizeof(float));
     cudaMalloc(&dev_mesh_nor, scene->faceCount * 3 * 3 * sizeof(float));
     cudaMalloc(&dev_mesh_uv, scene->faceCount * 2 * 3 * sizeof(float));
 
     int curOffset = 0;
+    int curPosOffset = 0;
 
     for (int i = 0; i < scene->meshes.size(); i++) 
     {
         for (int j = 0; j < scene->meshes.at(i).size(); j++) 
         {
             int stride = scene->meshes.at(i).at(j).faces.size() / (scene->meshes.at(i).at(j).stride / sizeof(float));
+            int curPosNum = scene->meshes.at(i).at(j).vertices.size();
             int final = scene->meshes.at(i).at(j).faces.at(stride * 3 - 1);
             cudaMemcpy(dev_mesh_idx + curOffset * 3,
                        scene->meshes.at(i).at(j).faces.data(), 
                        stride * 3 * sizeof(int),
                        cudaMemcpyHostToDevice);
 
-            cudaMemcpy(dev_mesh_pos + curOffset * 3 * 3,
+            cudaMemcpy(dev_mesh_pos + curPosOffset,
                 scene->meshes.at(i).at(j).vertices.data(),
-                stride * 3 * 3 * sizeof(float),
+                curPosNum * sizeof(float),
                 cudaMemcpyHostToDevice);
 
             cudaMemcpy(dev_mesh_nor + curOffset * 3 * 3,
@@ -178,6 +188,7 @@ void pathtraceInit(Scene *scene) {
                 cudaMemcpyHostToDevice);
 
             curOffset += stride;
+            curPosOffset += curPosNum;
         }
     }
 
@@ -295,6 +306,11 @@ void pathtraceFree() {
     cudaFree(dev_mesh_pos);
 
     cudaFree(dev_mesh_uv);
+
+    // Octree
+    cudaFree(dev_octreeNode);
+    cudaFree(dev_octree);
+
     for (int i = 0; i < cudaTextureData.size(); i++) 
     {
         cudaFreeArray(cudaTextureData.at(i));
@@ -435,6 +451,7 @@ __global__ void computeIntersections(
 			}
             else if (geom.type == MESH) 
             {
+#ifdef BOUNDINGBOX
                 // Bounding Box Test
                 Ray modelRay;
                 modelRay.origin = multiplyMV(geom.inverseTransform, 
@@ -470,8 +487,12 @@ __global__ void computeIntersections(
                 if (t != -1) 
                 {
                     t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, tmp_uv, outside, tmp_tangent, tmp_bitangent,
-                        meshPos, meshNor, meshIdx, meshUV, geom.faceNum, geom.offset);
+                        meshPos, meshNor, meshIdx, meshUV, geom.faceNum, geom.offset, geom.posOffset);
                 } 
+#else
+                t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, tmp_uv, outside, tmp_tangent, tmp_bitangent,
+                    meshPos, meshNor, meshIdx, meshUV, geom.faceNum, geom.offset, geom.posOffset);
+#endif
                 isMesh = true;
             }
 			
@@ -517,6 +538,200 @@ __global__ void computeIntersections(
 		}
 	}
 }
+
+// Use octree to accelerate intersection
+__host__ __device__ void computeIntersectionsOctree(
+    PathSegment* pathSegment
+    , Geom* geoms
+    , int* geomsList
+    , int numObj
+    , ShadeableIntersection* intersection
+    , float* meshPos
+    , float* meshNor
+    , int* meshIdx
+    , float* meshUV
+)
+{
+    float t;
+    glm::vec3 intersect_point;
+    glm::vec3 normal;
+    glm::vec2 uv;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
+
+    float t_min = FLT_MAX;
+    int hit_geom_index = -1;
+    bool outside = true;
+    bool finalMesh = false;
+
+    glm::vec3 tmp_intersect;
+    glm::vec3 tmp_normal;
+    glm::vec2 tmp_uv;
+    glm::vec3 tmp_tangent;
+    glm::vec3 tmp_bitangent;
+
+    intersection->isMesh = false;
+
+    // naive parse through global geoms
+    float isMesh = false;
+    for (int i = 0; i < numObj; i++)
+    {
+        Geom& geom = geoms[geomsList[i]];
+
+        if (geom.type == CUBE)
+        {
+            t = boxIntersectionTest(geom, pathSegment->ray, tmp_intersect, tmp_normal, outside);
+            isMesh = false;
+        }
+        else if (geom.type == SPHERE)
+        {
+            t = sphereIntersectionTest(geom, pathSegment->ray, tmp_intersect, tmp_normal, outside);
+            isMesh = false;
+        }
+        else if (geom.type == MESH)
+        {
+         
+            t = meshIntersectionTest(geom, pathSegment->ray, tmp_intersect, tmp_normal, tmp_uv, outside, tmp_tangent, tmp_bitangent,
+                meshPos, meshNor, meshIdx, meshUV, geom.faceNum, geom.offset, geom.posOffset);
+        
+            isMesh = true;
+        }
+
+
+
+        // Compute the minimum t from the intersection tests to determine what
+        // scene geometry object was hit first.
+        if (t > 0.0f && t_min > t)
+        {
+            if (isMesh)
+            {
+                finalMesh = true;
+                uv = tmp_uv;
+                tangent = tmp_tangent;
+                bitangent = tmp_bitangent;
+            }
+            else
+            {
+                finalMesh = false;
+            }
+            t_min = t;
+            hit_geom_index = i;
+            intersect_point = tmp_intersect;
+            normal = tmp_normal;
+
+        }
+    }
+
+    if (hit_geom_index == -1 && intersection->t == FLT_MAX)
+    {
+       intersection->t = -1.0f;
+    }
+    else if(intersection->t > t_min)
+    {
+        //The ray hits something
+        intersection->t = t_min;
+        intersection->materialId = geoms[hit_geom_index].materialid;
+        intersection->surfaceNormal = normal;
+        intersection->uv = uv;
+        intersection->isMesh = finalMesh;
+        intersection->surfaceTangent = tangent;
+        intersection->surfaceBiTangent = bitangent;
+    }
+    
+}
+
+
+
+__host__ __device__ void rayOctNodeIntersect(
+    int nodeIndex,
+    OctreeNode* octNodes,
+    PathSegment* pathSegment,
+    Geom* geoms,
+    ShadeableIntersection* intersection,
+    float* meshPos,
+    float* meshNor,
+    int* meshIdx,
+    float* meshUV
+)
+{
+    OctreeNode* octNode = &(octNodes[nodeIndex]);
+    glm::vec3 center = octNode->boxCenter;
+    float scale = octNode->scale;
+
+   
+    glm::vec3 bond_intersect = glm::vec3(0.0f);
+    glm::vec3 bond_normal = glm::vec3(0.0f);
+    bool bond_outside = true;
+    printf("InterBox!");
+
+    float t = boxIntersectionTest(octNode->octBlock, pathSegment->ray, bond_intersect, bond_normal, bond_outside);
+ 
+    if (t != -1)
+    {
+        if (octNode->childCount == 0)
+        {
+            // Leaf Node
+            int primCount = octNode->primitiveCount;
+            int* geomList = new int[primCount];
+            for (int i = 0; i < primCount; i++)
+            {
+                geomList[i] = octNode->primitiveArray[i];
+            }
+
+            int triCount = octNode->meshTriCount;
+            int* triList = new int[triCount];
+            for (int i = 0; i < triCount; i++)
+            {
+                triList[i] = octNode->meshTriangleArray[i];
+            }
+
+            computeIntersectionsOctree(pathSegment, geoms, geomList, primCount, intersection, meshPos, meshNor, meshIdx, meshUV);
+
+            return;
+        }
+        else
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                if (!octNode->hasChild[i])
+                    continue;
+                else
+                {
+                    rayOctNodeIntersect(octNode->nodeIndices[i], octNode, pathSegment, geoms, intersection, meshPos, meshNor, meshIdx, meshUV);
+                }
+            }
+        }
+    }
+}
+
+__global__ void rayOctreeIntersect(
+    int depth
+    , int num_paths
+    , PathSegment* pathSegments
+    , Geom* geoms
+    , BoundingBox* bbs
+    , int geoms_size
+    , ShadeableIntersection* intersections
+    , float* meshPos
+    , float* meshNor
+    , int* meshIdx
+    , float* meshUV
+    , Octree* octTree
+    , OctreeNode* octreeNode)
+{
+    int path_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (path_index < num_paths)
+    {
+        PathSegment pathSegment = pathSegments[path_index];
+
+        intersections[path_index].isMesh = false;
+        intersections[path_index].t = FLT_MAX;
+
+        rayOctNodeIntersect(0, octreeNode, &pathSegment, geoms, &(intersections[path_index]), meshPos, meshNor, meshIdx, meshUV);
+    }
+}
+
 
 // LOOK: "fake" shader demonstrating what you might do with the info in
 // a ShadeableIntersection, as well as how to use thrust's random number
@@ -859,6 +1074,22 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         {
             if (iter == 1)
             {
+#ifdef OCTREEACCEL
+                rayOctreeIntersect << <numblocksPathSegmentTracing, blockSize1d >> >(
+                    depth
+                    , num_paths
+                    , dev_paths
+                    , dev_geoms
+                    , dev_bounding_box
+                    , hst_scene->geoms.size()
+                    , dev_intersections
+                    , dev_mesh_pos
+                    , dev_mesh_nor
+                    , dev_mesh_idx
+                    , dev_mesh_uv
+                    , dev_octree
+                    , dev_octreeNode);
+#else
                 // tracing
                 computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
                     depth
@@ -873,6 +1104,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                     , dev_mesh_idx
                     , dev_mesh_uv
                     );
+#endif
                 checkCUDAError("trace one bounce");
                 cudaDeviceSynchronize();
                 depth++;
@@ -889,6 +1121,22 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
         else 
         {
+#ifdef OCTREEACCEL
+            rayOctreeIntersect << <numblocksPathSegmentTracing, blockSize1d >> > (
+                depth
+                , num_paths
+                , dev_paths
+                , dev_geoms
+                , dev_bounding_box
+                , hst_scene->geoms.size()
+                , dev_intersections
+                , dev_mesh_pos
+                , dev_mesh_nor
+                , dev_mesh_idx
+                , dev_mesh_uv
+                , dev_octree
+                , dev_octreeNode);
+#else
             computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
                 depth
                 , num_paths
@@ -902,6 +1150,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                 , dev_mesh_idx
                 , dev_mesh_uv
                 );
+#endif
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
             depth++;

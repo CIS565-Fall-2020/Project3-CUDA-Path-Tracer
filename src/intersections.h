@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "sceneStructs.h"
 #include "utilities.h"
@@ -159,7 +161,7 @@ float triArea(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2)
 __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, glm::vec2& uv, bool& outside,
     glm::vec3& tangent, glm::vec3& bitangent,
-    float* meshPos, float* meshNor, int* meshIdx, float* meshUV, int faceNum, int offset) 
+    float* meshPos, float* meshNor, int* meshIdx, float* meshUV, int faceNum, int offset, int posOffset) 
 {
     glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
     glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
@@ -177,9 +179,13 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
         int index1 = meshIdx[i * 3 + 3 * offset + 1] + 3 * offset;
         int index2 = meshIdx[i * 3 + 3 * offset + 2] + 3 * offset;
 
-        glm::vec3 pos0 = glm::vec3(meshPos[3 * index0], meshPos[3 * index0 + 1], meshPos[3 * index0 + 2]);
-        glm::vec3 pos1 = glm::vec3(meshPos[3 * index1], meshPos[3 * index1 + 1], meshPos[3 * index1 + 2]);
-        glm::vec3 pos2 = glm::vec3(meshPos[3 * index2], meshPos[3 * index2 + 1], meshPos[3 * index2 + 2]);
+        int posIndex0 = meshIdx[i * 3 + 3 * offset] + posOffset / 3;
+        int posIndex1 = meshIdx[i * 3 + 3 * offset + 1] + posOffset / 3;
+        int posIndex2 = meshIdx[i * 3 + 3 * offset + 2] + posOffset / 3;
+
+        glm::vec3 pos0 = glm::vec3(meshPos[3 * posIndex0], meshPos[3 * posIndex0 + 1], meshPos[3 * posIndex0 + 2]);
+        glm::vec3 pos1 = glm::vec3(meshPos[3 * posIndex1], meshPos[3 * posIndex1 + 1], meshPos[3 * posIndex1 + 2]);
+        glm::vec3 pos2 = glm::vec3(meshPos[3 * posIndex2], meshPos[3 * posIndex2 + 1], meshPos[3 * posIndex2 + 2]);
 
         glm::vec3 nor0 = glm::vec3(meshNor[3 * index0], meshNor[3 * index0 + 1], meshNor[3 * index0 + 2]);
         glm::vec3 nor1 = glm::vec3(meshNor[3 * index1], meshNor[3 * index1 + 1], meshNor[3 * index1 + 2]);
@@ -274,3 +280,4 @@ __host__ __device__ float frDielectric(float cosThetaI, float cosThetaT, float e
 
     return (Rparl * Rparl + Rperp * Rperp) / 2;
 }
+

@@ -12,33 +12,37 @@
   E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
   -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
   D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(847): warning : variable "firstIteration" was declared but never referenced
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(654): warning : variable "scale" was declared but never referenced
+  
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1060): warning : variable "firstIteration" was declared but never referenced
   
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include\glm\gtx\intersect.inl(51): warning : calling a constexpr __host__ function("epsilon") from a __host__ __device__ function("intersectRayTriangle") is not allowed. The experimental flag '--expt-relaxed-constexpr' can be used to allow this.
             detected during instantiation of "__nv_bool glm::intersectRayTriangle(const genType &, const genType &, const genType &, const genType &, const genType &, genType &) [with genType=glm::vec3]" 
-  E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(193): here
+  E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(199): here
   
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(94): warning : variable "lightLen" was set but never used
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(96): warning : variable "lightLen" was set but never used
   
+CUSTOMBUILD : ptxas warning : Stack size for entry function '_Z18rayOctreeIntersectiiP11PathSegmentP4GeomP11BoundingBoxiP21ShadeableIntersectionPfS7_PiS7_P6OctreeP10OctreeNode' cannot be statically determined
   pathtrace.cu
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(66): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(68): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\interactions.h(54): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\interactions.h(55): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(111): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(116): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(157): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(205): warning C4996: 'cudaMemcpyToArray': was declared deprecated
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(113): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(118): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(166): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(167): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(216): warning C4996: 'cudaMemcpyToArray': was declared deprecated
   D:\cuda\dev\include\cuda_runtime_api.h(6926): note: see declaration of 'cudaMemcpyToArray'
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(786): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(786): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(841): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(861): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(890): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(959): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(999): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(999): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1054): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1074): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1121): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1206): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'initializing': conversion from 'Integer' to 'int', possible loss of data
           with
           [
@@ -82,7 +86,7 @@ D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
               ValuesIt=PathSegment *,
               CompareOp=material_sort
           ]
-  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(919): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
+  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1166): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
           with
           [
               DerivedPolicy=thrust::cuda_cub::par_t,
@@ -111,359 +115,4 @@ D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
   D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<0>' being compiled
   D:\cuda\dev\include\thrust/functional.h(1451): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<0>>' being compiled
   Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj successfully.
-  Building Custom Rule E:/Learning/CIS565/Project3-CUDA-Path-Tracer/CMakeLists.txt
-  glslUtility.cpp
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\glslUtility.cpp(100,1): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\ucrt\string.h(133): message : see declaration of 'strcpy'
-  gltf-loader.cc
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(80,47): warning C4244: '=': conversion from 'const _Ty' to 'float', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(81,47): warning C4244: '=': conversion from 'const _Ty' to 'float', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(82,47): warning C4244: '=': conversion from 'const _Ty' to 'float', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(113,62): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(114,62): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(115,62): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(120,58): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(121,58): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(122,58): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(127,52): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(128,52): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(129,52): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(260,50): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(261,50): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(262,50): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(263,50): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(264,50): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(265,50): warning C4244: '=': conversion from 'const _Ty' to 'T', possible loss of data
-          with
-          [
-              _Ty=double
-          ]
-          and
-          [
-              T=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(301,61): warning C4244: 'argument': conversion from 'T' to '_Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(302,61): warning C4244: 'argument': conversion from 'T' to '_Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(303,61): warning C4244: 'argument': conversion from 'T' to '_Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(382,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(383,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(384,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(386,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(387,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(388,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(390,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(391,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(392,68): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(458,67): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(459,67): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(461,67): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(462,67): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(464,67): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\gltf-loader.cc(465,67): warning C4244: 'argument': conversion from 'T' to 'const _Ty', possible loss of data
-          with
-          [
-              T=double
-          ]
-          and
-          [
-              _Ty=float
-          ]
-  image.cpp
-  main.cpp
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(79,19): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(130,19): warning C4018: '<': signed/unsigned mismatch
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(133,1): warning C4996: 'cudaGLMapBufferObject': was declared deprecated
-D:\cuda\dev\include\cuda_gl_interop.h(356): message : see declaration of 'cudaGLMapBufferObject'
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(140,1): warning C4996: 'cudaGLUnmapBufferObject': was declared deprecated
-D:\cuda\dev\include\cuda_gl_interop.h(382): message : see declaration of 'cudaGLUnmapBufferObject'
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(179,34): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(180,37): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(185,36): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-  preview.cpp
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(83,1): warning C4996: 'cudaGLUnregisterBufferObject': was declared deprecated
-D:\cuda\dev\include\cuda_gl_interop.h(404): message : see declaration of 'cudaGLUnregisterBufferObject'
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(107,1): warning C4996: 'cudaGLSetGLDevice': was declared deprecated
-D:\cuda\dev\include\cuda_gl_interop.h(305): message : see declaration of 'cudaGLSetGLDevice'
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(127,1): warning C4996: 'cudaGLRegisterBufferObject': was declared deprecated
-D:\cuda\dev\include\cuda_gl_interop.h(327): message : see declaration of 'cudaGLRegisterBufferObject'
-  scene.cpp
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(110,69): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(111,87): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(131,63): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(135,65): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(239,24): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(303,53): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(308,49): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(310,49): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(312,53): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(314,45): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-  stb.cpp
-E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include\stb_image_write.h(742,1): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\ucrt\stdio.h(1774): message : see declaration of 'sprintf'
-  utilities.cpp
-  Generating Code...
-     Creating library E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/lib/Debug/cis565_path_tracer.lib and object E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/lib/Debug/cis565_path_tracer.exp
-glew32s.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32s.lib(glew.obj)' or at 'E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\bin\Debug\vc120.pdb'; linking object as if no debug info
-LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   cis565_path_tracer.vcxproj -> E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\bin\Debug\cis565_path_tracer.exe
