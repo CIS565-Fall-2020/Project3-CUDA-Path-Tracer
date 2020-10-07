@@ -12,6 +12,7 @@ enum GeomType {
     CUBE,
     GLTF_MESH,
     TRIANGLE,
+    BBOX,
 };
 
 struct Ray {

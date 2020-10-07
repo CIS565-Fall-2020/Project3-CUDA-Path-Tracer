@@ -201,12 +201,16 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 maxVal_vec = glm::max(maxVal_vec, cur_triangle.v2);
             }
             cur_model.bbox_geom = parent_geom;
+            cur_model.bbox_geom.type = BBOX;
             cur_model.bbox_geom.scale = maxVal_vec - minVal_vec;
             cur_model.bbox_geom.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
             cur_model.bbox_geom.rotation = glm::vec3(0.0f);
 
             cur_model.bbox_geom.transform = utilityCore::buildTransformationMatrix(
-                cur_model.bbox_geom.translation, cur_model.bbox_geom.rotation, cur_model.bbox_geom.scale);
+                cur_model.bbox_geom.translation, 
+                cur_model.bbox_geom.rotation, 
+                cur_model.bbox_geom.scale);
+
             cur_model.bbox_geom.inverseTransform = glm::inverse(cur_model.bbox_geom.transform);
             cur_model.bbox_geom.invTranspose = glm::inverseTranspose(cur_model.bbox_geom.transform);
 
