@@ -110,9 +110,8 @@ SCALE       .01 10 10
 
 // gltf object
 OBJECT 6
-obj
-../scenes/sphere.obj
+sdf1
 material 1
 TRANS       0 3 0
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       3 1 1

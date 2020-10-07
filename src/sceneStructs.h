@@ -10,7 +10,8 @@
 enum GeomType {
     SPHERE,
     CUBE,
-    OBJ
+    OBJ,
+    SDF1
 };
 
 struct Ray {

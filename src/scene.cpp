@@ -160,7 +160,10 @@ int Scene::loadGeom(string objectid) {
                     filename = line.c_str();
                     cout << "Connecting Geom " << objectid << " to File " << filename << "..." << endl;
                 }
-
+            }
+            else if (strcmp(line.c_str(), "sdf1") == 0) {
+                cout << "Creating new sdf model..." << endl;
+                newGeom.type = SDF1;
             }
         }
 

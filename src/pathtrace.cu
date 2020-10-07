@@ -253,6 +253,9 @@ __global__ void computeIntersections(
                 t = meshTriangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal);
 #endif
             }
+            else if (geom.type == SDF1) {
+                t = sdfIntersection(geom, pathSegment.ray, tmp_intersect, tmp_normal);
+            }
 
             // Compute the minimum t from the intersection tests to determine what
             // scene geometry object was hit first.
