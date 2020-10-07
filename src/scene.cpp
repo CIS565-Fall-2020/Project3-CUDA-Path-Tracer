@@ -6,6 +6,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <map>
 
 #define TINYGLTF_IMPLEMENTATION
@@ -64,6 +65,15 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 	}
 
 	glm::mat4 gTran = pTran * tran * rot * scale;
+	// Check if matrix specified
+	if (node.matrix.size() > 0) {
+		float arr[16];
+		for (int i = 0; i < 16; i++) {
+			arr[i] = (float)node.matrix[i];
+		}
+		glm::mat4 local = glm::make_mat4(arr);
+		gTran = pTran * local;
+	}
 
 	if (node.mesh >= 0) {
 		const tinygltf::Mesh &mesh = model.meshes[node.mesh];
@@ -102,33 +112,19 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 				const unsigned char* data_ptr = &buffer.data[bufferView.byteOffset + attrAccessor.byteOffset];
 
 				if (attr.first == "POSITION") {
-					if (count % 3 != 0) {
-						cout << "Only support triangle mesh" << endl;
-						throw;
-					}
 					for (int i = 0; i < count; i++) {
 						const float* p = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
-						vertex_positions.push_back(glm::vec3(p[0], p[1], p[2]));
+						glm::vec4 vpos = glm::vec4(p[0], p[1], p[2], 1.0f);
+						vpos = gTran * vpos;
+						vertex_positions.push_back(glm::vec3(vpos));
 					}
-					/*
-					for (int i = 0; i < count; i = i + 3) {
-						Geom newGeom;
-						newGeom.type = TRIANGLE;
-						const float* px = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
-						const float* py = reinterpret_cast<const float*>(data_ptr + (i + 1) * byte_stride);
-						const float* pz = reinterpret_cast<const float*>(data_ptr + (i + 2) * byte_stride);
-						newGeom.v0 = glm::vec3(px[0], px[1], px[2]);
-						newGeom.v1 = glm::vec3(py[0], py[1], py[2]);
-						newGeom.v2 = glm::vec3(pz[0], pz[1], pz[2]);
-						newGeom.materialid = prim.material + existingMats;
-						geoms.push_back(newGeom);
-					}
-					*/
 				}
 				else if (attr.first == "NORMAL") {
 					for (int i = 0; i < count; i++) {
 						const float* n = reinterpret_cast<const float*>(data_ptr + i * byte_stride);
-						vertex_normals.push_back(glm::vec3(n[0], n[1], n[2]));
+						glm::vec4 norm = glm::vec4(n[0], n[1], n[2], 1.0f);
+						norm = gTran * norm;
+						vertex_normals.push_back(glm::vec3(norm));
 					}
 				}
 			}
@@ -172,10 +168,11 @@ int Scene::loadGltf(string filename) {
 	}
 	
 	// Iterate through all nodes (load triangles)
-	for (const auto &node : model.nodes) {
-		traverseNode(model, node, glm::mat4(1.f));
+	for (const auto &sc : model.scenes) {
+		for (const auto &nodeIdx : sc.nodes) {
+			traverseNode(model, model.nodes[nodeIdx], glm::mat4(1.f));
+		}
 	}
-
 	// Load Materials (after traversing nodes)
 	for (const auto &gltfMat : model.materials) {
 		Material mat;

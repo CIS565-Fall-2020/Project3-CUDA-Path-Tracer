@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#define MAX_DEPTH 4
 
 using namespace std;
 

@@ -304,6 +304,7 @@ __global__ void computeIntersections(
 		}
 	}
 
+	// TODO: use octree
 	if (hit_geom_index == -1)
 	{
 		intersections[path_index].t = -1.0f;
