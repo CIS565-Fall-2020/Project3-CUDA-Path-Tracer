@@ -15,9 +15,9 @@
 #include "intersections.h"
 #include "interactions.h"
 
-#define SORT_MATERIALS
-#define CACHE_FIRST_BOUNCE
-#define RAY_TERMINATION
+// #define SORT_MATERIALS
+// #define CACHE_FIRST_BOUNCE
+//  #define RAY_TERMINATION
 
 // #define PERF_RAY_TERMINATION
 
@@ -277,7 +277,8 @@ __global__ void shadeFakeMaterial (
 }
 
 __global__ void shadeRealMaterial(
-    int iter
+    int iter,
+    int depth
     , int num_paths
     , ShadeableIntersection* shadeableIntersections
     , PathSegment* pathSegments
@@ -297,7 +298,7 @@ __global__ void shadeRealMaterial(
           // Set up the RNG
           // LOOK: this is how you use thrust's RNG! Please look at
           // makeSeededRandomEngine as well.
-            thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
+            thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, depth);
             thrust::uniform_real_distribution<float> u01(0, 1);
 
             Material material = materials[intersection.materialId];
@@ -464,6 +465,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
   // path segments that have been reshuffled to be contiguous in memory.
      shadeRealMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
        iter,
+       depth,
        num_paths,
        dev_intersections,
        dev_paths,

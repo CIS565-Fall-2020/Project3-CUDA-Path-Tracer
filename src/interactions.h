@@ -74,16 +74,16 @@ void scatterRay(
         const Material &m,
         thrust::default_random_engine &rng) {
   thrust::uniform_real_distribution<float> u01(0, 1);
-  if (u01(rng) < m.hasReflective) {
+  if (u01(rng) < 0) {
     // Specular
-    pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+    pathSegment.ray.direction = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
     pathSegment.color *= m.specular.color;
   } else {
     // Diffuse
     pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    pathSegment.color *= m.color;
   }
   
-  pathSegment.color *= m.color;
   glm::clamp(pathSegment.color, glm::vec3(0.0f), glm::vec3(1.0f));              // Clamp the color
   pathSegment.ray.origin = intersect + 0.0001f * normal;     // New ray shoot from intersection point
   pathSegment.remainingBounces--;                                               // Decrease bounce counter
