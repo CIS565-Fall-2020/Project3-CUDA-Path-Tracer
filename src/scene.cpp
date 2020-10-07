@@ -121,6 +121,10 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 						vpos = gTran * vpos;
 						vertex_positions.push_back(glm::vec3(vpos));
 					}
+					// compute and update bounding box
+					glm::vec3 p_min = glm::vec3(attrAccessor.minValues[0], attrAccessor.minValues[1], attrAccessor.minValues[2]);
+					glm::vec3 p_max = glm::vec3(attrAccessor.maxValues[0], attrAccessor.maxValues[1], attrAccessor.maxValues[2]);
+					updateBoundingBox(p_min, p_max, gTran);
 				}
 				else if (attr.first == "NORMAL") {
 					for (int i = 0; i < count; i++) {
@@ -155,6 +159,20 @@ void Scene::traverseNode(const tinygltf::Model &model, const tinygltf::Node &nod
 		traverseNode(model, child, gTran);
 	}
 #endif
+}
+
+void Scene::updateBoundingBox(const glm::vec3 &v0, const glm::vec3 &v1, const glm::mat4 &tMat) {
+	glm::mat2x3 vals = glm::mat2x3(v0, v1);
+	for (int i : {0, 1}) {
+		for (int j : {0, 1}) {
+			for (int k : {0, 1}) {
+				glm::vec4 v = glm::vec4(vals[i][0], vals[j][1], vals[k][2], 1.f);
+				glm::vec3 vt = glm::vec3(tMat * v);
+				pMin = glm::min(pMin, vt);
+				pMax = glm::max(pMax, vt);
+			}
+		}
+	}
 }
 
 int Scene::loadGltf(string filename) {
@@ -194,9 +212,12 @@ int Scene::loadGltf(string filename) {
 		materials.push_back(eMat);
 	}
 
-	// Load Camera
 
 	return 0;
+}
+
+void Scene::buildOctTree() {
+	OctreeNode root;
 }
 
 int Scene::loadGeom(string objectid) {

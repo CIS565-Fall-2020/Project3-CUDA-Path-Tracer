@@ -22,16 +22,20 @@ private:
     int loadCamera();
 	
 	void traverseNode(const tinygltf::Model &model, const tinygltf::Node &node, glm::mat4 pTran);
+	void updateBoundingBox(const glm::vec3 &v0, const glm::vec3 &v1, const glm::mat4 &tMat);
 
 public:
     Scene(string filename);
     ~Scene();
 
 	int loadGltf(string filename);
+	void buildOctTree();
 
     std::vector<Geom> geoms;
     std::vector<Material> materials;
     RenderState state;
 
 	std::vector<OctreeNode> octree;
+	glm::vec3 pMin;
+	glm::vec3 pMax;
 };
