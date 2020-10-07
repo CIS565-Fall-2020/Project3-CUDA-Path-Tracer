@@ -19,6 +19,7 @@ using utilTimer::PerformanceTimer;
 #define ERRORCHECK 1
 #define CACHE_BOUNCE 1
 #define MATERIAL_SORT 0
+#define DEPTH_OF_FIELD 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -129,6 +130,16 @@ void pathtraceFree() {
     checkCUDAError("pathtraceFree");
 }
 
+__host__ __device__
+glm::vec3 squareToDiskUniform(const glm::vec2& sample)
+{
+	float r = sqrt(sample.x);
+	float theta = 2 * PI * sample.y;
+	float x = r * cos(theta);
+	float y = r * sin(theta);
+	return glm::vec3(x, y, 0.f);
+}
+
 /**
 * Generate PathSegments with rays from the camera through the screen into the
 * scene, which is the first bounce of rays.
@@ -154,6 +165,25 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 			);
+
+#if DEPTH_OF_FIELD == 1
+
+    float discRadius = 0.5f;
+    float focalDistance = 10.5f;   // distance between the projection point and the plane where everything is in perfect focus
+    
+    thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+    thrust::uniform_real_distribution<float> u01(0, 1);
+
+    glm::vec2 sample = glm::vec2(u01(rng), u01(rng));
+    glm::vec3 pLens = discRadius * squareToDiskUniform(sample);
+
+    float ft = focalDistance / glm::abs(segment.ray.direction.z);
+    glm::vec3 pFocus = segment.ray.origin + ft * segment.ray.direction;
+
+    segment.ray.origin += glm::vec3(pLens.x, pLens.y, 0.f);
+    segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
+
+#endif  //DEPTH_OF_FEILD
 
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
