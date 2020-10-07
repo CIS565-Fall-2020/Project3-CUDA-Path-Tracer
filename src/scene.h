@@ -7,6 +7,7 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "sceneStructs.h"
+#include "octree.h"
 
 //#define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
@@ -31,4 +32,6 @@ public:
     std::vector<Geom> geoms;
     std::vector<Material> materials;
     RenderState state;
+
+	std::vector<OctreeNode> octree;
 };
