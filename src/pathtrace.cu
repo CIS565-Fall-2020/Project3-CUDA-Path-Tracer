@@ -18,6 +18,7 @@
 // #define SORT_MATERIALS
 #define CACHE_FIRST_BOUNCE
 #define RAY_TERMINATION
+#define ANTIALIASING
 
 // #define PERF_RAY_TERMINATION
 
@@ -129,19 +130,27 @@ void pathtraceFree() {
 __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    float px = (float)x;
+    float py = (float)y;
 
 	if (x < cam.resolution.x && y < cam.resolution.y) {
 		int index = x + (y * cam.resolution.x);
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> u01(0, 1);
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-		// TODO: implement antialiasing by jittering the ray
+#ifdef ANTIALIASING
+        px += u01(rng);
+        py += u01(rng);
+#endif // ANTIALIASING
+
 		segment.ray.direction = glm::normalize(cam.view
-			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+			- cam.right * cam.pixelLength.x * (px - (float)cam.resolution.x * 0.5f)
+			- cam.up * cam.pixelLength.y * (py - (float)cam.resolution.y * 0.5f)
 			);
 
 		segment.pixelIndex = index;
@@ -414,7 +423,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	// tracing
 	dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
-#ifdef CACHE_FIRST_BOUNCE
+#if defined(CACHE_FIRST_BOUNCE) && !defined(ANTIALIASING)
     if (depth == 0) {
         if (iter == 1) {
             computeIntersections<<<numblocksPathSegmentTracing, blockSize1d >>> (
