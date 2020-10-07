@@ -7,7 +7,8 @@ OctreeNode::OctreeNode()
 {}
 
 OctreeNode::OctreeNode(glm::vec3 &v0, glm::vec3 &v1)
-	: bp0(v0), bp1(v1), childrenIndices(8, -1)
+	: bp0(v0), bp1(v1), childrenIndices{ -1, -1, -1, -1, -1, -1, -1, -1 },
+	geom_idx_start(-1), geom_idx_end(-1)
 {
 	center = (v0 + v1) / 2.f;
 }
@@ -59,20 +60,4 @@ bool OctreeNode::intersectTriangle(const Geom &geom) const {
 	}
 
 	return true;
-}
-
-float OctreeNode::intersectRay(const Ray &ray,
-		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) const {
-	Geom box;
-	box.type = CUBE;
-	box.translation = center;
-	box.rotation = glm::vec3(0.0f);
-	box.scale = bp1 - bp0;
-
-	box.transform = utilityCore::buildTransformationMatrix(
-		box.translation, box.rotation, box.scale);
-	box.inverseTransform = glm::inverse(box.transform);
-	box.invTranspose = glm::inverseTranspose(box.transform);
-
-	return -1;
 }

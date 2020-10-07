@@ -218,7 +218,7 @@ int Scene::loadGltf(string filename) {
 }
 
 void Scene::buildOctreeNode(OctreeNode &node, int depth) {
-	if (depth >= MAX_DEPTH || node.geomIndices.size() <= 1) {
+	if (depth >= MAX_DEPTH || node.geom_idx_end == node.geom_idx_start) {
 		return;
 	}
 	int startNodeIdx = octree.size();
@@ -240,10 +240,18 @@ void Scene::buildOctreeNode(OctreeNode &node, int depth) {
 				glm::vec3 p_max = p_min + glm::vec3(dx, dy, dz);
 				OctreeNode c(p_min, p_max);
 				// add intersecting mesh
-				for (int gIdx : node.geomIndices) {
+				int start = geom_indices.size();
+				for (int k = node.geom_idx_start; k < node.geom_idx_end; k++) {
+					int gIdx = geom_indices[k];
 					if (c.intersectTriangle(geoms[gIdx])) {
-						c.geomIndices.push_back(gIdx);
+						//c.geomIndices.push_back(gIdx);
+						geom_indices.push_back(gIdx);
 					}
+				}
+				int end = geom_indices.size();
+				if (start < end) {
+					c.geom_idx_start = start;
+					c.geom_idx_end = end;
 				}
 				octree.push_back(c);
 			}
@@ -261,9 +269,11 @@ void Scene::buildOctree() {
 	for (int i = 0; i < geoms.size(); i++) {
 		if (geoms[i].type == TRIANGLE) {
 			// only handle triangle mesh for now
-			root.geomIndices.push_back(i);
+			geom_indices.push_back(i);
 		}
 	}
+	root.geom_idx_start = 0;
+	root.geom_idx_end = geom_indices.size();
 	octree.push_back(root);
 	buildOctreeNode(octree[0], 1);
 }

@@ -148,7 +148,7 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 __host__ __device__
 float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside, int &index, 
-		Geom *geoms, OctreeNode *octree) {
+		Geom *geoms, int *geom_indices, OctreeNode *octree) {
 	Geom box;
 	box.type = CUBE;
 	box.translation = node.center;
@@ -177,7 +177,7 @@ float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 		int tmp_idx2 = -1;
 		for (int cIdx : node.childrenIndices) {
 			float t = octreeIntersectionTest(octree[cIdx], ray, 
-				tmp_intersect2, tmp_normal2, tmp_outside2, tmp_idx2, geoms, octree);
+				tmp_intersect2, tmp_normal2, tmp_outside2, tmp_idx2, geoms, geom_indices, octree);
 			if (t > 0.0f && t_min > t) {
 				t_min = t;
 				tmp_idx = tmp_idx2;
@@ -189,7 +189,8 @@ float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 	}
 	else {
 		// This is a leaf
-		for (int gIdx : node.geomIndices) {
+		for (int k = node.geom_idx_start; k < node.geom_idx_end; k++) {
+			int gIdx = geom_indices[k];
 			Geom & geom = geoms[gIdx];
 			glm::vec3 baryRes;
 			bool ret = glm::intersectRayTriangle(ray.origin, ray.direction,

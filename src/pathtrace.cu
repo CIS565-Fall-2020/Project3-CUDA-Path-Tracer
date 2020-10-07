@@ -92,6 +92,7 @@ static int *dev_path_mats = NULL;
 static ShadeableIntersection *dev_intersections_cache = NULL;
 static bool state_updated = true;
 static OctreeNode *dev_octree = NULL;
+static int *dev_geom_idxes = NULL;
 
 // Predicate for thust__remove_if
 struct path_is_end {
@@ -146,6 +147,9 @@ void pathtraceInit(Scene *scene) {
 	cudaMalloc(&dev_octree, scene->octree.size() * sizeof(OctreeNode));
 	cudaMemcpy(dev_octree, scene->octree.data(), scene->octree.size() * sizeof(OctreeNode), cudaMemcpyHostToDevice);
 
+	cudaMalloc(&dev_geom_idxes, scene->geom_indices.size() * sizeof(int));
+	cudaMemcpy(dev_geom_idxes, scene->geom_indices.data(), scene->geom_indices.size() * sizeof(int), cudaMemcpyHostToDevice);
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -159,6 +163,7 @@ void pathtraceFree() {
 	cudaFree(dev_path_idxes);
 	cudaFree(dev_path_mats);
 	cudaFree(dev_octree);
+	cudaFree(dev_geom_idxes);
 
     checkCUDAError("pathtraceFree");
 }
@@ -234,6 +239,7 @@ __global__ void computeIntersections(
 	, ShadeableIntersection * cached_intersections
 	, bool state_changed
 	, OctreeNode *octree_nodes
+	, int *geom_indices
 	)
 {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -313,7 +319,8 @@ __global__ void computeIntersections(
 #ifdef USE_OCTREE
 	// TODO: use octree for meshes
 	int idx;
-	t = octreeIntersectionTest(octree_nodes[0], pathSegment.ray, tmp_intersect, tmp_normal, outside, idx, geoms, octree_nodes);
+	t = octreeIntersectionTest(octree_nodes[0], pathSegment.ray, tmp_intersect, tmp_normal, outside, idx, 
+		geoms, geom_indices, octree_nodes);
 	if (t > 0.0f && t_min > t) {
 		t_min = t;
 		hit_geom_index = idx;
@@ -508,6 +515,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, dev_intersections_cache
 			, state_updated
 			, dev_octree
+			, dev_geom_idxes
 			);
 		checkCUDAError("trace one bounce");
 		cudaDeviceSynchronize();
