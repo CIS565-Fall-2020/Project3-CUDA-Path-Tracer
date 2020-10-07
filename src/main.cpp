@@ -110,8 +110,9 @@ void saveImage() {
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
             int index = x + (y * width);
-            glm::vec3 pix = renderState->image[index];
-            img.setPixel(width - 1 - x, y, glm::vec3(pix) / samples);
+            glm::vec3 pix = renderState->image[index] / samples;
+            pix = glm::pow(pix, glm::vec3(1.0f / 2.2f));
+            img.setPixel(width - 1 - x, y, pix);
         }
     }
 
@@ -173,7 +174,7 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration, samplers[0].range());
+        pathtrace(pbo_dptr, frame, iteration, -1, samplers[0].range());
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);

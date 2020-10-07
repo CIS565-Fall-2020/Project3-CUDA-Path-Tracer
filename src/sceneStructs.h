@@ -65,8 +65,8 @@ struct DisneyMaterial {
 		specularTint,
 		sheen,
 		sheenTint,
-		clearCoat,
-		clearCoatGloss;
+		clearcoat,
+		clearcoatGloss;
 };
 
 struct Material {
@@ -99,7 +99,7 @@ struct RenderState {
 };
 
 struct PathSegment {
-	glm::vec3 color;
+	glm::vec3 color, colorAccum;
 	int remainingBounces;
 	Ray ray;
 	int pixelIndex;

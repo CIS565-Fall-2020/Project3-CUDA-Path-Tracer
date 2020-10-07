@@ -56,13 +56,14 @@ __host__ __device__ float gtr2(float cosHalf, float a) {
 	float t = 1.0f + (a2 - 1.0f) * cosHalf * cosHalf;
 	return a2 / (glm::pi<float>() * t * t);
 }
-__host__ __device__ float smithGGgxSpecular(float cosOut, float a) {
-	float sqrA = a * a, sqrCosOut = cosOut * cosOut;
-	return 1.0f / (cosOut + glm::sqrt(sqrCosOut + (1.0 - sqrCosOut) / sqrA));
-}
-__host__ __device__ float smithGGgxClearcoat(float cosOut, float alphaG) {
+__host__ __device__ float smithGGgx(float cosOut, float alphaG) {
 	float a = alphaG * alphaG, b = cosOut * cosOut;
 	return 1.0f / (cosOut + glm::sqrt(a + b - a * b));
+}
+
+__host__ __device__ glm::vec3 disneyBrdfTint(glm::vec3 linearColor) {
+	float luminance = 0.3f * linearColor.r + 0.6f * linearColor.g + 0.1f * linearColor.b;
+	return luminance > 0.0f ? linearColor / luminance : glm::vec3(1.0f);
 }
 
 __host__ __device__ glm::vec3 disneyBrdfIsotropicDiffuse(
@@ -93,7 +94,7 @@ __host__ __device__ void disneyBrdfIsotropicSpecular(
 	float a = glm::max(0.001f, m.disney.roughness * m.disney.roughness);
 	float dSpecular = gtr2(cosHalf, a);
 	glm::vec3 fSpecular = glm::mix(spec0, glm::vec3(1.0f), fresnelHalf);
-	float gSpecular = smithGGgxSpecular(cosIn, a) * smithGGgxSpecular(cosOut, a);
+	float gSpecular = smithGGgx(cosIn, a) * smithGGgx(cosOut, a);
 
 	*color = fSpecular * gSpecular;
 	*density = dSpecular;
@@ -102,12 +103,13 @@ __host__ __device__ void disneyBrdfIsotropicClearcoat(
 	float cosIn, float cosOut, float cosHalf, const Material &m, float fresnelHalf,
 	float *color, float *density
 ) {
-	// clearcoat, IOR = 1.5
-	float dClearcoat = gtr1(cosHalf, glm::mix(0.1f, 0.001f, m.disney.clearCoatGloss));
+	// clearcoat
+	float dClearcoat = gtr1(cosHalf, glm::mix(0.1f, 0.001f, m.disney.clearcoatGloss));
 	float fClearcoat = glm::mix(0.04f, 1.0f, fresnelHalf);
-	float gClearcoat = smithGGgxClearcoat(cosIn, 0.25f) * smithGGgxClearcoat(cosOut, 0.25f);
+	float gClearcoat = smithGGgx(cosIn, 0.25f) * smithGGgx(cosOut, 0.25f);
 
-	*color = 0.25f * m.disney.clearCoat * gClearcoat * fClearcoat;
+	// the disney implmentation multiplies it by 0.25 here which results in clearcoat being too weak
+	*color = m.disney.clearcoat * gClearcoat * fClearcoat;
 	*density = dClearcoat;
 }
 
@@ -123,8 +125,7 @@ __host__ __device__ glm::vec3 disneyBrdfIsotropic(
 	float cosHalf = glm::dot(halfVec, normal), inDotHalf = glm::dot(lightIn, halfVec);
 
 	float fresnelHalf = schlickFresnel(inDotHalf);
-	float luminance = 0.3f * m.baseColorLinear.r + 0.6f * m.baseColorLinear.g + 0.1f * m.baseColorLinear.b;
-	glm::vec3 tint = luminance > 0.0f ? m.baseColorLinear / luminance : glm::vec3(1.0f);
+	glm::vec3 tint = disneyBrdfTint(m.baseColorLinear);
 
 	glm::vec3 specularColor;
 	float specularDensity, clearcoatColor, clearcoatDensity;
@@ -136,26 +137,26 @@ __host__ __device__ glm::vec3 disneyBrdfIsotropic(
 		specularColor * specularDensity + clearcoatColor * clearcoatDensity;
 }
 
-__host__ __device__ glm::vec3 sampleDisneySpecular(
-	const Material &m, glm::vec3 rayDir, glm::vec3 normal, glm::vec2 rand, float *pdf
+__host__ __device__ glm::vec3 sampleDisneySpecularHalf(
+	const Material &m, glm::vec3 rayDir, glm::vec3 normal, glm::vec2 rand
 ) {
-	float gtr2Weight = 1.0f / (m.disney.clearCoat + 1.0f);
+	float specularWeight = 1.0f / (m.disney.clearcoat + 1.0f);
 	glm::vec3 x = glm::normalize(glm::cross(crossDirection(normal), normal)), y = glm::cross(normal, x);
 	glm::vec3 resultHalf;
-	bool isSpecular = rand.x < gtr2Weight;
-	if (isSpecular) {
-		rand.x /= gtr2Weight;
+	if (rand.x < specularWeight) {
+		rand.x /= specularWeight;
 
 		float g = glm::sqrt(rand.y / (1.0f - rand.y)) * m.disney.roughness * m.disney.roughness;
 		float phi = 2.0f * glm::pi<float>() * rand.x;
 		
 		resultHalf = glm::normalize(normal + g * (glm::cos(phi) * x + glm::sin(phi) * y));
 	} else {
-		rand.x = (rand.x - gtr2Weight) / (1.0f - gtr2Weight);
+		rand.x = (rand.x - specularWeight) / (1.0f - specularWeight);
 
 		// sample GTR1 direction
 		float phiH = 2.0f * rand.x * glm::pi<float>();
-		float roughness2 = m.disney.roughness * m.disney.roughness;
+		float roughness = glm::mix(0.1f, 0.001f, m.disney.clearcoatGloss);
+		float roughness2 = roughness * roughness;
 		float cosThetaH = glm::sqrt(
 			roughness2 >= 1.0f ?
 			1.0f - rand.y :
@@ -167,16 +168,7 @@ __host__ __device__ glm::vec3 sampleDisneySpecular(
 			(glm::cos(phiH) * x + glm::sin(phiH) * y) * glm::sqrt(1.0f - cosThetaH * cosThetaH);
 	}
 
-	glm::vec3 result = glm::reflect(rayDir, resultHalf);
-	float inDotHalf = glm::dot(result, resultHalf), cosHalf = glm::dot(normal, resultHalf);
-	float d = glm::mix(
-		gtr1(cosHalf, glm::mix(0.1f, 0.001f, m.disney.clearCoatGloss)),
-		gtr2(cosHalf, glm::max(0.001f, m.disney.roughness * m.disney.roughness)),
-		gtr2Weight
-	);
-	*pdf = d * cosHalf * 0.25f / inDotHalf;
-
-	return result;
+	return resultHalf;
 }
 
 /**
@@ -205,25 +197,28 @@ __host__ __device__ glm::vec3 sampleDisneySpecular(
  * You may need to change the parameter list for your purposes!
  */
 __host__ __device__ void scatterRay(
-	PathSegment &path, glm::vec3 intersect, glm::vec3 geomNormal, glm::vec3 shadeNormal,
-	Material m, glm::vec2 rand
+	PathSegment &path, glm::vec3 intersect, glm::vec3 geomNormal, glm::vec3 shadeNormal, Material m,
+	glm::vec2 rand, glm::vec2 randMis, int geomMis,
+	const Geom *geoms, const Material *mats, const AABBTreeNode *tree, int treeRoot
 ) {
 	path.ray.origin = intersect;
 
 	if (m.type == MaterialType::emitter) {
 		path.color *= m.baseColorLinear;
-		path.remainingBounces = -1;
+		path.colorAccum += path.color;
+		path.remainingBounces = 0;
 	} else {
 		--path.remainingBounces;
 		bool backface = glm::dot(geomNormal, path.ray.direction) > 0.0f;
 		if (backface) {
 			shadeNormal = -shadeNormal;
 		}
+
+		bool useMultipleImportanceSampling = false;
+		glm::vec3 brdf;
+		float pdf, cosLightIn;
+
 		switch (m.type) {
-		case MaterialType::diffuse:
-			path.color *= m.baseColorLinear;
-			path.ray.direction = sampleHemisphereCosine(shadeNormal, rand);
-			break;
 		case MaterialType::specularReflection:
 			path.color *= m.baseColorLinear;
 			path.ray.direction = glm::reflect(path.ray.direction, shadeNormal);
@@ -254,27 +249,93 @@ __host__ __device__ void scatterRay(
 				}
 			}
 			break;
+
+		case MaterialType::diffuse:
+			path.ray.direction = sampleHemisphereCosine(shadeNormal, rand);
+			useMultipleImportanceSampling = true;
+			brdf = m.baseColorLinear / glm::pi<float>();
+			cosLightIn = glm::dot(shadeNormal, path.ray.direction);
+			pdf = cosLightIn / glm::pi<float>();
+			break;
 		case MaterialType::disney:
 			{
-				glm::vec3 lightOut = -path.ray.direction;
-				float diffuseWeight = 1.0f; /*glm::max(m.disney.roughness, 1.0f - m.disney.clearCoat);*/
+				glm::vec3 lightOut = -path.ray.direction, half;
+				float diffuseWeight = 1.0f / (glm::max(1.0f - m.disney.roughness, m.disney.clearcoat) + 1.0f);
+
 				if (rand.x < diffuseWeight) { // diffuse
 					rand.x /= diffuseWeight;
 					path.ray.direction = sampleHemisphereCosine(shadeNormal, rand);
-					path.color *= glm::pi<float>() / diffuseWeight;
+					half = glm::normalize(path.ray.direction + lightOut);
 				} else { // specular
 					rand.x = (rand.x - diffuseWeight) / (1.0f - diffuseWeight);
-					float pdf = 1.0f;
-					path.ray.direction = sampleDisneySpecular(m, path.ray.direction, shadeNormal, rand, &pdf);
-					path.color *= glm::dot(path.ray.direction, shadeNormal) / (pdf * (1.0f - diffuseWeight));
+					half = sampleDisneySpecularHalf(m, path.ray.direction, shadeNormal, rand);
+					path.ray.direction = glm::reflect(path.ray.direction, half);
 				}
-				path.color *= disneyBrdfIsotropic(lightOut, shadeNormal, path.ray.direction, m);
 
-				/*path.color = (path.ray.direction + 1.0f) * 0.5f;
-				path.remainingBounces = -1;*/
+				cosLightIn = glm::dot(shadeNormal, path.ray.direction);
+				if (cosLightIn < 0.0f) {
+					path.remainingBounces = 0;
+					return;
+				}
+				float
+					cosOut = glm::dot(shadeNormal, lightOut),
+					cosHalf = glm::dot(half, shadeNormal),
+					inDotHalf = glm::dot(path.ray.direction, half);
+
+				float fresnelHalf = schlickFresnel(inDotHalf);
+				glm::vec3 tint = disneyBrdfTint(m.baseColorLinear);
+
+				glm::vec3 specularColor;
+				float specularDensity, clearcoatColor, clearcoatDensity;
+				glm::vec3 diffuse = disneyBrdfIsotropicDiffuse(cosLightIn, cosOut, inDotHalf, m, tint, fresnelHalf);
+				disneyBrdfIsotropicSpecular(
+					cosLightIn, cosOut, cosHalf, m, tint, fresnelHalf, &specularColor, &specularDensity
+				);
+				disneyBrdfIsotropicClearcoat(
+					cosLightIn, cosOut, cosHalf, m, fresnelHalf, &clearcoatColor, &clearcoatDensity
+				);
+
+				useMultipleImportanceSampling = true;
+				brdf = diffuse + specularColor * specularDensity + clearcoatColor * clearcoatDensity;
+				pdf = glm::mix(
+					glm::mix(
+						clearcoatDensity, specularDensity, 1.0f / (m.disney.clearcoat + 1.0f)
+					) * cosHalf * 0.25f / inDotHalf,
+					cosLightIn / glm::pi<float>(),
+					diffuseWeight
+				);
 			}
 			break;
 		}
-		path.ray.origin += 0.01f * path.ray.direction;
+
+		if (useMultipleImportanceSampling) {
+			if (geomMis != -1) {
+				const Geom &geom = geoms[geomMis];
+				glm::vec3 emission = mats[geom.materialid].baseColorLinear;
+
+				if (randMis.x + randMis.y > 1.0f) {
+					randMis = 1.0f - randMis;
+				}
+				glm::vec3 lightSample =
+					geom.triangle.vertices[0] * randMis.x +
+					geom.triangle.vertices[1] * randMis.y +
+					geom.triangle.vertices[2] * (1.0f - randMis.x - randMis.y);
+
+				float dist = 1.0f;
+				Ray ray;
+				ray.origin = intersect;
+				ray.direction = lightSample - intersect;
+				glm::vec3 normTokenUnused;
+				int hitGeom = traverseAABBTree(
+					ray, tree, treeRoot, geoms, path.lastGeom, geomMis, &dist, &normTokenUnused
+				);
+
+				if (hitGeom == -1) {
+					// do mis
+				}
+			}
+
+			path.color *= brdf * cosLightIn / pdf;
+		}
 	}
 }

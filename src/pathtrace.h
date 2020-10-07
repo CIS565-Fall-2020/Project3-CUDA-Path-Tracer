@@ -10,5 +10,5 @@ constexpr std::size_t numStratifiedSamples = sqrtNumStratifiedSamples * sqrtNumS
 
 void pathtraceInit(Scene *scene);
 void pathtraceFree();
-void pathtrace(uchar4 *pbo, int frame, int iteration, float stratifiedRange);
+void pathtrace(uchar4 *pbo, int frame, int iteration, int lightMis, float stratifiedRange);
 void updateStratifiedSamples(const std::vector<StratifiedSampler> &samplers);

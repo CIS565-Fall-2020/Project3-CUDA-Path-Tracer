@@ -125,7 +125,6 @@ void initPBO() {
     // Allocate data for the buffer. 4-channel 8-bit image
     glBufferData(GL_PIXEL_UNPACK_BUFFER, size_tex_data, NULL, GL_DYNAMIC_COPY);
     cudaGLRegisterBufferObject(pbo);
-
 }
 
 void errorCallback(int error, const char* description) {

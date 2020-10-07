@@ -38,5 +38,6 @@ public:
     std::vector<Geom> geoms;
     std::map<std::string, int> materialIdMapping;
     std::vector<Material> materials;
+    std::vector<int> lightPoolMis;
     RenderState state;
 };

@@ -117,6 +117,10 @@ void Scene::loadGeom() {
                 ++matIter;
             }
 
+            if (materials[curMaterialId].type == MaterialType::emitter) {
+                lightPoolMis.emplace_back(geoms.size());
+            }
+
             Geom geom;
             geom.type = GeomType::TRIANGLE;
             geom.materialid = curMaterialId;
@@ -287,12 +291,14 @@ void Scene::loadMaterial(std::string materialid) {
             { "SPECULAR_TINT", std::make_shared<Reader<float>>(&newMaterial.disney.specularTint) },
             { "SHEEN", std::make_shared<Reader<float>>(&newMaterial.disney.sheen) },
             { "SHEEN_TINT", std::make_shared<Reader<float>>(&newMaterial.disney.sheenTint) },
-            { "CLEARCOAT", std::make_shared<Reader<float>>(&newMaterial.disney.clearCoat) },
-            { "CLEARCOAT_GLOSS", std::make_shared<Reader<float>>(&newMaterial.disney.clearCoatGloss) }
+            { "CLEARCOAT", std::make_shared<Reader<float>>(&newMaterial.disney.clearcoat) },
+            { "CLEARCOAT_GLOSS", std::make_shared<Reader<float>>(&newMaterial.disney.clearcoatGloss) }
         });
     }
     while (readMaterialAttr(fp_in, attributes)) {
     }
+
+    newMaterial.baseColorLinear = glm::pow(newMaterial.baseColorLinear, glm::vec3(2.2f));
 
     materialIdMapping[materialid] = static_cast<int>(materials.size());
     materials.push_back(newMaterial);
