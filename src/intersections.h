@@ -8,6 +8,19 @@
 #include "glm/gtc/matrix_inverse.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
+#define BOUNDINGBOXINTERSECTIONTEST true
+
+__host__ __device__
+glm::mat4 getTansformation(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale) 
+{
+	glm::mat4 translationMat = glm::translate(glm::mat4(), translation);
+	glm::mat4 rotationMat = glm::rotate(glm::mat4(), rotation.x * (float)PI / 180, glm::vec3(1, 0, 0));
+	rotationMat = rotationMat * glm::rotate(glm::mat4(), rotation.y * (float)PI / 180, glm::vec3(0, 1, 0));
+	rotationMat = rotationMat * glm::rotate(glm::mat4(), rotation.z * (float)PI / 180, glm::vec3(0, 0, 1));
+	glm::mat4 scaleMat = glm::scale(glm::mat4(), scale);
+	return translationMat * rotationMat * scaleMat;
+}
+
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
  */
@@ -198,31 +211,23 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 
 	for (int i = 0, faces_offset = 0, vertices_offset = 0; i < total_meshes; i++)
 	{
-		int cur_num_faces = num_faces[i];
-		int cur_num_vertices = num_vertices[i];
-
-		glm::vec3 bbox_min(bbox_verts[i / 6 + 0], bbox_verts[i / 6 + 1], bbox_verts[i / 6 + 2]);
-		glm::vec3 bbox_max(bbox_verts[i / 6 + 3], bbox_verts[i / 6 + 4], bbox_verts[i / 6 + 5]);
-
-		glm::vec3 bbox_scale(bbox_verts[i / 6 + 3] - bbox_verts[i / 6 + 0],
-							 bbox_verts[i / 6 + 4] - bbox_verts[i / 6 + 1],
-							 bbox_verts[i / 6 + 5] - bbox_verts[i / 6 + 2]);
-
+#if BOUNDINGBOXINTERSECTIONTEST
 		Geom bbox_geom;
 		bbox_geom.type = GeomType::CUBE;
+		glm::vec3 bbox_scale(bbox_verts[i / 6 + 3] - bbox_verts[i / 6 + 0],
+							 bbox_verts[i / 6 + 4] - bbox_verts[i / 6 + 1],
+						     bbox_verts[i / 6 + 5] - bbox_verts[i / 6 + 2]);
 
-		glm::mat4 translationMat = glm::translate(glm::mat4(), glm::vec3(0));
-		glm::mat4 rotationMat = glm::rotate(glm::mat4(), 0.f, glm::vec3(1, 0, 0));
-		rotationMat = rotationMat * glm::rotate(glm::mat4(), 0.f, glm::vec3(0, 1, 0));
-		rotationMat = rotationMat * glm::rotate(glm::mat4(), 0.f, glm::vec3(0, 0, 1));
-		glm::mat4 scaleMat = glm::scale(glm::mat4(), bbox_scale);
-		glm::mat4 bbox_trans = translationMat * rotationMat * scaleMat;
-		bbox_trans = bbox_trans * mesh.transform;
-		setGeomTransform(&bbox_geom, bbox_trans);
-		float bbox_t = boxIntersectionTest(bbox_geom, r, intersectionPoint, normal, outside);
-		return bbox_t;
+		setGeomTransform(&bbox_geom, mesh.transform * getTansformation(glm::vec3(0), glm::vec3(0), bbox_scale));
+		t = boxIntersectionTest(bbox_geom, r, intersectionPoint, normal, outside);
+		if (t < 0)
+		{
+			continue;
+		}
+#endif // BOUNDINGBOXINTERSECTIONTEST
 
-		
+		int cur_num_faces = num_faces[i];
+		int cur_num_vertices = num_vertices[i];
 	
 		for (int face_idx = 0; face_idx < cur_num_faces / 3; face_idx++)
 		{

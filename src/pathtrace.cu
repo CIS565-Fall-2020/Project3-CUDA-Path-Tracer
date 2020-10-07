@@ -19,7 +19,6 @@
 #define ERRORCHECK 1
 #define RECORDEDITERATION 100
 #define CACHEFIRSTBOUNCE true
-#define BBOXINTERSECTIONTEST true
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -155,6 +154,7 @@ void pathtraceFree()
 	cudaFree(dev_gltf_vertices);
 	cudaFree(dev_gltf_num_faces);
 	cudaFree(dev_gltf_num_vertices);
+	cudaFree(dev_gltf_bbox_verts);
 
 	checkCUDAError("pathtraceFree");
 }

@@ -85,7 +85,7 @@ int Scene::loadGeom(string objectid) {
                     std::cerr << "Failed to load glTF file [ " << gltf_file << " ]" << std::endl;
                     return -1;
                 }
-
+                
                 for (int i = 0; i < meshes.size(); i++)
                 {
                     Geom meshGeom;
@@ -113,7 +113,6 @@ int Scene::loadGeom(string objectid) {
 
                     gltfGeoms.push_back(meshGeom);
                 }
-
             }
         }
 
@@ -131,42 +130,50 @@ int Scene::loadGeom(string objectid) {
             }
             else
             {
-
                 newGeom.materialid = atoi(tokens[1].c_str());
                 cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
             }
         }
 
         //load transformations
+        glm::vec3 tempTranslate(0);
+        glm::vec3 tempRotate(0);
+        glm::vec3 tempScale(1);
+
         utilityCore::safeGetline(fp_in, line);
         while (!line.empty() && fp_in.good()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
-
             //load tranformations
             if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
-                newGeom.translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                tempTranslate = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
             else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
-                newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                tempRotate = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
             else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
-                newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                tempScale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
 
             utilityCore::safeGetline(fp_in, line);
         }
 
-        glm::mat4 totalTransform = utilityCore::buildTransformationMatrix(newGeom.translation, newGeom.rotation, newGeom.scale);
+        glm::mat4 totalTransform = utilityCore::buildTransformationMatrix(tempTranslate, tempRotate, tempScale);
         if (geomFromGltf)
         {
             for (Geom& gltfGeom : gltfGeoms)
             {
-                setGeomTransform(&gltfGeom, gltfGeom.transform * totalTransform);
+                gltfGeom.translation = tempTranslate;
+                gltfGeom.rotation = tempRotate;
+                gltfGeom.scale = tempScale;
+                setGeomTransform(&gltfGeom, totalTransform * gltfGeom.transform);
                 geoms.push_back(gltfGeom);
             }
         }
         else
         {
+            newGeom.translation = tempTranslate;
+            newGeom.rotation = tempRotate;
+            newGeom.scale = tempScale;
             setGeomTransform(&newGeom, totalTransform);
             geoms.push_back(newGeom);
         }

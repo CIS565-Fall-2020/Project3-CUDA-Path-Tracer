@@ -530,14 +530,6 @@ namespace gltf {
 				loadedMesh.bbox_verts.push_back(pMax.y);
 				loadedMesh.bbox_verts.push_back(pMax.z);
 
-				if (mesh_idx == 0)
-				{
-					for (int i = 0; i < 6; i++)
-					{
-						cout << loadedMesh.bbox_verts[i] << ", ";
-					}
-				}
-
 				meshes->push_back(loadedMesh);
 
 				// preprocess for data copy to gpu
