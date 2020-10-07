@@ -105,8 +105,8 @@ struct OctNode {
     int id = -1;
     glm::vec3 maxCorner;
     glm::vec3 minCorner;
-    std::vector<Geom> geoms;
     int numGeoms;
+    int geomStartIdx = -1;
 
     // children ids
     int upFarLeft;

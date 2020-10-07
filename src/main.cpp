@@ -149,7 +149,7 @@ void runCuda() {
 
     if (iteration == 0) {
         pathtraceFree();
-        pathtraceInit(scene, true);
+        pathtraceInit(scene, true, 2, 3);
         //timer().startGpuTimer();
     }
 
