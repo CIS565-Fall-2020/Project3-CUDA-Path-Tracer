@@ -80,6 +80,21 @@ struct ShadeableIntersection {
     int materialId;
 };
 
+struct OctreeNodeDevice {
+    glm::vec3 minCorner;
+    glm::vec3 maxCorner;
+    int children[8];
+    int triangleStart;
+    int triangleCount;
+    int geomStart;
+    int geomCount;
+};
+
+struct OctreeLookUp {
+    int pixelIndex;
+    int branches[8];
+};
+
 // Boolean function for path termination
 struct path_terminated {
     __host__ __device__ bool operator()(const PathSegment& segment) {

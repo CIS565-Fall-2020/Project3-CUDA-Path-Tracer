@@ -20,16 +20,6 @@ private:
 	std::string err, warn;
 };
 
-struct OctreeNodeDevice {
-	glm::vec3 minCorner;
-	glm::vec3 maxCorner;
-	int children[8];
-	int triangleStart;
-	int triangleCount;
-	int geomStart;
-	int geomCount;
-};
-
 class OctreeNode {
 public:
 	glm::vec3 minCorner;

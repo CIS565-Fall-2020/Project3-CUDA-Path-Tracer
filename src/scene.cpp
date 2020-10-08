@@ -5,9 +5,9 @@
 #include <glm/gtx/string_cast.hpp>
 #include <queue>
 
-Scene::Scene(string filename, bool usingCulling, int maxOctreeLevel, float sceneSize)
+Scene::Scene(string filename, bool usingCulling, float sceneSize)
     : usingCulling(usingCulling), isWorldSpace(usingCulling),
-    octree(maxOctreeLevel, sceneSize) {
+    octree(9, sceneSize), meshMaterial(0) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -87,6 +87,8 @@ int Scene::loadGeom(string objectid) {
                 mLoader.pushTriangles(triangles);
             }
             newGeom.triangleCount = triangles.size() - newGeom.triangleStart;
+            //TODO: temporary solution: using a global mesh material
+            meshMaterial = newGeom.materialid;
         }
         else {
             newGeom.triangleStart = -1;

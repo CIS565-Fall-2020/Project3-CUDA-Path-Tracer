@@ -111,16 +111,15 @@ __global__ void generateSeed(Camera cam, int* sobolSeed) {
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
+    const Camera& cam = hst_scene->state.camera;
+    const int pixelcount = cam.resolution.x * cam.resolution.y;
 
-    // Need to prepare the octree for device if we are using culling
+    // Prepare the octree for device if we are using culling
     if (scene->usingCulling) {
         std::vector<OctreeNodeDevice> temp = scene->prepareOctree();
         cudaMalloc(&dev_octree, temp.size() * sizeof(OctreeNodeDevice));
         cudaMemcpy(dev_octree, temp.data(), temp.size() * sizeof(OctreeNodeDevice), cudaMemcpyHostToDevice);
     }
-
-    const Camera &cam = hst_scene->state.camera;
-    const int pixelcount = cam.resolution.x * cam.resolution.y;
 
     cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
@@ -176,7 +175,7 @@ void pathtraceFree() {
     cudaFree(dev_triangles);
 
     // Free octree
-    if (hst_scene->usingCulling) {
+    if (hst_scene != nullptr && hst_scene->usingCulling) {
         cudaFree(dev_octree);
     }
 
@@ -231,20 +230,137 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	}
 }
 
+
 // Compute intersection using Octree
 __global__ void computeIntersectionsOctree(
     int depth
     , int num_paths
     , PathSegment* pathSegments
     , Geom* geoms
-    , int geoms_size
     , ShadeableIntersection* intersections
     , glm::vec3* triangles
     , OctreeNodeDevice* octree
+    , int meshMaterial
 ) {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
     if (path_index < num_paths) {
-        //TODO!!!!!!!!!!!!!
+        PathSegment pathSegment = pathSegments[path_index];
+
+        // Intersection variables
+        glm::vec3 intersect_point;
+        glm::vec3 normal;
+        float t_min = FLT_MAX;
+        int hit_geom_index = -1;
+        bool outside = true;
+        glm::vec3 tmp_intersect;
+        glm::vec3 tmp_normal;
+
+        // DFS variables
+        OctreeNodeDevice node = octree[0]; // Root
+        OctreeNodeDevice stack[8];
+        int branches[8];
+        int level = 0;
+        int status = 0;
+        bool first = true;
+        while (level >= 0) {
+            if (status == 0) {
+                if (!first) {
+                    int j;
+                    for (j = 0; j < 8; j++) {
+                        if (node.children[j] != -1) {
+                            node = octree[node.children[j]];
+                            branches[level] = j;
+                            level++;
+                            break;
+                        }
+                    }
+                    if (j == 8) { // No children
+                        status = 1;
+                        level--;
+                        continue;
+                    }
+                }
+                else {
+                    first = false;
+                }
+            }
+            else {
+                node = stack[level];
+                int j;
+                for (j = branches[level] + 1; j < 8; j++) {
+                    if (node.children[j] != -1) {
+                        node = octree[node.children[j]];
+                        branches[level] = j;
+                        level++;
+                        break;
+                    }
+                }
+                if (j == 8) {
+                    level--;
+                    continue;
+                }
+            }
+
+            // If there is intersection with current bounding box
+            if (boundingBoxTest(node.minCorner, node.maxCorner, pathSegment.ray)) {
+                float t;
+                for (int ct = 0, i = node.geomStart; ct < node.geomCount; ct++, i++) {
+                    Geom& geom = geoms[i];
+                    if (geom.type == CUBE) {
+                        t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                    }
+                    else if (geom.type == SPHERE) {
+                        t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                    }
+                    if (t > 0.0f && t_min > t) {
+                        t_min = t;
+                        hit_geom_index = i;
+                        intersect_point = tmp_intersect;
+                        normal = tmp_normal;
+                    }
+                }
+                for (int ct = 0, i = node.triangleStart; ct < node.triangleCount; ct++, i += 3) {
+                    t = triangleIntersectionTest(triangles[i], triangles[i + 1], triangles[i + 2],
+                        pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                    if (t > 0.0f && t_min > t) {
+                        t_min = t;
+                        hit_geom_index = -2; // -2 marks the mesh
+                        intersect_point = tmp_intersect;
+                        normal = tmp_normal;
+                    }
+                }
+                if (level == 8) {
+                    status = 1;
+                    level--;
+                }
+                else {
+                    status = 0;
+                    stack[level] = node;
+                }
+            }
+            // If not, backtrack to parent node, and search for next child
+            else {
+                status = 1;
+                level--;
+            }
+        }
+
+        if (hit_geom_index == -1) {
+            intersections[path_index].t = -1.0f;
+        }
+        else {
+            //The ray hits something
+            intersections[path_index].t = t_min;
+            if (hit_geom_index == -2) {
+                intersections[path_index].materialId = meshMaterial;
+            }
+            else {
+                intersections[path_index].materialId = geoms[hit_geom_index].materialid;
+            }
+            intersections[path_index].surfaceNormal = normal;
+        }
+
+
     }
 }
 
@@ -512,15 +628,29 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
             // tracing
-            computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
-                depth
-                , num_paths
-                , dev_paths
-                , dev_geoms
-                , hst_scene->geoms.size()
-                , dev_intersections
-                , dev_triangles
-                );
+            if (hst_scene->usingCulling) {
+                computeIntersectionsOctree << <numblocksPathSegmentTracing, blockSize1d >> > (
+                    depth
+                    , num_paths
+                    , dev_paths
+                    , dev_geoms
+                    , dev_intersections
+                    , dev_triangles
+                    , dev_octree
+                    , hst_scene->meshMaterial
+                    );
+            }
+            else {
+                computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+                    depth
+                    , num_paths
+                    , dev_paths
+                    , dev_geoms
+                    , hst_scene->geoms.size()
+                    , dev_intersections
+                    , dev_triangles
+                    );
+            }
             checkCUDAError("trace one bounce");
 
             if (CACHE_FIRST == 1 && ANTIALIASING == 0 && iter == 1 && depth == 0) {

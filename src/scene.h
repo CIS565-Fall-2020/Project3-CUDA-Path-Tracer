@@ -21,7 +21,6 @@ public:
     Scene(
         string filename,
         bool usingCulling = false,
-        int maxOctreeLevel = 8,
         float sceneSize = 40.f);
     ~Scene() {}
 
@@ -31,6 +30,7 @@ public:
     bool isWorldSpace; // In which frame of reference are triangles defined
     bool usingCulling;
     Octree octree;
+    int meshMaterial;
     std::vector<OctreeNodeDevice> prepareOctree();
     
     RenderState state;
