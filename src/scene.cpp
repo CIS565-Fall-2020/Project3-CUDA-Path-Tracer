@@ -4,6 +4,10 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#include "tinyobj.h"
+
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -28,7 +32,6 @@ Scene::Scene(string filename) {
                 loadCamera();
                 cout << " " << endl;
             }
-        }
     }
 }
 
@@ -51,6 +54,15 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
+            } else if (strcmp(line.c_str(), "mesh") == 0) {
+                cout << "Creating new mesh..." << endl;
+                utilityCore::safeGetline(fp_in, line);
+                int idx = loadMesh(line);
+                if (idx < 0) {
+                  return -1;
+                }
+                newGeom.meshIdx = idx;
+                newGeom.type = MESH;
             }
         }
 
@@ -87,6 +99,56 @@ int Scene::loadGeom(string objectid) {
         geoms.push_back(newGeom);
         return 1;
     }
+}
+
+// Return the index of the mesh, or -1 if failed
+int Scene::loadMesh(string filename) {
+   tinyobj::attrib_t attrib;
+   std::vector<tinyobj::shape_t> shapes;
+   std::vector<tinyobj::material_t> materials;
+   std::string warn, err;
+   std::vector<Triangle> triangles;
+
+   // load obj
+   if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
+     return -1;
+   }
+
+   if (!warn.empty()) {
+     std::cout << warn << std::endl;
+   }
+
+   if (!err.empty()) {
+     std::cerr << err << std::endl;
+   }
+
+   // Loop over shapes
+   for (const tinyobj::shape_t &shape : shapes) {
+     // Loop over faces(polygon)
+     size_t index_offset = 0;
+     for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+       int fv = shape.mesh.num_face_vertices[f];
+       // Loop over vertices in the face.
+       Triangle t;
+
+       for (size_t v = 0; v < fv; v++) {
+         // access to vertex
+         tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+         tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index];
+         tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+         tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+         t.v[v] = glm::vec3(vx, vy, vz);
+       }
+
+       index_offset += fv;
+       // compute normal
+       t.n = glm::normalize(glm::cross(t.v[1] - t.v[0], t.v[2] - t.v[0]));
+       triangles.push_back(t);
+     }
+   }
+   cout << triangles.size() << " triangles loaded from " << filename.c_str() << endl;
+   meshes.push_back(triangles);
+   return meshes.size() - 1;
 }
 
 int Scene::loadCamera() {

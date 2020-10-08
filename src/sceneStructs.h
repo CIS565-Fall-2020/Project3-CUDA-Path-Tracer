@@ -10,6 +10,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH
 };
 
 struct Ray {
@@ -26,6 +27,7 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    int meshIdx;
 };
 
 struct Material {
@@ -49,6 +51,11 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+};
+
+struct Triangle {
+    glm::vec3 v[3];
+    glm::vec3 n;
 };
 
 struct RenderState {
