@@ -7,6 +7,7 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "sceneStructs.h"
+#include <glm/gtx/normal.hpp>
 
 #include "tiny_gltf.h"
 #include "gltf-loader.h"

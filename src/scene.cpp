@@ -683,21 +683,27 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 );
 
                 cur_triangle.n0 = glm::vec3(
-                    cur_mesh->facevarying_normals[3 * idx_v0],
-                    cur_mesh->facevarying_normals[3 * idx_v0 + 1],
-                    cur_mesh->facevarying_normals[3 * idx_v0 + 2]
+                    cur_mesh->facevarying_normals[3 * i],
+                    cur_mesh->facevarying_normals[3 * i + 1],
+                    cur_mesh->facevarying_normals[3 * i + 2]
                 );
 
                 cur_triangle.n1 = glm::vec3(
-                    cur_mesh->facevarying_normals[3 * idx_v1],
-                    cur_mesh->facevarying_normals[3 * idx_v1 + 1],
-                    cur_mesh->facevarying_normals[3 * idx_v1 + 2]
+                    cur_mesh->facevarying_normals[3 * i + 3],
+                    cur_mesh->facevarying_normals[3 * i + 4],
+                    cur_mesh->facevarying_normals[3 * i + 5]
                 );
 
                 cur_triangle.n2 = glm::vec3(
-                    cur_mesh->facevarying_normals[3 * idx_v2 ],
-                    cur_mesh->facevarying_normals[3 * idx_v2 + 1],
-                    cur_mesh->facevarying_normals[3 * idx_v2 + 2]
+                    cur_mesh->facevarying_normals[3 * i + 6],
+                    cur_mesh->facevarying_normals[3 * i + 7],
+                    cur_mesh->facevarying_normals[3 * i + 8]
+                );
+
+                cur_triangle.norm = glm::triangleNormal(
+                    cur_triangle.v0,
+                    cur_triangle.v1,
+                    cur_triangle.v2
                 );
 
                 //cur_triangle.norm = glm::triangleNormal()

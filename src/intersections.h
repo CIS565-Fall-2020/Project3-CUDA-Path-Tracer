@@ -156,22 +156,24 @@ __host__ __device__ float triangleIntersectionTest(
     q.direction = glm::normalize(multiplyMV(supp_geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     float t = -1;
+    glm::vec3 glm_ret;
     if (glm::intersectRayTriangle(
         q.origin,
         q.direction,
         triangle.v0,
         triangle.v1,
         triangle.v2,
-        intersectionPoint)) {
-        t = intersectionPoint.z;
+        glm_ret)) {
+        t = glm_ret.z;
         // transform to world space
         intersectionPoint = multiplyMV(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
         // intepolate normal
         normal =
-            intersectionPoint.x * triangle.v1 +
-            intersectionPoint.y * triangle.v2 +
-            (1.0f - intersectionPoint.x - intersectionPoint.y) * triangle.v0;
+            glm_ret.x * triangle.n1 +
+            glm_ret.y * triangle.n2 +
+            (1.0f - glm_ret.x - glm_ret.y) * triangle.n0;
         normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(normal, 0.0f)));
+        ///normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(triangle.norm, 0.0f)));
     }
     return t;
 }
