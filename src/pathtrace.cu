@@ -19,6 +19,7 @@
 #define ERRORCHECK 1
 #define SORTMATERIAL 0
 #define CACHEFIRSTBOUNCE 0
+#define DEPTH_OF_FIELD 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -81,6 +82,7 @@ static ShadeableIntersection * dev_cache_intersections = NULL;
 //static PerformanceTimer timer;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
+static Triangle *dev_triangles = NULL;
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
@@ -93,8 +95,9 @@ void pathtraceInit(Scene *scene) {
   	cudaMalloc(&dev_paths, pixelcount * sizeof(PathSegment));
 
   	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
+	cout << "geoms.size(): " << scene->geoms.size() << endl;
   	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
-
+	
   	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
 
@@ -103,7 +106,9 @@ void pathtraceInit(Scene *scene) {
 	cudaMalloc(&dev_cache_intersections, pixelcount * sizeof(ShadeableIntersection));
 	cudaMemset(dev_cache_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
     // TODO: initialize any extra device memeory you need
-
+	cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
+	cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+cout << "triangles.size(): " << scene->triangles.size() << endl;
     checkCUDAError("pathtraceInit");
 }
 
@@ -115,6 +120,7 @@ void pathtraceFree() {
   	cudaFree(dev_intersections);
 	cudaFree(dev_cache_intersections);
     // TODO: clean up any extra device memory you created
+	cudaFree(dev_triangles);
 
     checkCUDAError("pathtraceFree");
 }
@@ -135,9 +141,9 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	if (x < cam.resolution.x && y < cam.resolution.y) {
 		int index = x + (y * cam.resolution.x);
 		PathSegment & segment = pathSegments[index];
-
 		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+
+ segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		// TODO: implement antialiasing by jittering the ray
 		segment.ray.direction = glm::normalize(cam.view
@@ -147,6 +153,19 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
+
+		// depth-of-field
+#if DEPTH_OF_FIELD
+		thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+		thrust::uniform_real_distribution<float> u01(0, 1);
+		float aperture = 0.2;
+	    float angle = u01(rng) * 2 * PI;
+		float radius = u01(rng) * aperture;
+		float offsetX = radius * cos(angle);
+		float offsetY = radius * sin(angle);
+		segment.ray.origin += glm::vec3(offsetX, offsetY, 0.0f);
+#endif
+
 	}
 }
 
@@ -161,6 +180,7 @@ __global__ void computeIntersections(
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
+	, Triangle * triangles
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -192,6 +212,10 @@ __global__ void computeIntersections(
 			else if (geom.type == SPHERE)
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+			}
+			else if (geom.type == MESH)
+			{
+				t = meshIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
@@ -383,6 +407,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, dev_geoms
 			, hst_scene->geoms.size()
 			, dev_cache_intersections
+			, dev_triangles
 			);
 		checkCUDAError("cache first bounce");
 	}
@@ -397,6 +422,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, dev_geoms
 			, hst_scene->geoms.size()
 			, dev_intersections
+			, dev_triangles
 			);
 		checkCUDAError("trace one bounce");
 	}
@@ -410,6 +436,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		, dev_geoms
 		, hst_scene->geoms.size()
 		, dev_intersections
+		, dev_triangles
 		);
 	checkCUDAError("trace one bounce");
 	cudaDeviceSynchronize();

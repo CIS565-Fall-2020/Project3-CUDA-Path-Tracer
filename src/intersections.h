@@ -142,3 +142,51 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+__host__ __device__ float meshIntersectionTest(Geom mesh, Triangle *triangles, Ray r,
+	glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
+	for (int i = mesh.tIndexStart; i <= mesh.tIndexEnd; i++)
+	{
+		glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+		glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+		Triangle triangle = triangles[i];
+		glm::vec3 p0 = triangle.vertices[0];
+		glm::vec3 p1 = triangle.vertices[1];
+		glm::vec3 p2 = triangle.vertices[2];
+		glm::vec3 n = glm::cross(p1 - p0, p2 - p0); // normal to check intersection inside a triangle, could opposite to triangle.normal 
+		float d = -glm::dot(triangle.normal, p1);
+
+		if (glm::abs(glm::dot(triangle.normal, rd)) < EPSILON) {
+			continue;
+		}
+		float t = (-d - glm::dot(triangle.normal, ro)) / (glm::dot(triangle.normal, rd));
+		if (t < 0) {
+			continue;
+		}
+		glm::vec3 p = ro + t * rd;
+	
+		if (glm::dot(glm::cross(p1 - p0, p - p0), n) < 0) {
+			continue;
+		}
+		if (glm::dot(glm::cross(p2 - p1, p - p1), n) < 0) {
+			continue;
+		}
+		if (glm::dot(glm::cross(p0 - p2, p - p2), n) < 0) {
+			continue;
+		}
+		if (glm::dot(rd, triangle.normal) <= 0) {
+			outside = true;
+		}
+		else {
+			outside = false;
+		}
+
+		glm::vec3 objspaceIntersection = p;
+		intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+		normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(triangle.normal, 0.f)));
+		return glm::length(r.origin - intersectionPoint);
+	}
+	return -1;
+
+}

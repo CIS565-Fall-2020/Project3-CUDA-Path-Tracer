@@ -81,8 +81,6 @@ void scatterRay(
 	
 	if (m.emittance > 0.0f) {
 		pathSegment.color *= (m.color * m.emittance);
-		//pathSegment.remainingBounces = 0;
-		//return;
 	}
 	if (pathSegment.remainingBounces <= 0) {
 		return;
@@ -108,10 +106,19 @@ void scatterRay(
 	if (m.hasReflective) {
 		glm::vec3 reflectDirection = glm::reflect(pathSegment.ray.direction, normal); 
 		pathSegment.ray.direction = reflectDirection;
-		float lightTerm = glm::abs(glm::dot(normal, reflectDirection));
+		float lightTerm = pow(glm::abs(glm::dot(normal, reflectDirection)), m.specular.exponent);
 		pathSegment.color *= (m.color * lightTerm);
 	}
+	if (m.hasRefractive) {
+		float n = m.indexOfRefraction;
+		glm::vec3 refractDirection = glm::refract(pathSegment.ray.direction, normal, n);
+		pathSegment.ray.direction = refractDirection;
+		float F0 = (n - 1) * (n - 1) / (n + 1) / (n + 1);
+		float lightTerm = glm::abs(glm::dot(normal, refractDirection));
+		float F = F0 + (1 - F0) * pow((1 - lightTerm), 5);
+		pathSegment.color *= (m.color * F);
+	}
+
 	pathSegment.ray.origin = intersect + 0.01f * normal;
 	pathSegment.remainingBounces--;
-
 }

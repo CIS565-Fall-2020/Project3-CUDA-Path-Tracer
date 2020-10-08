@@ -115,3 +115,12 @@ material 4
 TRANS       -1 4 -1
 ROTAT       0 0 0
 SCALE       3 3 3
+
+// Arrow
+OBJECT 7
+mesh
+../models/12190_Heart_v1_L3.obj
+material 2
+TRANS      -1 1 -5
+ROTAT       0 0 0
+SCALE       .4 .4 .4 

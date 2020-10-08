@@ -4,6 +4,9 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -30,6 +33,7 @@ Scene::Scene(string filename) {
             }
         }
     }
+	cout << "!!!!!!!!!!!!!!triangle normal: " << triangles[5].normal[1] << endl;
 }
 
 int Scene::loadGeom(string objectid) {
@@ -52,15 +56,24 @@ int Scene::loadGeom(string objectid) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
+			else if (strcmp(line.c_str(), "mesh") == 0) {
+				cout << "Creating new mesh..." << endl;
+				newGeom.type = MESH;
+				utilityCore::safeGetline(fp_in, line);
+				newGeom.tIndexStart = triangles.size();
+				loadObj(line);
+				newGeom.tIndexEnd = triangles.size() - 1;
+			}
         }
 
-        //link material
-        utilityCore::safeGetline(fp_in, line);
-        if (!line.empty() && fp_in.good()) {
-            vector<string> tokens = utilityCore::tokenizeString(line);
-            newGeom.materialid = atoi(tokens[1].c_str());
-            cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
-        }
+		
+		//link material
+		utilityCore::safeGetline(fp_in, line);
+		if (!line.empty() && fp_in.good()) {
+			vector<string> tokens = utilityCore::tokenizeString(line);
+			newGeom.materialid = atoi(tokens[1].c_str());
+			cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+		}
 
         //load transformations
         utilityCore::safeGetline(fp_in, line);
@@ -185,4 +198,91 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
+}
+
+bool Scene::loadObj(string filename) {
+	std::cout << "Loading " << filename << std::endl;
+
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> obj_materials;
+	cout << "obj_materials size: " << obj_materials.size() << endl;
+	std::string warn;
+	std::string err;
+	bool ret = tinyobj::LoadObj(&attrib, &shapes, &obj_materials, &warn, &err, filename.c_str());
+
+	if (!warn.empty()) {
+		std::cout << "WARN: " << warn << std::endl;
+	}
+
+	if (!err.empty()) {
+		std::cerr << "ERR: " << err << std::endl;
+	}
+
+	if (!ret) {
+		printf("Failed to load/parse .obj.\n");
+		return false;
+	}
+
+	int materialOffset = materials.size();
+
+	// Loop over materials
+	for (size_t m = 0; m < obj_materials.size(); m++) {
+		Material newMaterial;
+		newMaterial.specular.exponent = 1;
+		newMaterial.hasReflective = obj_materials[materialOffset + m].shininess;
+		newMaterial.hasRefractive = obj_materials[materialOffset + m].ior;
+		newMaterial.indexOfRefraction = obj_materials[materialOffset + m].ior;
+		
+		newMaterial.color = glm::vec3(
+			obj_materials[materialOffset + m].diffuse[0],
+			obj_materials[materialOffset + m].diffuse[1],
+			obj_materials[materialOffset + m].diffuse[2]);
+		materials.push_back(newMaterial);
+	}
+
+	// Loop over shapes
+	for (size_t s = 0; s < shapes.size(); s++) {
+		// Loop over faces(polygon)
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+			int fv = shapes[s].mesh.num_face_vertices[f];
+			Geom newGeom;
+			Triangle triangle;
+			glm::vec3 color;
+			// Loop over vertices in the face.
+			for (size_t v = 0; v < fv; v++) {
+				
+				// access to vertex
+				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+				tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+				tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+				tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+				tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+				tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+				// tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+				// tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+				// Optional: vertex colors
+			    //tinyobj::real_t red = attrib.colors[3*idx.vertex_index+0];
+				//tinyobj::real_t green = attrib.colors[3*idx.vertex_index+1];
+				//tinyobj::real_t blue = attrib.colors[3*idx.vertex_index+2];
+				triangle.vertices[v] = glm::vec3(vx, vy, vz);
+				triangle.normal = glm::vec3(nx, ny, nz);
+				
+				//color = glm::vec3(red, green, blue);
+			}
+			index_offset += fv;
+			triangle.materialId = materialOffset + shapes[s].mesh.material_ids[f];
+			triangles.push_back(triangle);
+	
+			// per-face material
+			
+
+		}
+
+		
+	}
+
+	return true;
 }

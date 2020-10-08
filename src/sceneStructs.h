@@ -10,11 +10,18 @@
 enum GeomType {
     SPHERE,
     CUBE,
+	MESH,
 };
 
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
+};
+
+struct Triangle {
+	glm::vec3 vertices[3];
+	glm::vec3 normal;
+	int materialId;
 };
 
 struct Geom {
@@ -26,7 +33,12 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+
+	// triangle index of a mesh
+	int tIndexStart;
+	int tIndexEnd;
 };
+
 
 struct Material {
     glm::vec3 color;
