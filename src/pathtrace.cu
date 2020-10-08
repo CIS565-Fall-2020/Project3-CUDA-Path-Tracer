@@ -14,7 +14,6 @@
 #include "pathtrace.h"
 #include "intersections.h"
 #include "interactions.h"
-
 #define ERRORCHECK 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -77,6 +76,7 @@ static Geom * dev_geoms = NULL;
 static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
+static Triangle * dev_tris = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 #if CACHE
@@ -102,6 +102,9 @@ void pathtraceInit(Scene *scene) {
   	cudaMalloc(&dev_intersections, pixelcount * sizeof(ShadeableIntersection));
   	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
+    cudaMalloc(&dev_tris, scene->tris.size() * sizeof(Triangle));
+    cudaMemcpy(dev_tris, scene->tris.data(), scene->tris.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+
     // TODO: initialize any extra device memeory you need
 #if CACHE
     cudaMalloc(&dev_intersections_cache, pixelcount * sizeof(ShadeableIntersection));
@@ -116,6 +119,7 @@ void pathtraceFree() {
   	cudaFree(dev_geoms);
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
+    cudaFree(dev_tris);
 #if CACHE
     cudaFree(dev_intersections_cache);
 #endif
@@ -169,12 +173,13 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
 __global__ void computeIntersections(
-	int depth
+	const int depth
 	, int num_paths
 	, PathSegment * pathSegments
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
+    , Triangle * tris
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -206,7 +211,12 @@ __global__ void computeIntersections(
 			else if (geom.type == SPHERE)
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
-			}
+            }
+            else if (geom.type == MESH) 
+            {
+                t = meshIntersectionTest(geom, tris, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+            }
+            
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 			// Compute the minimum t from the intersection tests to determine what
@@ -415,8 +425,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	generateRayFromCamera <<<blocksPerGrid2d, blockSize2d >>>(cam, iter, traceDepth, dev_paths);
 	checkCUDAError("generate camera ray");
-
 	int depth = 0;
+    int ctr = 0;
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
 
@@ -427,7 +437,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     int num_paths_orig = num_paths;
 
     while (!iterationComplete) {
-
+        //cout << depth << endl;
         // clean shading chunks
         cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
@@ -440,6 +450,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                 , dev_geoms
                 , hst_scene->geoms.size()
                 , dev_intersections
+                , dev_tris
                 );
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
@@ -458,13 +469,13 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                 , dev_geoms
                 , hst_scene->geoms.size()
                 , dev_intersections
+                , dev_tris
                 );
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
         }
 #else
 	    // tracing
-	    
 	    computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
 		    depth
 		    , num_paths
@@ -472,12 +483,13 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		    , dev_geoms
 		    , hst_scene->geoms.size()
 		    , dev_intersections
+            , dev_tris
 		    );
         checkCUDAError("trace one bounce");
         cudaDeviceSynchronize();
 #endif
-	    depth++;
 
+	    depth++;
 	    // --- Shading Stage ---
 	    // Shade path segments based on intersections and generate new rays by
         // evaluating the BSDF.

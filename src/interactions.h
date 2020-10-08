@@ -90,7 +90,8 @@ void scatterRay(
     //pathSegment.color *= material.color;
     // reflective
     pathSegment.remainingBounces--;
-    
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float rand_num = u01(rng);
     if (material.hasRefractive == 1.f) {
         glm::vec3 dir(0.f);
         glm::vec3 real_norm(0.f);
@@ -117,9 +118,8 @@ void scatterRay(
         
         float R0 = powf((1.f - ior_ratio)/(1.f + ior_ratio), 2.f);
         float R_theta = R0 + (1.f - R0) * powf(1.f - fmax(0.f, glm::dot(pathSegment.ray.direction, real_norm)), 5.f);
-        thrust::uniform_real_distribution<float> u01(0, 1);
-        float rand_num = u01(rng);
-        if (material.hasReflective == 1.f && rand_num > R_theta / 2.f) {
+        
+        if (material.hasReflective == 1.f && rand_num > R_theta / 1.5f) {
             // reflection
             reflect(pathSegment, intersection, real_norm, material);
             return;
@@ -134,11 +134,13 @@ void scatterRay(
     } else if (material.hasReflective == 1.f) {
         reflect(pathSegment, intersection, normal, material);
         return;
-    } else {
+    }
+    else {
         glm::vec3 bounce_dir = calculateRandomDirectionInHemisphere(normal, rng);
         pathSegment.ray.direction = bounce_dir;
         pathSegment.ray.origin = intersection + 0.01f * normal;
         pathSegment.color *= material.color;
+        
         return;
     }
 }

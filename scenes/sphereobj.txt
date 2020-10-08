@@ -10,7 +10,7 @@ EMITTANCE   5
 
 // Diffuse white
 MATERIAL 1
-RGB         .98 0.98 0.98
+RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -48,36 +48,6 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
-// Glass
-MATERIAL 5
-RGB         .98 .98 .98
-SPECEX      0.2
-SPECRGB     .98 .98 .98
-REFL        1
-REFR        1
-REFRIOR     1.5
-EMITTANCE   0
-
-// Glass
-MATERIAL 6
-RGB         .98 .98 .98
-SPECEX      0.2
-SPECRGB     .98 .98 .98
-REFL        1
-REFR        1
-REFRIOR     2
-EMITTANCE   0
-
-// Glass
-MATERIAL 7
-RGB         .98 .98 .98
-SPECEX      0.2
-SPECRGB     .98 .98 .98
-REFL        1
-REFR        1
-REFRIOR     2.5
-EMITTANCE   0
-
 // Camera
 CAMERA
 RES         800 800
@@ -101,7 +71,7 @@ SCALE       3 .3 3
 // Floor
 OBJECT 1
 cube
-material 1
+material 2
 TRANS       0 0 0
 ROTAT       0 0 0
 SCALE       10 .01 10
@@ -117,7 +87,7 @@ SCALE       .01 10 10
 // Back wall
 OBJECT 3
 cube
-material 1
+material 3
 TRANS       0 5 -5
 ROTAT       0 90 0
 SCALE       .01 10 10
@@ -125,7 +95,7 @@ SCALE       .01 10 10
 // Left wall
 OBJECT 4
 cube
-material 2
+material 1
 TRANS       -5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
@@ -133,47 +103,16 @@ SCALE       .01 10 10
 // Right wall
 OBJECT 5
 cube
-material 3
+material 1
 TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Sphere
+// Object
 OBJECT 6
-sphere
-material 5
-TRANS       -3 4 -1
-ROTAT       0 0 0
-SCALE       3 3 3
-
-// Sphere
-OBJECT 7
-sphere
-material 5
-TRANS       0 4 -1
+mesh
+../scenes/sphere.obj
+material 1
+TRANS       0 3 0
 ROTAT       0 0 0
 SCALE       2 2 2
-
-// Sphere
-OBJECT 8
-sphere
-material 5
-TRANS       3 4 -1
-ROTAT       0 0 0
-SCALE       3 3 3
-
-// Cube
-OBJECT 9
-cube
-material 2
-TRANS       3 4 -1
-ROTAT       0 0 0
-SCALE       1 1 1
-
-// Cube
-OBJECT 10
-cube
-material 3
-TRANS       -3 4 -1
-ROTAT       0 0 0
-SCALE       1 1 1

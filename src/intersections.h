@@ -99,6 +99,7 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
  * @param outside            Output param for whether the ray came from outside.
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
+
 __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
         glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
     float radius = .5;
@@ -141,4 +142,65 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     }
 
     return glm::length(r.origin - intersectionPoint);
+}
+
+
+__host__ __device__ glm::vec3 barycentricInterp(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c) {
+    glm::vec3 v0 = b - a;
+    glm::vec3 v1 = c - a;
+    glm::vec3 v2 = p - a;
+    float prod_00 = glm::dot(v0, v0);
+    float prod_01 = glm::dot(v0, v1);
+    float prod_11 = glm::dot(v1, v1);
+    float prod_20 = glm::dot(v2, v0);
+    float prod_21 = glm::dot(v2, v1);
+    float denominator = prod_00 * prod_11 - prod_01 * prod_01;
+    float y = (prod_11 * prod_20 - prod_01 * prod_21) / denominator;
+    float z = (prod_00 * prod_21 - prod_01 * prod_20) / denominator;
+    float x = 1.0f - y - z;
+    return glm::vec3(x, y, z);
+}
+
+
+__host__ __device__ float meshIntersectionTest(Geom mesh, Triangle* tris, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+
+    glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    int min_idx = -1;
+    float min_t = FLT_MAX;
+    glm::vec3 min_coord(0.f, 0.f, FLT_MAX);
+    for (int i = mesh.startidx; i < mesh.endidx; i++) {
+        Triangle tri = tris[i];
+        glm::vec3 baryPosition;
+        
+        if (glm::intersectRayTriangle(ro, rd, tri.verts[0], tri.verts[1], tri.verts[2], baryPosition)) {
+            if (baryPosition[2] > 0.f && baryPosition[2] < min_t) {
+                min_t = baryPosition[2];
+                min_coord = baryPosition;
+                min_idx = i;
+            }
+        }
+        
+    }
+    if (min_idx == -1) {
+        return -1;
+    }
+    intersectionPoint = min_t * ro + rd;
+    intersectionPoint = multiplyMV(mesh.transform, glm::vec4(intersectionPoint, 1.f));
+    //min_coord = barycentricInterp(intersectionPoint, tris[min_idx].verts[0], tris[min_idx].verts[1], tris[min_idx].verts[2]);
+    //normal = glm::normalize(glm::cross(tris[min_idx].verts[0] - tris[min_idx].verts[1], tris[min_idx].verts[0] - tris[min_idx].verts[2]));
+    normal = min_coord[0] * tris[min_idx].normal[0] 
+       + min_coord[1] * tris[min_idx].normal[1]
+        + (1.f - min_coord[0] - min_coord[1]) * tris[min_idx].normal[2];
+    normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(normal, 0.f)));
+    if (glm::dot(rd, normal) > 0.f) {
+        outside = false;
+    }
+    else {
+        outside = true;
+    }
+    return glm::length(r.origin - intersectionPoint);
+    
 }
