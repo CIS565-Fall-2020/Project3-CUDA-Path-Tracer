@@ -39,6 +39,7 @@ In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's
 ##### Better Sample
 
 - [x] stratified sampling ( Results not obvious though )
+- [x] Anti-aliasing 
 
 ##### Visual effects
 
@@ -58,17 +59,100 @@ In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's
 
 ##### [BSDF]()
 
+Basic kernel to represent the physical lighting attribute of each material.
+
+Since I'm good at setting up fascinating scenes, here I borrow scenes settings from [jmrcao](https://github.com/jmarcao) .
+
 diffuse ball
 
 <a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell.2020-09-30_03-21-12z.5000samp.png" height="400px"></a> 
 
-perfect reflection
+##### Perfect specular reflection
 
 <a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
 
-Basic kernel to represent the physical lighting attribute of each material.
+##### Imperfect specular
+
+Combing diffuse scattering and specular reflection can bring more vivacity and realness to the material. Here we randomly decide to do diffuse or specular based on the material shininess property. From left to right, shininess ranges from **5** to **Inf**. 
+
+<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
+
+##### Refractive transmission 
+
+<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
+
+Refraction basically refers to light transmitting from material to another material based on index of refraction(**IOR**). Here I assume the atmosphere is surrounded with Air (**IOR** = 1). After some critical angle for a certain **IOR**, it would cause total internal reflection.
+
+Here, from left to right, the index of refraction keeps increasing from 1 (Air) to 2.42(diamond), whose setting is exactly the same as [jmarcao](https://github.com/jmarcao/CUDA-Path-Tracer#refractive-transmission-scattering-function). So it achieves a comparable result with former.
+
+##### Fresnel effect
+
+It refers to the phenomenon that reflections easily appear when infer angle is smaller. Here I use [Shlick's approximation](https://en.wikipedia.org/wiki/Schlick%27s_approximation) to fit the ideal curve that light would transmit through or simply reflect on expectation. 
+
+Notice in the followed light starts to reflect in a narrower angle. After some critical angle, it directly transmits through the material.
+
+<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
+
+#### Stratified sampling
+
+Compared with uniform sampling, stratified sampling basically subdivides area and then sample in each block, which could reduces clustering of samples and bring  little noise especially around the edge.
+
+However, in my implementation, the results basically demonstrate comparable results between stratified and uniform sampling.
+
+<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
 
 
+
+#### Anti-aliasing
+
+Here I implement the anti-aliasing by randomly jitter the ray shot from camera.
+
+As you can see, the **left** is anti-aliasing, which a smoother edge than the right one.
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+
+
+
+
+
+
+### Visual effects
+
+##### Depth of field
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+Here **r** = 0.5,  **f** = 15.
+
+To simulate a real camera(with circle of confusion), we simulate this by shoot rays from a small concentric disk with given radius **r** and the focal distance **f**. 
+
+**Motion blur**
+
+To simulate a scene with the effect with time of exposure and moving objects, we randomly change the objects transform. How much the transformation would change depends on its given speed.
+
+
+
+### glTF mesh loading
+
+Here we implement the glTF loading function, which can load the glTF format meshed, which contains tons of triangles. However, as you can see from the image, the loading is still buggy , which basically include:
+
+- Incorrect relative position between meshes
+- Incorrect normal 
+
+This function is still under development yet (maybe not).
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+##### Bounding box
+
+Though the loading is not that correct, still we implement the bounding box that works just fine. A bounding box is created to do ray intersection culling. Which could somehow increase the performance.
+
+For the scene showed above(kirby in Cornell).
+
+|                                    | With bbox | without bbox |
+| ---------------------------------- | --------- | ------------ |
+| Elapsed time(ms) in each iteration | 326.1     | 476.9        |
 
 
 
@@ -83,6 +167,8 @@ Here shows the results based on my implementation.
 Well, obviously cache can trigger more performance with same results.
 
 **Warning** when those (motion blur,  material sort) with random ray are applied, we can not use first bounce cache here.
+
+
 
 ### **Material Sort**
 

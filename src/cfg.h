@@ -2,7 +2,7 @@
 
 #define camera_jittering 0
 #define cache_first_bounce 0
-#define material_sort 1
+#define material_sort 0
 
 #if material_sort
 	#define material_sort_ID 0
@@ -12,5 +12,5 @@
 
 #define stratified_sampling 0
 
-#define usebbox 1
-#define motion_blur 1
+#define usebbox 0
+#define motion_blur 0
