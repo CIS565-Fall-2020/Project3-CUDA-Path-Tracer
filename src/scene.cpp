@@ -231,6 +231,8 @@ void Scene::buildOctreeNode(OctreeNode &node, int depth) {
 	float dx = c[0] - v0[0];
 	float dy = c[1] - v0[1];
 	float dz = c[2] - v0[2];
+	int l = node.geom_idx_start;
+	int r = node.geom_idx_end;
 
 	// Add 8 child nodes
 	for (int i : {0, 1}) {
@@ -241,8 +243,8 @@ void Scene::buildOctreeNode(OctreeNode &node, int depth) {
 				OctreeNode c(p_min, p_max);
 				// add intersecting mesh
 				int start = geom_indices.size();
-				for (int k = node.geom_idx_start; k < node.geom_idx_end; k++) {
-					int gIdx = geom_indices[k];
+				for (int x = l; x < r; x++) {
+					int gIdx = geom_indices[x];
 					if (c.intersectTriangle(geoms[gIdx])) {
 						//c.geomIndices.push_back(gIdx);
 						geom_indices.push_back(gIdx);

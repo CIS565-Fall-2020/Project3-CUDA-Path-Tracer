@@ -238,6 +238,7 @@ __global__ void computeIntersections(
 	, ShadeableIntersection * intersections
 	, ShadeableIntersection * cached_intersections
 	, bool state_changed
+	, int num_nodes
 	, OctreeNode *octree_nodes
 	, int *geom_indices
 	)
@@ -318,6 +319,34 @@ __global__ void computeIntersections(
 	}
 #ifdef USE_OCTREE
 	// TODO: use octree for meshes
+	int stack[100]; /// need to adjust according to MAX_DEPTH defined in octree.h
+	int *ptr = stack;
+	*ptr = -1;
+	*++ptr = 0;
+	
+	int tmp_idx;
+	bool tmp_outside;
+	bool isLeaf;
+
+	do {
+		OctreeNode &node = octree_nodes[*ptr--]; // pop
+		t = octreeNodeIntersectionTest(node, pathSegment.ray, 
+			tmp_intersect, tmp_normal, tmp_outside, tmp_idx, geoms, geom_indices, isLeaf);
+		if (t > 0.f && t < t_min && isLeaf) {
+			t_min = t;
+			hit_geom_index = tmp_idx;
+			intersect_point = tmp_intersect;
+			normal = tmp_normal;
+			outside = tmp_outside;
+		}
+		else if (t > 0.f && !isLeaf) {
+			for (int c : node.childrenIndices) {
+				*++ptr = c;
+			}
+		}
+	} while (*ptr >= 0);
+
+	/*
 	int idx;
 	t = octreeIntersectionTest(octree_nodes[0], pathSegment.ray, tmp_intersect, tmp_normal, outside, idx, 
 		geoms, geom_indices, octree_nodes);
@@ -327,6 +356,7 @@ __global__ void computeIntersections(
 		intersect_point = tmp_intersect;
 		normal = tmp_normal;
 	}
+	*/
 #endif
 	
 	if (hit_geom_index == -1)
@@ -439,6 +469,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
+	const int num_nodes = hst_scene->octree.size();
 
 	// 2D block for generating ray from camera
     const dim3 blockSize2d(8, 8);
@@ -514,6 +545,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, dev_intersections
 			, dev_intersections_cache
 			, state_updated
+			, num_nodes
 			, dev_octree
 			, dev_geom_idxes
 			);

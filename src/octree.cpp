@@ -11,6 +11,10 @@ OctreeNode::OctreeNode(glm::vec3 &v0, glm::vec3 &v1)
 	geom_idx_start(-1), geom_idx_end(-1)
 {
 	center = (v0 + v1) / 2.f;
+
+	transform = utilityCore::buildTransformationMatrix(center, glm::vec3(0.0f), bp1 - bp0);
+	invTransform = glm::inverse(transform);
+	invTranspose = glm::inverseTranspose(transform);
 }
 
 bool OctreeNode::intersectTriangle(const Geom &geom) const {
@@ -26,9 +30,9 @@ bool OctreeNode::intersectTriangle(const Geom &geom) const {
 	glm::vec3 n1 = glm::vec3(0.f, 1.f, 0.f);
 	glm::vec3 n2 = glm::vec3(0.f, 0.f, 1.f);
 
-	float dx = center[0] - bp0[0];
-	float dy = center[1] - bp0[1];
-	float dz = center[2] - bp0[2];
+	float dx = center[0] - bp0[0] + 0.001f;
+	float dy = center[1] - bp0[1] + 0.001f;
+	float dz = center[2] - bp0[2] + 0.001f;
 
 	vector<glm::vec3> test_axis;
 	// Box normals and triangle edges (9 cases)

@@ -145,6 +145,7 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     return glm::length(r.origin - intersectionPoint);
 }
 
+#if 0
 __host__ __device__
 float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside, int &index, 
@@ -189,7 +190,9 @@ float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 	}
 	else {
 		// This is a leaf
-		for (int k = node.geom_idx_start; k < node.geom_idx_end; k++) {
+		int l = node.geom_idx_start;
+		int r = node.geom_idx_end;
+		for (int k = l; k < r; k++) {
 			int gIdx = geom_indices[k];
 			Geom & geom = geoms[gIdx];
 			glm::vec3 baryRes;
@@ -215,6 +218,77 @@ float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
 			}
 		}
 		
+	}
+	if (tmp_idx >= 0) {
+		intersectionPoint = tmp_intersect;
+		normal = tmp_normal;
+		outside = tmp_outside;
+		index = tmp_idx;
+		return t_min;
+	}
+	else {
+		return -1;
+	}
+}
+#endif
+
+__host__ __device__
+float octreeNodeIntersectionTest(const OctreeNode &node, const Ray &ray,
+		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside, int &index,
+		Geom *geoms, int *geom_indices, bool &isLeaf) {
+
+	isLeaf = (node.childrenIndices[0] < 0);
+
+	// check mesh in box
+	if (node.geom_idx_start == node.geom_idx_end) {
+		// no mesh within box
+		return -1;
+	}
+	// check bounding box intersection
+	Geom box;
+	box.type = CUBE;
+
+	box.transform = node.transform;
+	box.inverseTransform = node.invTransform;
+	box.invTranspose = node.invTranspose;
+
+	glm::vec3 tmp_intersect;
+	glm::vec3 tmp_normal;
+	bool tmp_outside = true;
+	int tmp_idx = -1;
+	float t_min = FLT_MAX;
+
+	float t0 = boxIntersectionTest(box, ray, tmp_intersect, tmp_normal, tmp_outside);
+	if (t0 < 0.f) {
+		return -1;
+	}
+	// test intersections 
+	int l = node.geom_idx_start;
+	int r = node.geom_idx_end;
+	for (int k = l; k < r; k++) {
+		int gIdx = geom_indices[k];
+		Geom & geom = geoms[gIdx];
+		glm::vec3 baryRes;
+		bool ret = glm::intersectRayTriangle(ray.origin, ray.direction,
+			geom.v0, geom.v1, geom.v2, baryRes);
+		if (ret) {
+			// Intersect
+			float t = baryRes.z;
+			if (t_min > t)
+			{
+				t_min = t;
+				tmp_idx = gIdx;
+				tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * (1 - baryRes.x - baryRes.y);
+				if (glm::dot(ray.origin, geom.normal) > 0.0f) {
+					tmp_outside = false;
+					tmp_normal = -geom.normal;
+				}
+				else {
+					tmp_outside = true;
+					tmp_normal = geom.normal;
+				}
+			}
+		}
 	}
 	if (tmp_idx >= 0) {
 		intersectionPoint = tmp_intersect;

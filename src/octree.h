@@ -4,7 +4,7 @@
 #include <vector>
 #include "sceneStructs.h"
 
-#define MAX_DEPTH 4
+#define MAX_DEPTH 3
 
 using namespace std;
 
@@ -14,9 +14,11 @@ public:
 	glm::vec3 bp0; // top left bounding point
 	glm::vec3 bp1;
 	int childrenIndices[8];
-	//vector<int> geomIndices;
 	int geom_idx_start;
 	int geom_idx_end; // [start, end)
+	glm::mat4 transform;
+	glm::mat4 invTransform;
+	glm::mat4 invTranspose;
 
 	OctreeNode();
 	OctreeNode(glm::vec3 &v0, glm::vec3 &v1);
