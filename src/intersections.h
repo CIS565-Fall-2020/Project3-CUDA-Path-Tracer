@@ -78,6 +78,7 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
             }
             if (tb < tmax) {
                 tmax = tb;
+                n[xyz] = -n[xyz];
                 tmax_n = n;
             }
         }

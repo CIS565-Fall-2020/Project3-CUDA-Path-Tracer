@@ -2,6 +2,9 @@
 
 #include "intersections.h"
 
+#define STRATIFIED_SAMPLING 1
+#define SAMPLE_SIZE 20
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -12,9 +15,22 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
+
+#if STRATIFIED_SAMPLING
+    int x = u01(rng) * SAMPLE_SIZE;
+    int y = u01(rng) * SAMPLE_SIZE;
+
+    float u = (x + u01(rng)) / SAMPLE_SIZE;
+    float v = (y + u01(rng)) / SAMPLE_SIZE;
+
+    float up = sqrt(u); // cos(theta)
+    float over = sqrt(1 - up * up); // sin(theta)
+    float around = v * TWO_PI;
+#else
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
+#endif // STRATIFIED_SAMPLING
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
@@ -128,7 +144,7 @@ void scatterRay(
         }
         float scale = m.hasReflective <= 0.0 ? 0.0 : 1.0 / m.hasReflective;
         pathSegment.color *= m.color * scale;
-        pathSegment.ray.origin = intersect + 0.001f * pathSegment.ray.direction;
+        pathSegment.ray.origin = intersect + 0.001f * normal;
     }
     // refract
     else if (p0 <= m.hasReflective + m.hasRefractive) {
@@ -166,6 +182,6 @@ void scatterRay(
         pathSegment.ray.direction = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
         float scale = m.hasReflective >= 1.0 ? 0.0 : 1.0 / (1.0 - m.hasReflective);
         pathSegment.color *= m.color * scale;
-        pathSegment.ray.origin = intersect + 0.001f * pathSegment.ray.direction;
+        pathSegment.ray.origin = intersect + 0.001f * normal;
     }
 }
