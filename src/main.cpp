@@ -139,10 +139,24 @@ void runCuda() {
         iteration++;
         cudaGLMapBufferObject((void**)&pbo_dptr, pbo);
 
+		// start timer
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start);
+
         // execute the kernel
         int frame = 0;
         pathtrace(pbo_dptr, frame, iteration);
 
+		// time
+		cudaEventRecord(stop);
+		cudaEventSynchronize(stop);
+		float milliseconds = 0.f;
+		cudaEventElapsedTime(&milliseconds, start, stop);
+		if (iteration < 20) {
+			cout << "Iteration " << iteration << ": " << milliseconds << " ms." << endl;
+		}
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
