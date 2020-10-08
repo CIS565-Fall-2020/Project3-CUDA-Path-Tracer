@@ -5,18 +5,49 @@ CUDA Path Tracer
 
 * Zijing Peng
 
-  - [LinkedIn](https://www.linkedin.com/in/zijing-peng/)
-  - [personal website](https://zijingpeng.github.io/)
-
+  - [LinkedIn](https://www.linkedin.com/in/zijing-peng/)  [personal website](https://zijingpeng.github.io/)
 * Tested on: Windows 22, i7-8750H@ 2.22GHz 16GB, NVIDIA GeForce GTX 1060
+
+![](/img/balls.png)
 
 ### Features
 
-#### Material
+#### Materials
 
-| Diffuse                                             | Specular                                            |
-| --------------------------------------------------- | --------------------------------------------------- |
-| ![](/img/cornell.2020-09-29_03-17-37z.5000samp.png) | ![](/img/cornell.2020-09-29_16-51-30z.5000samp.png) |
+Implemented Ideal Diffuse surfaces, perfectly specular-reflective (mirrored) surfaces and refraction (glass) with Frensel effects in this project.
+
+| Diffuse                           | Reflect                      | Refract               |
+| --------------------------------- | ---------------------------- | --------------------- |
+| ![](/img/diffuse.png)             | ![](/img/reflect.png)        | ![](/img/refract.png) |
+
+#### Depth of Field
+
+Implemented physically-based depth-of-field by jittering rays within an aperture. 
+
+| Lens Radius: 0    | Lens Radius: 0.5    | Lens Radius: 1.0    |
+| ----------------- | ------------------- | ------------------- |
+| ![](img/dof0.png) | ![](img/dof0.5.png) | ![](img/dof1.0.png) |
+
+#### Stochastic Sampled Antialiasing
+
+For a given pixel we create different samples within that pixel by adding randomly offsets to the origin of the ray. The samples are then combined into one value for the pixel. Thus, the colors of these rays are averaged.
+
+
+| Antialiasing Off | Antialiasing On |
+| ------------------------ | ----------------------- |
+| ![](img/aa0.png) | ![](img/aa.png) |
+
+#### Motion Blur
+
+Motion Blur is achieved by sending each ray at some random time when the shutter is open. A random time within the interval is chosen and bonded with the ray. When testing the intersection with the moving object, we can add up an offset based on this time. Thus, the objects is 'moving'.
+
+| Motion Blur Off          | Motion Blur On          |
+| ------------------------ | ----------------------- |
+| ![](img/motionblur0.png) | ![](img/motionblur.png) |
+
+#### OBJ Loading 
+
+I implemented arbitrary OBJ mesh loading and rendering. I use [tinyObj](https://github.com/tinyobjloader/tinyobjloader) for loading the OBJ files. In order to accelerate the rendering, I create bounding volume for meshes and do intersection culling by first testing the bounding box before testing the triangles.
 
 ### Optimizations
 
