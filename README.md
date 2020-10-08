@@ -61,7 +61,7 @@ In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's
 
 Basic kernel to represent the physical lighting attribute of each material.
 
-Since I'm good at setting up fascinating scenes, here I borrow scenes settings from [jmrcao](https://github.com/jmarcao) .
+Since I'm not good at setting up fascinating scenes, here I borrow scenes settings from [jmrcao](https://github.com/jmarcao) as a fast test for my algorithm. Thanks **jmrcao**!
 
 diffuse ball
 
@@ -119,19 +119,19 @@ As you can see, the **left** is anti-aliasing, which a smoother edge than the ri
 
 ##### Depth of field
 
+To simulate a real camera(with circle of confusion), instead of shooting rays from camera center as default, here we shoot rays from a small concentric disk with given radius **r** and focal distance **f**. 
+
 Here **r** = 0.5,  **f** = 15.
 
 ![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/dof.png)
 
-To simulate a real camera(with circle of confusion), we simulate this by shoot rays from a small concentric disk with given radius **r** and the focal distance **f**. 
+
 
 **Motion blur**
 
+To simulate a scene with the effect like time of exposure and moving objects, we randomly change the objects transform along its given speed. How much the motion would "blur " depends on its magnitude of speed.
+
 ![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/motion_blur.png)
-
-To simulate a scene with the effect with time of exposure and moving objects, we randomly change the objects transform. How much the transformation would change depends on its given speed.
-
-
 
 
 
@@ -140,7 +140,8 @@ To simulate a scene with the effect with time of exposure and moving objects, we
 Here we implement the glTF loading function, which can load the glTF format meshed, which contains tons of triangles. However, as you can see from the image, the loading is still buggy , which basically include:
 
 - Incorrect relative position between meshes
-- Incorrect normal 
+- can not load all the glTF mesh. The kirby is the most visibly-reasonable one.
+  - Probably due to glTF mesh itself( they were converted from obj actually)
 
 This function is still under development yet (maybe not).
 
@@ -148,7 +149,7 @@ This function is still under development yet (maybe not).
 
 ##### Bounding box
 
-Though the loading is not that correct, still we implement the bounding box that works just fine. A bounding box is created to do ray intersection culling. Which could somehow increase the performance.
+Though the loading is not that correct, still we implement the bounding box that works just fine. A bounding box is created to do ray intersection culling. Which could avoid unnecessary ray hit.
 
 For the scene showed above(kirby in Cornell).
 
