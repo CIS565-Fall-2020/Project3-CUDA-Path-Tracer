@@ -295,7 +295,7 @@ __global__ void shadeFakeMaterial (
       // If the material indicates that the object was a light, "light" the ray
       if (material.emittance > 0.0f) {
         pathSegments[idx].color *= (materialColor * material.emittance);
-        pathSegments[idx].remainingBounces = 0;
+        pathSegments[idx].remainingBounces = -1;
       }
       // Otherwise, do some pseudo-lighting computation. This is actually more
       // like what you would expect from shading in a rasterizer like OpenGL.
@@ -304,6 +304,7 @@ __global__ void shadeFakeMaterial (
         //float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
         //pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
         //pathSegments[idx].color *= u01(rng); // apply some noise because why not
+          
           if (depth == traceDepth || pathSegments[idx].remainingBounces == 0) {
               pathSegments[idx].color = glm::vec3(0.0f);
               pathSegments[idx].remainingBounces--;
@@ -322,7 +323,7 @@ __global__ void shadeFakeMaterial (
     // This can be useful for post-processing and image compositing.
     } else {
       pathSegments[idx].color = glm::vec3(0.0f);
-      pathSegments[idx].remainingBounces = 0;
+      pathSegments[idx].remainingBounces = -1;
     }
   }
 }
@@ -377,7 +378,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
     float lensRadius = 0.01;
-    float focalDistance = 12;
+    float focalDistance = 8;
     printf("\n\niter: %d   \n", iter);
 
 	// 2D block for generating ray from camera

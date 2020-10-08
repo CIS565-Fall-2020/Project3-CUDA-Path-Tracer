@@ -75,6 +75,7 @@ set(headers
     src/utilities.h
     src/tiny_obj_loader.cc
     src/tiny_obj_loader.h
+    src/sampler.h
     )
 
 set(sources
@@ -86,6 +87,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/sampler.cpp
     )
 
 list(SORT headers)

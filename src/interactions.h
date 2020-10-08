@@ -2,6 +2,8 @@
 
 #include "intersections.h"
 
+#define STRATIFIED 1
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -12,9 +14,32 @@ glm::vec3 calculateRandomDirectionInHemisphere(
     glm::vec3 normal, thrust::default_random_engine& rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
+#if STRATIFIED
+    //int nSamples = 25;
+    glm::vec2 sample[256];
+    int nx = 16, ny = 16;
+    float dx = (float)1 / (int)nx, dy = (float)1 / (int)ny;
+    for (int y = 0; y < ny; ++y) {
+        for (int x = 0; x < nx; ++x) {
+            float jx = u01(rng);
+            float jy = u01(rng);
+            sample[y * ny + x].x = glm::min((x + jx) * dx, 1 - EPSILON);
+            sample[y * ny + x].y = glm::min((y + jy) * dy, 1 - EPSILON);
+        }
+    }
+    int x = min((int)round(u01(rng) * 256), 255);
+    float u = sample[x].x;
+    float v = sample[x].y;
+    float up = sqrt(u); // cos(theta)
+    float over = sqrt(1 - up * up); // sin(theta)
+    float around = v * TWO_PI;
+#else
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
+#endif // STRATIFIED
+
+
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
@@ -52,6 +77,22 @@ glm::vec3 calculatePerfectSpecular(glm::vec3 normal, glm::vec3 ray) {
 __host__ __device__
 float cosTheta(glm::vec3 v1, glm::vec3 v2) {
     return glm::dot(glm::normalize(v1), glm::normalize(v2));
+}
+
+__host__ __device__
+glm::vec3 reflect(const glm::vec3& r, const glm::vec3& normal) {
+    return glm::normalize(glm::reflect(r, normal));
+    //return glm::normalize(r - 2 * glm::dot(r, normal) * normal);
+}
+
+__host__ __device__
+glm::vec3 refract(const glm::vec3& r, const glm::vec3& normal, const float &reflect_ratio) {
+    return glm::normalize(glm::refract(r, normal, reflect_ratio));
+    /*
+    float cos_theta = glm::dot(-r, normal);
+    glm::vec3 perp = reflect_ratio * (r + cos_theta * normal);
+    glm::vec3 parallel = -glm::sqrt(glm::abs(1.0f - glm::length(perp) * glm::length(perp))) * normal;
+    return perp + parallel;*/
 }
 
 /**
@@ -92,63 +133,64 @@ void scatterRay(
 
     // Specular
     thrust::uniform_real_distribution<float> u01(0, 1);
+    Ray r = pathSegment.ray;
+    if (m.hasRefractive) {
+        Ray r = pathSegment.ray;
+        bool outside = glm::dot(r.direction, glm::normalize(normal)) < 0;
+        float eta2 = m.indexOfRefraction;
 
+        float refraction_ratio = (outside ? (1.0f / eta2) : eta2);
+        
 
-    if (m.hasReflective && m.hasRefractive) {
-        glm::vec3 ray = pathSegment.ray.direction;
+        glm::vec3 unit_direction = glm::normalize(r.direction);
+        float cos_theta = glm::min(glm::dot(-unit_direction, normal), 1.0f);
 
-        float etaI = 1.0f, etaT = m.indexOfRefraction;
-        float r0 = pow((etaI - etaT) / (etaI + etaT), 2);
+        float sin_theta = glm::sqrt(1.0f - cos_theta * cos_theta);
 
-        float etaRatio = 0;
-        float costheta = glm::dot(ray, glm::normalize(normal));
-        glm::vec3 newNormal = normal;
+        bool cannot_refract = refraction_ratio * sin_theta > 1.0f;
 
-        bool enter = costheta < 0 ? true : false;
+        float r0 = (1 - refraction_ratio) / (1 + refraction_ratio);
+        r0 = r0 * r0;
+        float fresnel = r0 + (1 - r0) * glm::pow((1 - glm::abs(cos_theta)), 5.0f);
 
-        if (!enter) {
-            float tmp = etaI;
-            etaI = etaT;
-            etaT = tmp;
-            costheta = glm::abs(costheta);
-            newNormal *= -1;
-        }
-
-        etaRatio = etaI / etaT;
-        float rTheta = r0 + (1 - r0) * glm::pow(1 - costheta, 5);
-
-        if (u01(rng) > 0.5) {
-            float a = 0;
-        }
-
-        if (u01(rng) < rTheta) {
-            // refelction
-            glm::vec3 reflectDirection = glm::normalize(glm::reflect(ray, glm::normalize(normal)));
-            pathSegment.ray.origin = intersect;
-            pathSegment.ray.direction = reflectDirection;
+        glm::vec3 direction;
+        if (cannot_refract || fresnel > u01(rng)) {
+            pathSegment.ray.direction = reflect(unit_direction, normal);
+            //pathSegment.color *= m.specular.color;
+            if (outside) {
+                pathSegment.ray.origin = intersect + 0.001f * normal;
+            }
+            else {
+                pathSegment.ray.origin = intersect + 0.001f * -normal;
+            }
         }
         else {
-            glm::vec3 refractDirection = glm::normalize(glm::refract(ray, glm::normalize(newNormal), etaRatio));
-            pathSegment.ray.origin = intersect;
-            pathSegment.ray.direction = refractDirection;
+            pathSegment.ray.direction = refract(unit_direction, normal, refraction_ratio);
+            if (outside) {
+                pathSegment.ray.origin = intersect + 0.001f * -normal;
+            }
+            else {
+                pathSegment.ray.origin = intersect + 0.001f * normal;
+            }
         }
+        
     }
     else if (m.hasReflective) {
         // pure reflect
-        glm::vec3 ray = intersect - pathSegment.ray.origin;
-        glm::vec3 reflectRayDirection = calculatePerfectSpecular(normal, ray);
-        glm::vec3 specularColor = m.specular.color;
+        pathSegment.ray.direction = reflect(glm::normalize(pathSegment.ray.direction), normal);
+        pathSegment.color *= m.specular.color;
         pathSegment.ray.origin = intersect;
-        pathSegment.ray.direction = glm::normalize(reflectRayDirection);
-        pathSegment.color *= specularColor;
 
     }
     else {
         // diffuse
         glm::vec3 diffuseRayDirection = calculateRandomDirectionInHemisphere(normal, rng);
-        pathSegment.ray.origin = intersect;
         pathSegment.ray.direction = glm::normalize(diffuseRayDirection);
         pathSegment.color *= m.color;
+        pathSegment.ray.origin = intersect;
+
     }
+
+
 
 }
