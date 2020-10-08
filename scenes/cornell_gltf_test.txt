@@ -130,7 +130,7 @@ material 4
 PATH		../gltf_mesh/Box.glb
 //PATH		../gltf_mesh/hat/scene.gltf
 TRANS       -1 4 -1
-ROTAT     90 180 90
+//ROTAT     90 180 90
 ROTAT		0 0 0
 //SCALE       1.5 1.5 1.5 
 SCALE       2.0 2.0 2.0 

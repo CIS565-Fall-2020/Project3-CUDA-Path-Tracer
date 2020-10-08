@@ -171,7 +171,7 @@ __host__ __device__ float triangleIntersectionTest(
             intersectionPoint.x * triangle.v1 +
             intersectionPoint.y * triangle.v2 +
             (1.0f - intersectionPoint.x - intersectionPoint.y) * triangle.v0;
-        normal = multiplyMV(supp_geom.transform, glm::vec4(normal, 0.0f));
+        normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(normal, 0.0f)));
     }
     return t;
 }

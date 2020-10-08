@@ -152,7 +152,7 @@ void imperfectSpecularReflection(
 
         pathSegment.ray.direction = base_m * local_dir;
         pathSegment.color *= m.specular.color;
-        pathSegment.ray.origin = intersect + 0.001f * pathSegment.ray.direction;
+        pathSegment.ray.origin = intersect + 0.001f * normal;
 
     }
 }
