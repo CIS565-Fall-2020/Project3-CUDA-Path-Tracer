@@ -28,6 +28,7 @@ static bool cacheFirstBounce = false;
 static bool sortByMaterial = true;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
+static bool useOctree = true;
 
 float zoom, theta, phi;
 glm::vec3 cameraPosition;
@@ -148,8 +149,8 @@ void runCuda() {
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
     if (iteration == 0) {
-        pathtraceFree();
-        pathtraceInit(scene, true, 2, 3);
+        pathtraceFree(useOctree);
+        pathtraceInit(scene, useOctree, 3, 3);
         //timer().startGpuTimer();
     }
 
@@ -172,7 +173,7 @@ void runCuda() {
 
     } else {
         saveImage();
-        pathtraceFree();
+        pathtraceFree(useOctree);
         cudaDeviceReset();
         exit(EXIT_SUCCESS);
     }

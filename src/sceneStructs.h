@@ -102,11 +102,11 @@ struct ShadeableIntersection {
 
 // Hierarchical spatial datastructe: Octree
 struct OctNode {
-    int id = -1;
+    int id;
     glm::vec3 maxCorner;
     glm::vec3 minCorner;
     int numGeoms;
-    int geomStartIdx = -1;
+    int geomStartIdx;
 
     // children ids
     int upFarLeft;
