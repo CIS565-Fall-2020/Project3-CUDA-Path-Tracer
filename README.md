@@ -48,9 +48,13 @@ The basic implementation of a pathtracer interprets the world through a pinhole 
 
 ## Stochastic Anti-Aliasing
 
+The pathtracer shoots one ray through each pixel; color is strictly calculated for that ray and thus that pixel. Pixels doesn't account for the colors of the surrounding pixels, which results in discrete, pixelated edges in renders like this.
 
+![](img/presentable/noAAmarked.png)
 
-Shoot through each specific pixel - color calculated strictly for that pixel and that ray's direction, doesn't account for surrounding light rays therefore no smoothing. We can jitter the initial ray's direction 
+We can jitter the initial ray's direction by a small epsilon so it samples around its original trajectory each iteration. Then, over all iterations, this will average to an anti-aliased image with softer edges.
+
+![](img/presentable/AAmarked.png)
 
 ## OBJ Loading
 
@@ -58,9 +62,23 @@ To allow arbitrary meshes to be rendered by the pathtracer, the TinyObj loader w
 
 ## Procedural Shapes
 
-[tanglecube](https://mathworld.wolfram.com/Tanglecube.html).
+In contrast to the primitives and OBJs that are explicitly defined in the scene, implicit surfaces are defined by functions that equal zero for points that are on the surface. In order to find these points, we need to use a technique called **raymarching** to find points on or close to the surface.
 
-[signed distance functions](https://iquilezles.org/www/articles/distfunctions/distfunctions.htm)
+Raymarching starts at the origin of a ray, then moves along the direction in fixed increments, testing for the function's value at each step. This keeps going until it takes a maximum number of steps or it finds a value within an epsilon to zero. This is then used as the surface intersection for the surface. One of the surfaces I decided to implement is a [tanglecube](https://mathworld.wolfram.com/Tanglecube.html).
+
+![](img/presentable/tanglecube_diffuse.png)
+
+These surfaces can be given specular materials, but there is noise due to the more approximated nature of the surface:
+
+![](img/presentable/tanglecube_reflect.png)
+
+For an implicit surface with holes like this, a small enough step is required to properly capture the surface. Yet, the surface is a good distance away from the camera, and some rays may never hit the surface at all. This results in an extensive amount of time taken to process these surfaces, especially without a bounding volume hierarchy. There is a technique to find implicitly defined surfaces that contrasts this: **sphere-marching** using [signed distance functions](https://iquilezles.org/www/articles/distfunctions/distfunctions.htm) (SDFs).
+
+![](img/spheremarching.jpg)
+
+[GPU Gems 2: Chapter 8](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-8-pixel-displacement-mapping-distance-functions)
+
+A signed distance function also defines a surface depending on which points make its value equal zero, but its other values have utility: they inform us how far a point is from the surface at any point in space. This defines how large of a step we can take when we march along the ray, clearing a distance within a sphere just like the diagram. Surfaces rendered using spheremarching can be visualized much more efficiently than surfaces rendered with regular raymarching (depending on SDF calculation complexity, of course).
 
 ## Procedural Textures
 
