@@ -75,15 +75,17 @@ diffuse ball
 
 Combing diffuse scattering and specular reflection can bring more vivacity and realness to the material. Here we randomly decide to do diffuse or specular based on the material shininess property. From left to right, shininess ranges from **5** to **Inf**. 
 
-<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/imperfect_spec.png)
 
 ##### Refractive transmission 
-
-<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
 
 Refraction basically refers to light transmitting from material to another material based on index of refraction(**IOR**). Here I assume the atmosphere is surrounded with Air (**IOR** = 1). After some critical angle for a certain **IOR**, it would cause total internal reflection.
 
 Here, from left to right, the index of refraction keeps increasing from 1 (Air) to 2.42(diamond), whose setting is exactly the same as [jmarcao](https://github.com/jmarcao/CUDA-Path-Tracer#refractive-transmission-scattering-function). So it achieves a comparable result with former.
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/refraction.png)
+
+
 
 ##### Fresnel effect
 
@@ -91,7 +93,7 @@ It refers to the phenomenon that reflections easily appear when infer angle is s
 
 Notice in the followed light starts to reflect in a narrower angle. After some critical angle, it directly transmits through the material.
 
-<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/fresnel.png)
 
 #### Stratified sampling
 
@@ -99,7 +101,7 @@ Compared with uniform sampling, stratified sampling basically subdivides area an
 
 However, in my implementation, the results basically demonstrate comparable results between stratified and uniform sampling.
 
-<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/sample_camparison.png)
 
 
 
@@ -109,7 +111,7 @@ Here I implement the anti-aliasing by randomly jitter the ray shot from camera.
 
 As you can see, the **left** is anti-aliasing, which a smoother edge than the right one.
 
-![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/compare_jitter.png)
 
 
 
@@ -117,9 +119,9 @@ As you can see, the **left** is anti-aliasing, which a smoother edge than the ri
 
 ##### Depth of field
 
-![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
-
 Here **r** = 0.5,  **f** = 15.
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/dof.png)
 
 To simulate a real camera(with circle of confusion), we simulate this by shoot rays from a small concentric disk with given radius **r** and the focal distance **f**. 
 
