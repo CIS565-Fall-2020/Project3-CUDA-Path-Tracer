@@ -43,8 +43,8 @@ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(243): warning C499
 E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1096): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
 E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1096): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
 E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1151): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1171): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1220): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1189): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1237): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
 E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1307): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 D:/cuda/dev/include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'initializing': conversion from 'Integer' to 'int', possible loss of data
           with
@@ -118,6 +118,44 @@ D:/cuda/dev/include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
   D:/cuda/dev/include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<0>' being compiled
   D:/cuda/dev/include\thrust/functional.h(1451): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<0>>' being compiled
   Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Release/cis565_path_tracer_generated_pathtrace.cu.obj successfully.
+  main.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(79,19): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(130,19): warning C4018: '<': signed/unsigned mismatch
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(133,1): warning C4996: 'cudaGLMapBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(356): message : see declaration of 'cudaGLMapBufferObject'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(140,1): warning C4996: 'cudaGLUnmapBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(382): message : see declaration of 'cudaGLUnmapBufferObject'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(179,34): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(180,37): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\main.cpp(185,36): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+  octree.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.cpp(230,85): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.cpp(343,84): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.cpp(404,73): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.cpp(405,74): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  preview.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(83,1): warning C4996: 'cudaGLUnregisterBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(404): message : see declaration of 'cudaGLUnregisterBufferObject'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(107,1): warning C4996: 'cudaGLSetGLDevice': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(305): message : see declaration of 'cudaGLSetGLDevice'
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\preview.cpp(127,1): warning C4996: 'cudaGLRegisterBufferObject': was declared deprecated
+D:\cuda\dev\include\cuda_gl_interop.h(327): message : see declaration of 'cudaGLRegisterBufferObject'
+  scene.cpp
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(115,69): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(116,67): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(118,87): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(137,63): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(141,65): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(142,63): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(269,52): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(290,24): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(354,53): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(359,49): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(361,49): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(363,53): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\scene.cpp(365,45): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  Generating Code...
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\octree.cpp(117): warning C4715: 'Octree::newNodeTest': not all control paths return a value
      Creating library E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/lib/Release/cis565_path_tracer.lib and object E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/lib/Release/cis565_path_tracer.exp
 LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
   cis565_path_tracer.vcxproj -> E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\bin\Release\cis565_path_tracer.exe
