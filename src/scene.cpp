@@ -156,6 +156,20 @@ int Scene::loadGeom(string objectid) {
 			cout << "Creating new cube..." << endl;
 			newGeom.type = CUBE;
 		}
+        else if (strcmp(line.c_str(), "tanglecube") == 0) {
+            cout << "Creating new tanglecube..." << endl;
+            newGeom.type = IMPLICIT;
+            newGeom.implicit.type = TANGLECUBE;
+            newGeom.implicit.sdf = false;
+            newGeom.implicit.shadowEpsilon = 0.07f;
+        }
+        else if (strcmp(line.c_str(), "torus") == 0) {
+            cout << "Creating new torus..." << endl;
+            newGeom.type = IMPLICIT;
+            newGeom.implicit.type = TORUS;
+            newGeom.implicit.sdf = true;
+            newGeom.implicit.shadowEpsilon = 0.01f;
+        }
 		else if (strstr(line.c_str(), ".obj") != NULL) {
 			cout << "Creating OBJ..." << endl;
             loadingOBJ = true;

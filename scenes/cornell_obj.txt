@@ -114,17 +114,17 @@ ROTAT       0 0 0
 SCALE       .01 10 10
 
 // Cube
-OBJECT 6
-../objs/heart.obj
-material 4
-TRANS       0 0 0
-ROTAT       0 0 0
-SCALE       1 1 1
+//OBJECT 6
+//../objs/cube.obj
+//material 4
+//TRANS       0 0 -2
+//ROTAT       0 45 0
+//SCALE       3 3 3
 
 // Dog
-//OBJECT 6
-//../objs/dog.obj
-//material 4
-//TRANS       0 0 0
-//ROTAT       0 45 0
-//SCALE       0.005 0.005 0.005
+OBJECT 6
+../objs/dog.obj
+material 4
+TRANS       0 -0.5 0
+ROTAT       0 90 0
+SCALE       0.25 0.25 0.25

@@ -20,47 +20,53 @@ In addition to building a GPU-based pathtracer, this project involved implementi
 
 This pathtracer draws upon the [Physically-Based Rendering textbook](http://www.pbr-book.org/) for reference.
 
-## Features
+# Features
 
-### Materials
+Dog model from [here](https://www.cgtrader.com/free-3d-print-models/house/decor/doberman-dog-6140e3ce-7726-4c90-8133-e924d1f8ba49).
+
+## Materials
 
 ![](img/presentable/materials_guide.png)
 
 In this pathtracer, three basic material types exist: **diffuse**, **reflective**, and **refractive**. Their interactions with rays of light are handled by bidirectional scattering distribution functions, or BSDFs, based on the directions of the input and output rays (thus *bi-directional*). The BSDF for each material type handles their light rays differently:
 
-- *Diffuse*: samples a hemisphere of space around the intersection normal that is incident to the surface. Chooses a random direction in said hemisphere for the new direction of the ray.
-- *Reflective*: reflects the light ray about the surface normal. 
-- *Refractive*: refracts the ray through the material according to Snell's law, pictured above.
+- **Diffuse**: samples a hemisphere of space around the intersection normal that is incident to the surface.
+- **Reflective**: reflects the light ray about the surface normal. 
+- **Refractive**: refracts the ray through the material according to Snell's law of refraction.
 
-In the spirit of the PBR textbook, materials are handled using BSDF "flags" that are parsed from the scene file. When an object has more than one material flag, all rays that hit it will choose randomly between the flagged materials, sample the randomly chosen material, then divide its contribution by the probability of choosing it (to upscale its contribution). This allows for mixed materials, such as a half specular, half diffuse material.
+In the spirit of the PBR textbook, I handle materials using BSDF "flags" that are parsed from the scene file. When an object has more than one material flag, all rays that hit it will choose randomly between the flagged materials, sample the randomly chosen material, then divide its contribution by the probability of choosing it (to upscale its contribution). This allows for mixed materials, such as a half specular, half diffuse material.
 
-Here, a compound reflective and refractive material is implemented as a [Fresnel](https://www.dorian-iten.com/fresnel/) effect. In contrast to the purely refractive material, the Fresnel glass accounts for the material's reflectivity. For comparison, these renders below feature a purely refractive sphere on the left, and glass spheres in the middle and right.
+Here, a compound reflective and refractive effect is implemented through a [Fresnel](https://www.dorian-iten.com/fresnel/) material, which reflects light rays that are more tangent to its surface. This creates an effect where rays passing through the material are refracted, while rays grazing the sides of the material are reflected. Instead of directly calculating the Fresnel component, I estimate it using Schlick's approximation, just as [this raytracer's implementation](https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/refraction) does. For comparison, these renders below feature a purely refractive sphere on the left, and Fresnel glass spheres in the middle and right.
 
 ![](img/presentable/glassmaterials.png)
 
-Instead of directly calculating the Fresnel components, Schlick's approximation based on [this raytracer's implementation](https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/refraction).
+## Depth of Field
 
-### Depth of Field
-
-The basic implementation of a pathtracer interprets the world through a pinhole camera (i.e. a camera without any sort of "lens"). This results in an image where everything is in equal focus. To simulate a thin lens camera that can focus on objects on a plane some focal distance away, the intial rays are jittered around on a circular space, and their directions are then refocused to a point on the focal distance plane.
+The basic implementation of a pathtracer interprets the world through a pinhole camera, which doesn't factor in any effects that would occur through a real camera lens. This results in an image where everything is in equal focus. Simulating a depth of field effect requires a bit more work: the rays need to simulate being passed through a thin lens camera that is focusing on objects on a plane some focal distance away. To achieve this, the pathtracer's initial rays are jittered on a circular space that represents the lens, and their directions are refocused to a point on the focal distance plane. This can then be used to give some blur to the foreground or background of our scenes.
 
 ![](img/presentable/dof.png)
 
-### Stochastic Anti-Aliasing
+## Stochastic Anti-Aliasing
+
+
 
 Shoot through each specific pixel - color calculated strictly for that pixel and that ray's direction, doesn't account for surrounding light rays therefore no smoothing. We can jitter the initial ray's direction 
 
-### OBJ Loading
+## OBJ Loading
 
 To allow arbitrary meshes to be rendered by the pathtracer, the TinyObj loader was used to parse OBJ files as geometry in the scene. These are broken into triangles of the same material.
 
-### Procedural Shapes
+## Procedural Shapes
 
-### Procedural Textures
+[tanglecube](https://mathworld.wolfram.com/Tanglecube.html).
 
-## Performance Analysis
+[signed distance functions](https://iquilezles.org/www/articles/distfunctions/distfunctions.htm)
 
-### Optimizations
+## Procedural Textures
+
+# Performance Analysis
+
+## Optimizations
 
 To improve performance, I implemented some optimizations with the intent to make each pathtracing iteration faster. These optimizations include:
 * stream compaction,
@@ -71,12 +77,12 @@ The measurements for these performance changes are taken from the pathtracing pr
 
 ![](img/presentable/diffuse.png)
 
-### Methods
+## Methods
 Using the Performance Timer class provided in the [previous assignment](https://github.com/j9liu/Project2-Stream-Compaction/), I surrounded my `pathtrace` call with calls to start and stop the CPU timer. I then took the average of all these iterations to determine what the average iteration time would be. To save time, I limited the number of these recorded iterations to 20% of the total number of samples.
 
 For the Stream Compaction section, I simply collected data for the first iteration of the pathtracing process.
 
-### Stream Compaction
+## Stream Compaction
 
 Stream compaction is an algorithm that removes elements from an array that meet a certain condition and reorganizes the elements so they are contiguous in place. Here, I use the `stable_partition` function in Thrust's library to target the rays who have no bounces left and need to be terminated, removing them from the rest of the paths to be considered.
 
@@ -94,13 +100,13 @@ Using this scene, as opposed to the default one, creates a noticeable difference
 
 Indeed, the average iteration time for the open scene was **21.6799ms**, while that of the closed scene was **34.7032ms**.
 
-### Material Sorting
+## Material Sorting
 
 Each material in the scene has a unique ID that scene intersections reference whenever they collide with a material. Continguous intersections in memory can have different materials between them, thus leading to random memory access in the materials' global memory bank. To improve memory access, intersections who share the same material can be sorted based on material ID, so intersections with the same materials are coalesced in memory.
 
 The chart, pictured later, will actually demonstrate an increase in time when material sorting is used. This is because there are few materials in the default Cornell scene, and not enough to optimize to justify the overhead of sorting repeatedly. It is expected that this will improve when there are much more materials in the scene to manage. Scenes with more materials will experience greater latency with unsorted, random memory access.
 
-### Caching First Bounce
+## Caching First Bounce
 
 Since the target pixel coordinates don't change with each iteration, the camera shoots the same rays into the scene and hits the same geometry every time, before using random sampling to scatter into different parts of the scene. Thus, the rays' intersections from the first bounce can be stored to improve performance, since they won't be repeatedly calculated with each iteration. A plot of the cache's performance against varying levels of maximum ray depth is shown below.
 
@@ -112,8 +118,8 @@ The performance of all the optimizations combined is shown below.
 
 ![](img/graphs/optimization_graph.png)
 
-## Bugs and Bloopers
-### Stream Compaction-less Issues
+# Bugs and Bloopers
+## Stream Compaction-less Issues
 
 My pathtracer cannot render images properly without using stream compaction. Here are two bloopers from when I was trying to debug this issue:
 

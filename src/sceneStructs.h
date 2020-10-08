@@ -11,8 +11,12 @@ enum GeomType {
     SPHERE,
     CUBE,
     TRIANGLE,
-    TORUS,
-    TANGLECUBE
+    IMPLICIT
+};
+
+enum ImplicitGeomType {
+    TANGLECUBE,
+    TORUS
 };
 
 struct Ray {
@@ -32,6 +36,12 @@ struct Triangle {
     TrianglePoint point3;
 };
 
+struct Implicit {
+    ImplicitGeomType type;
+    bool sdf;
+    float shadowEpsilon;
+};
+
 struct Geom {
     enum GeomType type;
     int materialid;
@@ -42,6 +52,7 @@ struct Geom {
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
     Triangle tri;
+    Implicit implicit;
 };
 
 struct Material {

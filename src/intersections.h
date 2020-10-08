@@ -143,48 +143,117 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     return glm::length(r.origin - intersectionPoint);
 }
 
-// Based on 461 ray-tracing notes and 
-// Assumes that the geometry passed in has been confirmed to be
-// a triangle.
-
 __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
-    glm::vec3 ro = multiplyMV(triangle.inverseTransform, glm::vec4(r.origin, 1.0f));
+   /* Attempted initially to un-transform ray to local triangle space, but
+      had some weird errors.
+
+   glm::vec3 ro = multiplyMV(triangle.inverseTransform, glm::vec4(r.origin, 1.0f));
     glm::vec3 rd = glm::normalize(multiplyMV(triangle.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     glm::vec3 p1 = triangle.tri.point1.pos;
     glm::vec3 p2 = triangle.tri.point2.pos;
-    glm::vec3 p3 = triangle.tri.point3.pos;
-    glm::vec3 p1p2 = p2 - p1;
-    glm::vec3 p1p3 = p3 - p1;
+    glm::vec3 p3 = triangle.tri.point3.pos; */
 
-    normal = glm::cross(p1p2, p1p3);
-    // Step 1: finding t on a plane
-    float t = glm::dot(normal, p1 - ro) / glm::dot(normal, rd);
+    glm::vec3 p1 = glm::vec3(triangle.transform * glm::vec4(triangle.tri.point1.pos, 1.0f));
+    glm::vec3 p2 = glm::vec3(triangle.transform * glm::vec4(triangle.tri.point2.pos, 1.0f));
+    glm::vec3 p3 = glm::vec3(triangle.transform * glm::vec4(triangle.tri.point3.pos, 1.0f));
 
-    if (t < 0) return -1.0f;
+    // Barycentric output is (barycentric coordinate 1, barycentric coordinate 2, t)
+    glm::vec3 ret;
+    if (!glm::intersectRayTriangle(r.origin, r.direction, p1, p2, p3, ret)) {
+        return -1.0f;
+    }
+    
+    float baryz = 1.0f - ret.x - ret.y;
+    intersectionPoint = ret.x * p1 + ret.y * p2 + baryz * p3;
+    normal = glm::normalize(glm::cross(p2 - p1, p3 - p1));
+    //normal = ret.x * triangle.tri.point1.nor + ret.y * triangle.tri.point2.nor * baryz * triangle.tri.point3.nor;
+    //normal = glm::normalize(multiplyMV(triangle.invTranspose, glm::vec4(normal, 0.0f)));
 
-    // Step 2: determine if in plane using barycentric
+    return ret.z;
+}
 
-    glm::vec3 p = r.origin + t * r.direction;
 
-    float S = 0.5f * glm::length(glm::cross(p1p2, p1p3));
-    float S1 = 0.5f * glm::length(glm::cross(p2 - p, p3 - p)) / S;
-    float S2 = 0.5f * glm::length(glm::cross(p3 - p, p1 - p)) / S;
-    float S3 = 0.5f * glm::length(glm::cross(p1 - p, p2 - p)) / S;
+////////////////////////////
+//  IMPLICIT SURFACES
+////////////////////////////
 
-    // S1 > 0 && S2 > 0 && S3 > 0 && 
-    if (S1 <= 1 && S2 <= 1 && S3 <= 1 && fabsf(S1 + S2 + S3 - 1) <= 0.001f) {
-        intersectionPoint = multiplyMV(triangle.transform, glm::vec4(p, 1.0f));
-        normal = triangle.tri.point1.nor;
-        normal = glm::normalize(multiplyMV(triangle.invTranspose, glm::vec4(normal, 0.0f)));
-        //normal = S1 / S * triangle.tri.point3.nor
-        //       + S2 / S * triangle.tri.point1.nor
-        //       + S3 / S * triangle.tri.point2.nor;
-        outside = glm::dot(r.direction, normal) <= 0;
+// Source of SDFs: https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 
-        return glm::length(intersectionPoint - r.origin);
+#define MAX_STEPS 1000
+#define CUTOFF 20.0f
+#define I_EPSILON 0.005f
+#define STEP 0.05f
+#define N_EPSILON 0.0001f
+
+__host__ __device__ float torusFunction(Geom surface, glm::vec3 p) {
+    if (surface.implicit.sdf) {
+        glm::vec2 t(1.0, 0.5);
+        glm::vec2 q(glm::length(glm::vec2(p.x, p.z)) - t.x, p.y);
+        return glm::length(q) - t.y;
     }
 
+    return -1.0f;
+}
+
+__host__ __device__ float tanglecubeFunction(Geom surface, glm::vec3 p) {
+    // First handle transformed point
+    // Assume uniform scaling
+
+    float x2 = p.x * p.x,
+        y2 = p.y * p.y,
+        z2 = p.z * p.z,
+        x4 = x2 * x2,
+        y4 = y2 * y2,
+        z4 = z2 * z2;
+    return x4 - 5.f * x2 + y4 - 5.f * y2 + z4 - 5.f * z2 + 11.8f;
+}
+
+__host__ __device__ glm::vec3 tanglecubeNormal(Geom surface, glm::vec3 p) {
+    float nx = tanglecubeFunction(surface, glm::vec3(p.x + N_EPSILON, p.y, p.z))
+        - tanglecubeFunction(surface, glm::vec3(p.x - N_EPSILON, p.y, p.z));
+    float ny = tanglecubeFunction(surface, glm::vec3(p.x, p.y + N_EPSILON, p.z))
+        - tanglecubeFunction(surface, glm::vec3(p.x, p.y - N_EPSILON, p.z));
+    float nz = tanglecubeFunction(surface, glm::vec3(p.x, p.y, p.z + N_EPSILON))
+        - tanglecubeFunction(surface, glm::vec3(p.x, p.y, p.z - N_EPSILON));
+    return glm::normalize(glm::vec3(nx, ny, nz));
+}
+
+
+__host__ __device__ float implicitSurfaceIntersectionTest(Geom surface, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    float t = 0.0f;
+    float scale = surface.scale.x;
+    glm::vec3 p;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        // March point by t.
+        p = r.origin + t * r.direction;
+        // transform point
+        glm::vec3 localPoint = glm::vec3(surface.inverseTransform * glm::vec4(p, 1.0f));
+        float dist = 1e38f;
+        switch (surface.implicit.type) {
+        case TANGLECUBE:
+            dist = scale * tanglecubeFunction(surface, localPoint / scale);
+        }
+
+        if (dist < I_EPSILON) {
+             t -= surface.implicit.shadowEpsilon;
+             intersectionPoint = r.origin + t * r.direction;
+             normal = tanglecubeNormal(surface, localPoint / scale);
+             return t;
+         }
+
+         if (surface.implicit.sdf) {
+             t += dist;
+         } else {
+             t += glm::min(STEP, dist);
+         }
+
+         if (t >= CUTOFF) {
+             return -1.0f;
+         }
+    }
+    
     return -1.0f;
 }
