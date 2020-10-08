@@ -154,9 +154,7 @@ void runCuda() {
 		cudaEventSynchronize(stop);
 		float milliseconds = 0.f;
 		cudaEventElapsedTime(&milliseconds, start, stop);
-		if (iteration < 20) {
-			cout << "Iteration " << iteration << ": " << milliseconds << " ms." << endl;
-		}
+
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
