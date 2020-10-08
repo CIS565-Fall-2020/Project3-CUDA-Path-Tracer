@@ -2,6 +2,9 @@
 #include "intersections.h"
 #include "fresnel.h"
 
+#define STRATIFIEDSAMPLING true
+#define SAMPLESPERPIXEL 100
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -11,10 +14,27 @@ __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(glm::vec3 normal, thrust::default_random_engine &rng) 
 {
     thrust::uniform_real_distribution<float> u01(0, 1);
+    float r1 = u01(rng), r2 = u01(rng);
 
-    float up = sqrt(u01(rng)); // cos(theta)
+#if STRATIFIEDSAMPLING
+    int samplesPerPixel = SAMPLESPERPIXEL;
+    int sqrtVal = (int)(sqrt((float)samplesPerPixel) + 0.5);
+    // A number useful for scaling a square of size sqrtVal x sqrtVal to 1 x 1
+    float invSqrtVal = 1.f / sqrtVal;
+
+    samplesPerPixel = sqrtVal * sqrtVal;
+    int i = u01(rng) * SAMPLESPERPIXEL;
+    int y = i / sqrtVal;
+    int x = i % sqrtVal;
+    glm::vec2 sample = glm::vec2((x + r1) * invSqrtVal,
+        (y + r2) * invSqrtVal);
+    r1 = sample.x;
+    r2 = sample.y;
+#endif // STRATIFIEDSAMPLING
+
+    float up = sqrt(r1); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
-    float around = u01(rng) * TWO_PI;
+    float around = r2 * TWO_PI;
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
