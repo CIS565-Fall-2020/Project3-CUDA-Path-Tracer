@@ -93,7 +93,10 @@ static cudaTextureObject_t* dev_cudaTextures = NULL;
 static example::Material* dev_gltfMateiral = NULL;
 static Octree* dev_octree = NULL;
 static OctreeNode* dev_octreeNode = NULL;
+static int* dev_primsForOcts = NULL;
+static int* dev_meshTriForOcts = NULL;
 static int lightLen = 0;
+const static int depthSize = 0;
 
 cudaTextureObject_t texTest;
 
@@ -158,7 +161,7 @@ void pathtraceInit(Scene *scene) {
 
     int curOffset = 0;
     int curPosOffset = 0;
-
+ 
     for (int i = 0; i < scene->meshes.size(); i++) 
     {
         for (int j = 0; j < scene->meshes.at(i).size(); j++) 
@@ -191,6 +194,30 @@ void pathtraceInit(Scene *scene) {
             curPosOffset += curPosNum;
         }
     }
+
+    // Load Prim and MeshTri Oct Data
+    cudaMalloc(&dev_primsForOcts, scene->octree.primitiveCount * sizeof(int));
+    cudaMalloc(&dev_meshTriForOcts, scene->octree.meshTriCount * sizeof(int));
+
+    int curPrimOffset = 0;
+    int curMeshTriOffset = 0;
+
+    for (int i = 0; i < scene->octree.nodeData.size(); i++)
+    {
+        cudaMemcpy(dev_primsForOcts + curPrimOffset,
+            scene->octree.nodeData.at(i).primitiveIndices.data(),
+            sizeof(int) * scene->octree.nodeData.at(i).primitiveCount,
+            cudaMemcpyHostToDevice);
+
+        cudaMemcpy(dev_meshTriForOcts + curMeshTriOffset,
+            scene->octree.nodeData.at(i).meshTriangleIndices.data(),
+            sizeof(int) * scene->octree.nodeData.at(i).meshTriCount,
+            cudaMemcpyHostToDevice);
+
+        curPrimOffset += scene->octree.nodeData.at(i).primitiveCount;
+        curMeshTriOffset += scene->octree.nodeData.at(i).meshTriCount;
+    }
+
 
     // Load Textures
     int count = 0;
@@ -539,171 +566,6 @@ __global__ void computeIntersections(
 	}
 }
 
-// Use octree to accelerate intersection
-__host__ __device__ void computeIntersectionsOctree(
-    PathSegment* pathSegment
-    , Geom* geoms
-    , int* geomsList
-    , int numObj
-    , ShadeableIntersection* intersection
-    , float* meshPos
-    , float* meshNor
-    , int* meshIdx
-    , float* meshUV
-)
-{
-    float t;
-    glm::vec3 intersect_point;
-    glm::vec3 normal;
-    glm::vec2 uv;
-    glm::vec3 tangent;
-    glm::vec3 bitangent;
-
-    float t_min = FLT_MAX;
-    int hit_geom_index = -1;
-    bool outside = true;
-    bool finalMesh = false;
-
-    glm::vec3 tmp_intersect;
-    glm::vec3 tmp_normal;
-    glm::vec2 tmp_uv;
-    glm::vec3 tmp_tangent;
-    glm::vec3 tmp_bitangent;
-
-    intersection->isMesh = false;
-
-    // naive parse through global geoms
-    float isMesh = false;
-    for (int i = 0; i < numObj; i++)
-    {
-        Geom& geom = geoms[geomsList[i]];
-
-        if (geom.type == CUBE)
-        {
-            t = boxIntersectionTest(geom, pathSegment->ray, tmp_intersect, tmp_normal, outside);
-            isMesh = false;
-        }
-        else if (geom.type == SPHERE)
-        {
-            t = sphereIntersectionTest(geom, pathSegment->ray, tmp_intersect, tmp_normal, outside);
-            isMesh = false;
-        }
-        else if (geom.type == MESH)
-        {
-         
-            t = meshIntersectionTest(geom, pathSegment->ray, tmp_intersect, tmp_normal, tmp_uv, outside, tmp_tangent, tmp_bitangent,
-                meshPos, meshNor, meshIdx, meshUV, geom.faceNum, geom.offset, geom.posOffset);
-        
-            isMesh = true;
-        }
-
-
-
-        // Compute the minimum t from the intersection tests to determine what
-        // scene geometry object was hit first.
-        if (t > 0.0f && t_min > t)
-        {
-            if (isMesh)
-            {
-                finalMesh = true;
-                uv = tmp_uv;
-                tangent = tmp_tangent;
-                bitangent = tmp_bitangent;
-            }
-            else
-            {
-                finalMesh = false;
-            }
-            t_min = t;
-            hit_geom_index = i;
-            intersect_point = tmp_intersect;
-            normal = tmp_normal;
-
-        }
-    }
-
-    if (hit_geom_index == -1 && intersection->t == FLT_MAX)
-    {
-       intersection->t = -1.0f;
-    }
-    else if(intersection->t > t_min)
-    {
-        //The ray hits something
-        intersection->t = t_min;
-        intersection->materialId = geoms[hit_geom_index].materialid;
-        intersection->surfaceNormal = normal;
-        intersection->uv = uv;
-        intersection->isMesh = finalMesh;
-        intersection->surfaceTangent = tangent;
-        intersection->surfaceBiTangent = bitangent;
-    }
-    
-}
-
-
-
-__host__ __device__ void rayOctNodeIntersect(
-    int nodeIndex,
-    OctreeNode* octNodes,
-    PathSegment* pathSegment,
-    Geom* geoms,
-    ShadeableIntersection* intersection,
-    float* meshPos,
-    float* meshNor,
-    int* meshIdx,
-    float* meshUV
-)
-{
-    OctreeNode* octNode = &(octNodes[nodeIndex]);
-    glm::vec3 center = octNode->boxCenter;
-    float scale = octNode->scale;
-
-   
-    glm::vec3 bond_intersect = glm::vec3(0.0f);
-    glm::vec3 bond_normal = glm::vec3(0.0f);
-    bool bond_outside = true;
-    printf("InterBox!");
-
-    float t = boxIntersectionTest(octNode->octBlock, pathSegment->ray, bond_intersect, bond_normal, bond_outside);
- 
-    if (t != -1)
-    {
-        if (octNode->childCount == 0)
-        {
-            // Leaf Node
-            int primCount = octNode->primitiveCount;
-            int* geomList = new int[primCount];
-            for (int i = 0; i < primCount; i++)
-            {
-                geomList[i] = octNode->primitiveArray[i];
-            }
-
-            int triCount = octNode->meshTriCount;
-            int* triList = new int[triCount];
-            for (int i = 0; i < triCount; i++)
-            {
-                triList[i] = octNode->meshTriangleArray[i];
-            }
-
-            computeIntersectionsOctree(pathSegment, geoms, geomList, primCount, intersection, meshPos, meshNor, meshIdx, meshUV);
-
-            return;
-        }
-        else
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                if (!octNode->hasChild[i])
-                    continue;
-                else
-                {
-                    rayOctNodeIntersect(octNode->nodeIndices[i], octNode, pathSegment, geoms, intersection, meshPos, meshNor, meshIdx, meshUV);
-                }
-            }
-        }
-    }
-}
-
 __global__ void rayOctreeIntersect(
     int depth
     , int num_paths
@@ -717,9 +579,14 @@ __global__ void rayOctreeIntersect(
     , int* meshIdx
     , float* meshUV
     , Octree* octTree
-    , OctreeNode* octreeNode)
+    , OctreeNode* octreeNode
+    , int* primOct
+    , int* meshTriOct)
 {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    int octStack[OCT_MAX_DEPTH + 1];
+    int childStack[OCT_MAX_DEPTH + 1];
 
     if (path_index < num_paths)
     {
@@ -728,7 +595,233 @@ __global__ void rayOctreeIntersect(
         intersections[path_index].isMesh = false;
         intersections[path_index].t = FLT_MAX;
 
-        rayOctNodeIntersect(0, octreeNode, &pathSegment, geoms, &(intersections[path_index]), meshPos, meshNor, meshIdx, meshUV);
+        int top = 0;
+        octStack[top] = 0;
+        childStack[top] = 0;
+        OctreeNode* curNode;
+
+        do
+        {
+            int curNodeIndex = octStack[top];
+            OctreeNode* curNode = &(octreeNode[curNodeIndex]);
+            
+            //First Coming
+            if (childStack[top] == 0) 
+            {
+                glm::vec3 bond_intersect = glm::vec3(0.0f);
+                glm::vec3 bond_normal = glm::vec3(0.0f);
+                bool bond_outside = true;
+
+                int octBoxT = boxIntersectionTest(curNode->octBlock, pathSegment.ray, bond_intersect, bond_normal, bond_outside);
+
+
+                if (octBoxT != -1)
+                {
+                    
+                    float geomT;
+                    glm::vec3 intersect_point;
+                    glm::vec3 normal;
+                    glm::vec2 uv;
+                    glm::vec3 tangent;
+                    glm::vec3 bitangent;
+
+                    float t_min = FLT_MAX;
+                    int hit_geom_index = -1;
+                    bool outside = true;
+                    bool finalMesh = false;
+
+                    glm::vec3 tmp_intersect;
+                    glm::vec3 tmp_normal;
+                    glm::vec2 tmp_uv;
+                    glm::vec3 tmp_tangent;
+                    glm::vec3 tmp_bitangent;
+
+                    intersections[path_index].isMesh = false;
+
+                    // naive parse through global geoms
+                    float isMesh = false;
+
+                    for (int i = 0; i < curNode->primitiveCount; i++) 
+                    {
+                        int geomIdx = primOct[curNode->primOffset + i];
+                        Geom& geom = geoms[geomIdx];
+
+                        if (geom.type == CUBE)
+                        {
+                            geomT = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                            isMesh = false;
+                        }
+                        else if (geom.type == SPHERE)
+                        {
+                            geomT = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                            isMesh = false;
+                        }
+                        else if (geom.type == MESH)
+                        {
+
+                            geomT = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, tmp_uv, outside, tmp_tangent, tmp_bitangent,
+                                meshPos, meshNor, meshIdx, meshUV, geom.faceNum, geom.offset, geom.posOffset);
+
+                            isMesh = true;
+                        }
+
+                        // Compute the minimum t from the intersection tests to determine what
+                        // scene geometry object was hit first.
+                        if (geomT > 0.0f && t_min >= geomT)
+                        {
+                            if (isMesh)
+                            {
+                                finalMesh = true;
+                                uv = tmp_uv;
+                                tangent = tmp_tangent;
+                                bitangent = tmp_bitangent;
+                            }
+                            else
+                            {
+                                finalMesh = false;
+                            }
+                            t_min = geomT;
+                            hit_geom_index = geomIdx;
+                            intersect_point = tmp_intersect;
+                            normal = tmp_normal;
+                            glm::vec3 pMin = curNode->boxCenter - glm::vec3(curNode->scale / 2.0f);
+                            glm::vec3 pMax = curNode->boxCenter + glm::vec3(curNode->scale / 2.0f);
+                            if (!(pMin.x < tmp_intersect.x && pMax.x > tmp_intersect.x
+                                && pMin.y < tmp_intersect.y && pMax.y > tmp_intersect.y
+                                && pMin.z < tmp_intersect.z && pMax.z > tmp_intersect.z)) 
+                            {
+                                hit_geom_index = -1;
+                            }
+                        }
+
+                        
+                    }
+
+                    /*for (int i = 0; i < curNode->meshTriCount; i++)
+                    {
+                        int faceIdx = meshTriOct[curNode->meshTriOffset + i];
+                        Geom meshGeom;
+                        int meshGeomIdx = -1;
+                        for (int j = 0; j < geoms_size; j++)
+                        {
+                            if (geoms[j].type != MESH)
+                                continue;
+                            else if (faceIdx < geoms[j].offset)
+                            {
+                                meshGeom = geoms[j - 1];
+                                meshGeomIdx = j - 1;
+                            }
+                        }
+
+                        float t_min = FLT_MAX;
+                        int hit_geom_index = -1;
+                        bool outside = true;
+                        bool finalMesh = false;
+
+                        glm::vec3 tmp_intersect;
+                        glm::vec3 tmp_normal;
+                        glm::vec2 tmp_uv;
+                        glm::vec3 tmp_tangent;
+                        glm::vec3 tmp_bitangent;
+
+                        triIntersectionTest(meshGeom, faceIdx, pathSegment.ray, tmp_intersect, tmp_normal, tmp_uv, outside, tmp_tangent, tmp_bitangent,
+                            meshPos, meshNor, meshIdx, meshUV);
+
+                        // Compute the minimum t from the intersection tests to determine what
+                        // scene geometry object was hit first.
+                        if (geomT > 0.0f && t_min >= geomT)
+                        {
+                            if (isMesh)
+                            {
+                                finalMesh = true;
+                                uv = tmp_uv;
+                                tangent = tmp_tangent;
+                                bitangent = tmp_bitangent;
+                            }
+                            else
+                            {
+                                finalMesh = false;
+                            }
+                            t_min = geomT;
+                            hit_geom_index = meshGeomIdx;
+                            intersect_point = tmp_intersect;
+                            normal = tmp_normal;
+                            glm::vec3 pMin = curNode->boxCenter - glm::vec3(curNode->scale / 2.0f);
+                            glm::vec3 pMax = curNode->boxCenter + glm::vec3(curNode->scale / 2.0f);
+                            if (!(pMin.x < tmp_intersect.x && pMax.x > tmp_intersect.x
+                                && pMin.y < tmp_intersect.y && pMax.y > tmp_intersect.y
+                                && pMin.z < tmp_intersect.z && pMax.z > tmp_intersect.z))
+                            {
+                                hit_geom_index = -1;
+                            }
+                        }
+                    }*/
+                    if (hit_geom_index != -1 && intersections[path_index].t >= t_min)
+                    {
+                        //The ray hits something
+                        intersections[path_index].t = t_min;
+                        intersections[path_index].materialId = geoms[hit_geom_index].materialid;
+                        intersections[path_index].surfaceNormal = normal;
+                        intersections[path_index].uv = uv;
+                        intersections[path_index].isMesh = finalMesh;
+                    }
+
+                    if (curNode->childCount == 0)
+                        top--;
+                    else 
+                    {
+                        for (int i = childStack[top]; i < 8; i++)
+                        {
+                            if (curNode->hasChild[i])
+                            {
+                                childStack[top] = i + 1;
+                                top++;
+                                octStack[top] = curNode->nodeIndices[i];
+                                childStack[top] = 0;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    top--;
+                }
+            }
+            else 
+            {
+                if (childStack[top] == 8) 
+                {
+                    top--;
+                }
+                else 
+                {
+                    for (int i = childStack[top]; i < 8; i++)
+                    {
+                        if (curNode->hasChild[i])
+                        {
+                            childStack[top] = i + 1;
+                            top++;
+                            octStack[top] = curNode->nodeIndices[i];
+                            childStack[top] = 0;
+
+                            break;
+                        }
+                        else if (i == 7) 
+                        {
+                            childStack[top] = 8;
+                        }
+                    }
+                }
+                
+            }
+        } while (top >= 0);
+
+        if (intersections[path_index].t == FLT_MAX) 
+        {
+            intersections[path_index].t = -1.0f;
+        }
     }
 }
 
@@ -1088,7 +1181,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                     , dev_mesh_idx
                     , dev_mesh_uv
                     , dev_octree
-                    , dev_octreeNode);
+                    , dev_octreeNode
+                    , dev_primsForOcts
+                    , dev_meshTriForOcts);
 #else
                 // tracing
                 computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
@@ -1135,7 +1230,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
                 , dev_mesh_idx
                 , dev_mesh_uv
                 , dev_octree
-                , dev_octreeNode);
+                , dev_octreeNode
+                , dev_primsForOcts
+                , dev_meshTriForOcts);
 #else
             computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
                 depth

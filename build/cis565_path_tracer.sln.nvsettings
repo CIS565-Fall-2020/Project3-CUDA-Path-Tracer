@@ -1,2 +1,2 @@
 [WarpWatch]
-Expressions=a, width, height, metallic.x, metallic.y, uvy2, uvx, uvy, uvx1, uvy1
+Expressions=t, i, top, octStack[top], childStack[top], curNode->primitiveArray[i], curNode->primitiveArray

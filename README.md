@@ -68,8 +68,18 @@ Implemented perfect refractive, perfect reflective and Schlick's approximation f
 
 Shadows under Halton Sampling are more regularized.
 
+**6. Octree(Partially)**
+
+I build the octree for primitives and triangle but find for mesh triangles, it always aggregates in the root node which finally slow down the rendering. 
+
 ### Benchmark for Bounding Box
 
 ![](./img/BoundingBoxBM.png)
 
 For a very simple mesh such as cube the bounding box didn't help much for the rendering speed, but if we render a more complex mesh like pistol or duck which have more than 4000 triangles, the bounding box improved the performance greatly.
+
+
+
+### Third Libraries
+
+Tinygltf libraries: GLTF Loader

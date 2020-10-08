@@ -35,6 +35,17 @@ struct Ray {
     glm::vec3 direction;
 };
 
+struct MeshTri 
+{
+    int faceIndex;
+    glm::vec3 x;
+    glm::vec3 y;
+    glm::vec3 z;
+    glm::mat4 transform;
+    glm::mat4 inverseTransform;
+    glm::mat4 invTranspose;
+};
+
 struct Geom {
     enum GeomType type;
     int materialid;

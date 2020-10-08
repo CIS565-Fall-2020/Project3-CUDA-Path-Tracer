@@ -63,6 +63,7 @@ int Scene::loadGeom(string objectid) {
         Geom newGeom;
         string line;
         std::vector<Geom> meshGeoms;
+        std::vector<example::Mesh<float>> curMesh;
         bool isMesh = false;
 
         //load object type
@@ -88,8 +89,6 @@ int Scene::loadGeom(string objectid) {
                 utilityCore::safeGetline(fp_in, line);
 
                 cout << "Loading new mesh..." << endl;
-
-                std::vector<example::Mesh<float>> curMesh;
 
                 bool isLoaded = example::LoadGLTF(line, 1.0f, &curMesh, &gltfMaterials, &gltfTextures);
 
@@ -130,7 +129,6 @@ int Scene::loadGeom(string objectid) {
 
                     curGeom.transform = utilityCore::buildTransformationMatrix(
                         curTranslation, curRotation, curScale);
-
                     BoundingBox bb;
 
                     bb.boundingCenter = glm::vec3(curMesh.at(i).center[0], curMesh.at(i).center[1], curMesh.at(i).center[2]);
@@ -213,6 +211,46 @@ int Scene::loadGeom(string objectid) {
                     meshGeoms.at(i).translation, meshGeoms.at(i).rotation, meshGeoms.at(i).scale);
                 meshGeoms.at(i).inverseTransform = glm::inverse(meshGeoms.at(i).transform);
                 meshGeoms.at(i).invTranspose = glm::inverseTranspose(meshGeoms.at(i).transform);
+
+                Geom curGeom = meshGeoms.at(i);
+
+
+                // Add into octree
+                for (int j = 0; j < curGeom.faceNum; j++)
+                {
+                    int xIndex = curMesh.at(i).faces.at(3 * j);
+                    int yIndex = curMesh.at(i).faces.at(3 * j + 1);
+                    int zIndex = curMesh.at(i).faces.at(3 * j + 2);
+
+                    glm::vec3 posX = glm::vec3(curGeom.transform *
+                        glm::vec4(curMesh.at(i).vertices.at(xIndex),
+                            curMesh.at(i).vertices.at(xIndex + 1),
+                            curMesh.at(i).vertices.at(xIndex + 2), 1.0f));
+
+                    glm::vec3 posY = glm::vec3(curGeom.transform *
+                        glm::vec4(curMesh.at(i).vertices.at(yIndex),
+                            curMesh.at(i).vertices.at(yIndex + 1),
+                            curMesh.at(i).vertices.at(yIndex + 2), 1.0f));
+
+                    glm::vec3 posZ = glm::vec3(curGeom.transform *
+                        glm::vec4(curMesh.at(i).vertices.at(zIndex),
+                            curMesh.at(i).vertices.at(zIndex + 1),
+                            curMesh.at(i).vertices.at(zIndex + 2), 1.0f));
+
+                    int faceIndex = curGeom.offset + j;
+
+                    MeshTri curTri;
+                    curTri.x = posX;
+                    curTri.y = posY;
+                    curTri.z = posZ;
+                    curTri.faceIndex = faceIndex;
+                    curTri.transform = curGeom.transform;
+                    curTri.inverseTransform = curGeom.inverseTransform;
+                    curTri.invTranspose = curGeom.invTranspose;
+
+                    octree.insertMeshTri(curTri);
+                }
+
 
                 geoms.push_back(meshGeoms.at(i));
             }

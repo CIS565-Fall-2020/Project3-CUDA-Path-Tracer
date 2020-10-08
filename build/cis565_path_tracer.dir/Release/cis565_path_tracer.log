@@ -12,17 +12,20 @@
   E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
   -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Release/cis565_path_tracer_generated_pathtrace.cu.obj
   D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Release/cis565_path_tracer_generated_pathtrace.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MD\",\"/O2\",\"/Ob2\",\"/DNDEBUG\" -gencode arch=compute_75,code=sm_75 -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(659): warning : variable "scale" was declared but never referenced
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(174): warning : variable "isInter" was set but never used
   
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1064): warning : variable "firstIteration" was declared but never referenced
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(601): warning : variable "curNode" was declared but never referenced
+  
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1157): warning : variable "firstIteration" was declared but never referenced
   
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include\glm\gtx\intersect.inl(51): warning : calling a constexpr __host__ function("epsilon") from a __host__ __device__ function("intersectRayTriangle") is not allowed. The experimental flag '--expt-relaxed-constexpr' can be used to allow this.
             detected during instantiation of "__nv_bool glm::intersectRayTriangle(const genType &, const genType &, const genType &, const genType &, const genType &, genType &) [with genType=glm::vec3]" 
-  E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(199): here
+  E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(193): here
   
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(96): warning : variable "lightLen" was set but never used
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(98): warning : variable "lightLen" was set but never used
   
-CUSTOMBUILD : ptxas warning : Stack size for entry function '_Z18rayOctreeIntersectiiP11PathSegmentP4GeomP11BoundingBoxiP21ShadeableIntersectionPfS7_PiS7_P6OctreeP10OctreeNode' cannot be statically determined
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(99): warning : variable "depthSize" was declared but never referenced
+  
   pathtrace.cu
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(68): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
           with
@@ -31,18 +34,18 @@ E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(68): warning C4
           ]
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\interactions.h(68): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
 E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\interactions.h(69): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(113): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(118): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(166): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(167): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(216): warning C4996: 'cudaMemcpyToArray': was declared deprecated
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(116): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(121): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(169): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(170): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(243): warning C4996: 'cudaMemcpyToArray': was declared deprecated
   D:\cuda\dev\include\cuda_runtime_api.h(6926): note: see declaration of 'cudaMemcpyToArray'
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1003): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1003): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1058): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1094): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1140): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1210): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1096): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1096): warning C4244: 'argument': conversion from 'double' to 'unsigned int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1151): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1171): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1220): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1307): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
 D:/cuda/dev/include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'initializing': conversion from 'Integer' to 'int', possible loss of data
           with
           [
@@ -86,7 +89,7 @@ D:/cuda/dev/include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'init
               ValuesIt=PathSegment *,
               CompareOp=material_sort
           ]
-  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1170): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
+  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(1267): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
           with
           [
               DerivedPolicy=thrust::cuda_cub::par_t,

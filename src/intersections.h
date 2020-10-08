@@ -158,6 +158,79 @@ float triArea(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2)
     return S;
 }
 
+__host__ __device__ float triIntersectionTest(Geom mesh, int faceIndex, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, glm::vec2& uv, bool& outside,
+    glm::vec3& tangent, glm::vec3& bitangent,
+    float* meshPos, float* meshNor, int* meshIdx, float* meshUV) 
+{
+    glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+   
+    glm::vec3 curInter = glm::vec3(0.0f);
+    glm::vec3 curNormal = glm::vec3(0.0f);
+    glm::vec3 curTangent = glm::vec3(0.0f);
+    glm::vec3 curBitangent = glm::vec3(0.0f);
+    bool isInter = false;
+
+    int index0 = meshIdx[3 * faceIndex] + 3 * faceIndex;
+    int index1 = meshIdx[3 * faceIndex + 1] + 3 * faceIndex;
+    int index2 = meshIdx[3 * faceIndex + 2] + 3 * faceIndex;
+
+    glm::vec3 pos0 = glm::vec3(meshPos[3 * index0], meshPos[3 * index0 + 1], meshPos[3 * index0 + 2]);
+    glm::vec3 pos1 = glm::vec3(meshPos[3 * index1], meshPos[3 * index1 + 1], meshPos[3 * index1 + 2]);
+    glm::vec3 pos2 = glm::vec3(meshPos[3 * index2], meshPos[3 * index2 + 1], meshPos[3 * index2 + 2]);
+
+    glm::vec3 nor0 = glm::vec3(meshNor[3 * index0], meshNor[3 * index0 + 1], meshNor[3 * index0 + 2]);
+    glm::vec3 nor1 = glm::vec3(meshNor[3 * index1], meshNor[3 * index1 + 1], meshNor[3 * index1 + 2]);
+    glm::vec3 nor2 = glm::vec3(meshNor[3 * index2], meshNor[3 * index2 + 1], meshNor[3 * index2 + 2]);
+    glm::vec3 interP = glm::vec3(0.0f);
+
+    glm::vec2 uv0 = glm::vec2(meshUV[2 * index0], meshUV[2 * index0 + 1]);
+    glm::vec2 uv1 = glm::vec2(meshUV[2 * index1], meshUV[2 * index1 + 1]);
+    glm::vec2 uv2 = glm::vec2(meshUV[2 * index2], meshUV[2 * index2 + 1]);
+
+    bool triIntersect = glm::intersectRayTriangle(ro, rd, pos0, pos1, pos2, interP);
+    if (!triIntersect)
+        return -1.0f;
+
+    glm::vec3 deltaPos1 = pos1 - pos0;
+    glm::vec3 deltaPos2 = pos2 - pos0;
+    glm::vec2 deltaUV1 = uv1 - uv0;
+    glm::vec2 deltaUV2 = uv2 - uv0;
+
+    float t = interP.z;
+    interP = ro + t * rd;
+    glm::vec3 nor = glm::normalize(glm::cross(pos2 - pos0, pos1 - pos0));
+
+    float s2 = triArea(interP, pos0, pos1);
+    float s1 = triArea(interP, pos0, pos2);
+    float s0 = triArea(interP, pos1, pos2);
+    float s = triArea(pos0, pos1, pos2);
+
+
+
+    glm::vec2 interUV = s0 / s * uv0 + s1 / s * uv1 + s2 / s * uv2;
+
+    curInter = interP + 0.001f * nor;
+    curNormal = nor;
+    isInter = true;
+    uv = interUV;
+    
+    intersectionPoint = multiplyMV(mesh.transform, glm::vec4(curInter, 1.f));
+    normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(curNormal, 0.f)));
+
+    if (glm::dot(normal, intersectionPoint - r.origin) > 0.0f)
+    {
+        normal = -normal;
+    }
+
+
+    outside = true;
+
+    return glm::length(r.origin - intersectionPoint);
+}
+
 __host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, glm::vec2& uv, bool& outside,
     glm::vec3& tangent, glm::vec3& bitangent,
