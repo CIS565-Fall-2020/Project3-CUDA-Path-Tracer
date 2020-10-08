@@ -1,6 +1,6 @@
 #pragma once
-
 #include "intersections.h"
+#include "fresnel.h"
 
 // CHECKITOUT
 /**
@@ -53,35 +53,29 @@ glm::vec3 calculateRandomDirectionInHemisphere(glm::vec3 normal, thrust::default
  * In order to apply multiple effects to one surface, probabilistically choose
  * between them.
  * 
- * The visual effect you want is to straight-up add the diffuse and specular
- * components. You can do this in a few ways. This logic also applies to
- * combining other types of materias (such as refractive).
- * 
- * - Always take an even (50/50) split between a each effect (a diffuse bounce
- *   and a specular bounce), but divide the resulting color of either branch
- *   by its probability (0.5), to counteract the chance (0.5) of the branch
- *   being taken.
- *   - This way is inefficient, but serves as a good starting point - it
- *     converges slowly, especially for pure-diffuse or pure-specular.
- * - Pick the split based on the intensity of each material color, and divide
- *   branch result by that branch's probability (whatever probability you use).
- *
- * This method applies its changes to the Ray parameter `ray` in place.
- * It also modifies the color `color` of the ray in place.
- *
- * You may need to change the parameter list for your purposes!
  */
 __host__ __device__
 void scatterRay(PathSegment& pathSegment,
-                glm::vec3 intersect,
-                glm::vec3 normal,
+                const ShadeableIntersection& intersection,
                 const Material& m,
                 thrust::default_random_engine& rng) 
 {
-    if (m.hasReflective > 0.f)  // specular
+    glm::vec3 intersectionPoint = getPointOnRay(pathSegment.ray, intersection.t);
+    glm::vec3 normal = intersection.surfaceNormal;
+    glm::vec3 wo = pathSegment.ray.direction;
+
+    if (m.hasRefractive > 0.f)
     {
-        pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        pathSegment.ray.direction = FresnelDielectric::evaluate(wo, normal, m.hasRefractive, u01(rng));
         pathSegment.color *= m.specular.color;
+        pathSegment.ray.origin = intersectionPoint + 0.000618f * pathSegment.ray.direction;
+    } 
+    else if (m.hasReflective > 0.f)  // specular
+    {
+        pathSegment.ray.direction = glm::reflect(wo, normal);
+        pathSegment.color *= m.specular.color;
+        pathSegment.ray.origin = intersectionPoint;
     }
     else  // diffuse
     {
@@ -100,8 +94,8 @@ void scatterRay(PathSegment& pathSegment,
 
         pathSegment.ray.direction = wi;
         pathSegment.color = f * pathSegment.color * std::abs(cosTheta) / pdf;
+        pathSegment.ray.origin = intersectionPoint;
     }
 
-    pathSegment.ray.origin = intersect;
     pathSegment.remainingBounces--;
 }

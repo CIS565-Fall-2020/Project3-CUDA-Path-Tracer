@@ -77,6 +77,7 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    src/fresnel.h
     )
 
 set(sources

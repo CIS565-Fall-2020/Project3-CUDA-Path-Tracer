@@ -18,10 +18,10 @@
 
 #define ERRORCHECK 1
 #define RECORDEDITERATION 100
-#define CACHEFIRSTBOUNCE false
 #define BOUNDINGBOXINTERSECTIONTEST true
 #define DEPTHOFFIELD false
 #define ANTIALIASING true
+#define CACHEFIRSTBOUNCE !ANTIALIASING
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -177,7 +177,6 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	if (x < cam.resolution.x && y < cam.resolution.y) 
 	{
 		int index = x + (y * cam.resolution.x);
-
 		PathSegment& segment = pathSegments[index];
 		segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 		
@@ -192,7 +191,6 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.ray = cam.rayCast(x, y);
 #endif // ANTIALIASING
 		
-
 #if DEPTHOFFIELD
 		if (cam.lensRadius > 0)
 		{
@@ -302,6 +300,7 @@ __global__ void computeIntersections(int depth,
 			intersections[path_index].t = t_min;
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
+			// intersections[path_index].hitGeom = &geoms[hit_geom_index];
 		}
 	}
 }
@@ -371,7 +370,7 @@ __global__ void shadeMaterial(int iter,
 			}
 			else
 			{
-				scatterRay(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+				scatterRay(pathSegments[idx], intersection, material, rng);
 			}
 		}
 		else
