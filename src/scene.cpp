@@ -7,7 +7,7 @@
 
 Scene::Scene(string filename, bool usingCulling, float sceneSize)
     : usingCulling(usingCulling), isWorldSpace(usingCulling),
-    octree(9, sceneSize), meshMaterial(0) {
+    octree(9, sceneSize), meshMaterial(0), prepared(false) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -227,7 +227,13 @@ int Scene::loadMaterial(string materialid) {
 }
 
 std::vector<OctreeNodeDevice> Scene::prepareOctree() {
-    std::vector<OctreeNodeDevice> result;
+    if (prepared) {
+        return result;
+    }
+    else {
+        prepared = true;
+    }
+
     std::vector<glm::vec3> rearrangedTriangles;
     std::vector<Geom> rearrangedGeoms;
 
@@ -270,5 +276,6 @@ std::vector<OctreeNodeDevice> Scene::prepareOctree() {
     }
     triangles = rearrangedTriangles;
     geoms = rearrangedGeoms;
+
     return result;
 }

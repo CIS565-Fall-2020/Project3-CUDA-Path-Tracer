@@ -153,7 +153,7 @@ __host__ __device__ float meshIntersectionTest(Geom geom, Ray r,
     float tmin = FLT_MAX;
     int nearest = -1;
 
-    for (int i = geom.triangleStart, ct = 0; ct < geom.triangleCount; ct++, i += 3) {
+    for (int i = geom.triangleStart, ct = 0; ct < geom.triangleCount; ct += 3, i += 3) {
         glm::vec3 v0 = triangles[i];
         glm::vec3 v1 = triangles[i + 1];
         glm::vec3 v2 = triangles[i + 2];

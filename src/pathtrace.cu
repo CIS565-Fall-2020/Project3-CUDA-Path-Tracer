@@ -120,14 +120,19 @@ void pathtraceInit(Scene *scene) {
         cudaMalloc(&dev_octree, temp.size() * sizeof(OctreeNodeDevice));
         cudaMemcpy(dev_octree, temp.data(), temp.size() * sizeof(OctreeNodeDevice), cudaMemcpyHostToDevice);
     }
+    
+    cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
+    cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
+    
+    // Copy mesh triangles to device
+    cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(glm::vec3));
+    cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(glm::vec3), cudaMemcpyHostToDevice);
 
     cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
 
   	cudaMalloc(&dev_paths, pixelcount * sizeof(PathSegment));
 
-  	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
-  	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
 
   	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
@@ -148,9 +153,6 @@ void pathtraceInit(Scene *scene) {
         (cam.resolution.y + blockSize2d.y - 1) / blockSize2d.y);
     generateSeed << <blocksPerGrid2d, blockSize2d >> > (cam, dev_sobol_seed);
 
-    // Copy mesh triangles to device
-    cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(glm::vec3));
-    cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(glm::vec3), cudaMemcpyHostToDevice);
 
     // TODO: initialize any extra device memeory you need
 

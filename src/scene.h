@@ -28,9 +28,12 @@ public:
     std::vector<Material> materials;
     std::vector<glm::vec3> triangles; // Triangles of meshes
     bool isWorldSpace; // In which frame of reference are triangles defined
-    bool usingCulling;
+    bool usingCulling; // Whether we are using culling or not
+
     Octree octree;
     int meshMaterial;
+    std::vector<OctreeNodeDevice> result;
+    bool prepared;
     std::vector<OctreeNodeDevice> prepareOctree();
     
     RenderState state;
