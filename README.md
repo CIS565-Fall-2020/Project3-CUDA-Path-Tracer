@@ -113,10 +113,6 @@ As you can see, the **left** is anti-aliasing, which a smoother edge than the ri
 
 
 
-
-
-
-
 ### Visual effects
 
 ##### Depth of field
@@ -130,6 +126,8 @@ To simulate a real camera(with circle of confusion), we simulate this by shoot r
 **Motion blur**
 
 To simulate a scene with the effect with time of exposure and moving objects, we randomly change the objects transform. How much the transformation would change depends on its given speed.
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
 
 
 
@@ -182,6 +180,20 @@ However, for scenes simple like Cornell box, the more contiguous memory read can
 
 
 
+#### Blooper
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
+
+
+
 ###  Acknowledgement
 
 [CUDA PATH Tracer](https://github.com/jmarcao/CUDA-Path-Tracer) by [Jmarcao](https://github.com/jmarcao): for the test scene he provides.
@@ -199,3 +211,6 @@ The most comprehensive book I ever found.
 [Comparing hemisphere sampling techniques for obscurance computation](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.468.4690&rep=rep1&type=pdf)
 
 for stratified sampling.
+
+#### 
+
