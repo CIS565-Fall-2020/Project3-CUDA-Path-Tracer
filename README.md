@@ -142,6 +142,7 @@ Here we implement the glTF loading function, which can load the glTF format mesh
 - Incorrect relative position between meshes
 - can not load all the glTF mesh. The kirby is the most visibly-reasonable one.
   - Probably due to glTF mesh itself( they were converted from obj actually)
+- Do not handle outside test yet( so triangle can not work well with refraction )
 
 This function is still under development yet (maybe not).
 

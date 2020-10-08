@@ -706,6 +706,18 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                     cur_triangle.v2
                 );
 
+                if (cur_mesh->facevarying_uvs.size() > 0) {
+                    auto uvs = cur_mesh->facevarying_uvs;
+                    cur_triangle.uv0 = glm::vec2(uvs[2 * i + 0], uvs[2 * i + 1]);
+                    cur_triangle.uv1 = glm::vec2(uvs[2 * i + 2], uvs[2 * i + 3]);
+                    cur_triangle.uv2 = glm::vec2(uvs[2 * i + 4], uvs[2 * i + 5]);
+                }
+                else {
+                    cur_triangle.uv0 = glm::vec2(-1.0f);
+                    cur_triangle.uv1 = glm::vec2(-1.0f);
+                    cur_triangle.uv2 = glm::vec2(-1.0f);
+                }
+
                 //cur_triangle.norm = glm::triangleNormal()
                 cur_triangles.emplace_back(cur_triangle);
                 // store geom info from .txt
