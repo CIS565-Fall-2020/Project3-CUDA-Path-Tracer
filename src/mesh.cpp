@@ -65,6 +65,9 @@ void Octree::addTriangles(const std::vector<glm::vec3>& triangles) {
 			maxCorner.y = std::max(maxCorner.y, t.y);
 			maxCorner.z = std::max(maxCorner.z, t.z);
 		}
+		// Offset the corner a little bit to avoid error from axis-aligned triangles
+		maxCorner += glm::vec3(0.01f);
+		minCorner -= glm::vec3(0.01f);
 		addPrimitive(minCorner, maxCorner, true, i);
 	}
 }
