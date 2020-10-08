@@ -4,7 +4,7 @@
 #include <vector>
 #include "sceneStructs.h"
 
-#define MAX_DEPTH 3
+#define MAX_DEPTH 5
 
 using namespace std;
 

@@ -24,7 +24,7 @@
 #define SORTBYMAT 0
 #define CACHE 0
 #define DEPTH_OF_FIELD 0
-#define USE_OCTREE 1
+#define USE_OCTREE 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -323,7 +323,7 @@ __global__ void computeIntersections(
 	}
 #ifdef USE_OCTREE
 	// TODO: use octree for meshes
-	int stack[100]; /// need to adjust according to MAX_DEPTH defined in octree.h
+	int stack[200]; /// need to adjust according to MAX_DEPTH defined in octree.h
 	int *ptr = stack;
 	*ptr = -1;
 	*++ptr = 0;
