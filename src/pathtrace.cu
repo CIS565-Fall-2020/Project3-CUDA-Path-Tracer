@@ -108,14 +108,13 @@ __global__ void samplesInit(glm::vec2* samples, int samples1D) {
     return;
   }
 
-  int idx = y * samples1D + x;  
   thrust::default_random_engine rng = makeSeededRandomEngine(x, y, 0);
   thrust::uniform_real_distribution<float> u01(0, 1);
   
   float jitterX = (x + u01(rng)) / (float)samples1D;
   float jitterY = (y + u01(rng)) / (float)samples1D;
 
-  samples[i] = glm::vec2(jitterX, jitterY);
+  samples[y * samples1D + x] = glm::vec2(jitterX, jitterY);
 }
 
 void pathtraceInit(Scene* scene) {
