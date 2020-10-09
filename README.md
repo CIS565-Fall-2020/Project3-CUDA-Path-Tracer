@@ -82,7 +82,7 @@ However, sorting material does not help improve the performance. As we have disc
 - As we are casting the ray pixel by pixel, many of the adjacent intersections are already the same surface (with same materials), and the branch divergent is not so bad. In this circumstance, sorting the materials itself cause overload. 
 - Now we only have 3 type of the materials. If there are more types of the surface such as micro surface material, subsurface scattering material, the branch divergent will be very proficient.
 
-To compare with the result, I also attached the profiling that I've done last week for the mid-term submission of this assignment. This profiling is done with a simple [cornell box scene](./img/balls0.png).
+To compare with the result, I also attached the profiling that I've done last week for the mid-term submission of this assignment. This profiling is done with a simple [cornell box scene](./img/cornell.png).
 
 ![](/img/perf2.png)
 
