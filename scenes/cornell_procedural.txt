@@ -56,15 +56,15 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
-PROCEDTEXT  2
+PROCEDTEXT  1
 
 // Procedural Material 2 reflect
 MATERIAL 5
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
-DIFF	    0
-REFL        1
+DIFF	    1
+REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
@@ -94,17 +94,17 @@ REFRIOR     0
 EMITTANCE   0
 PROCEDTEXT  0
 
-// Procedural Material 2 refract
+// Procedural Material 3
 MATERIAL 8
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
-DIFF	    0
-REFL        1
-REFR        1
+DIFF	    1
+REFL        0
+REFR        0
 REFRIOR     1.9
 EMITTANCE   0
-PROCEDTEXT  2
+PROCEDTEXT  3
 
 // Camera
 CAMERA
@@ -121,7 +121,7 @@ UP          0 1 0
 OBJECT 0
 cube
 material 0
-TRANS       -4 10.5 2
+TRANS       -4 10.5 3
 ROTAT       0 0 0
 SCALE       4 .3 4
 
@@ -129,7 +129,7 @@ SCALE       4 .3 4
 OBJECT 1
 cube
 material 6
-TRANS       4 10.5 2
+TRANS       4 10.5 3
 ROTAT       0 0 0
 SCALE       4 .3 4
 
@@ -177,7 +177,7 @@ SCALE       .01 12 10
 OBJECT 7
 sphere
 material 4
-TRANS       -7 4 0.5
+TRANS       0 4 0.5
 ROTAT       0 0 0
 SCALE       5 5 5
 
@@ -185,7 +185,7 @@ SCALE       5 5 5
 OBJECT 8
 sphere
 material 5
-TRANS       0 4 0.5
+TRANS       -7 4 0.5
 ROTAT       0 0 0
 SCALE       5 5 5
 
@@ -194,5 +194,13 @@ OBJECT 9
 sphere
 material 8
 TRANS       7 4 0.5
+ROTAT       0 0 0
+SCALE       5 5 5
+
+// Sphere
+OBJECT 10
+sphere
+material 0
+TRANS       0 4 13
 ROTAT       0 0 0
 SCALE       5 5 5

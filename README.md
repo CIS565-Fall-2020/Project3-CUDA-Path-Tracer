@@ -11,18 +11,17 @@ Pathtracing is a rendering technique that traces numerous rays of light through 
 
 In addition to building a GPU-based pathtracer, this project involved implementing optimizations and other features, including:
 
-- Reflective and refractive materials
-- Depth of field based on a thin lens camera
-- Stochastic Anti-Aliasing
-- OBJ Loading
-- Procedural Shapes
-- Procedural Textures
+- [Reflective and refractive materials](#materials)
+- [Depth of field based on a thin lens camera](#depth-of-field)
+- [Stochastic Anti-Aliasing](#stochastic-anti-aliasing)
+- [OBJ Loading](#obj-loading)
+- [Procedural Shapes](#procedural-shapes)
+- [Procedural Textures](#procedural-textures)
 
 This pathtracer draws upon the [Physically-Based Rendering textbook](http://www.pbr-book.org/) for reference.
 
 # Features
 
-Dog model from [here](https://www.cgtrader.com/free-3d-print-models/house/decor/doberman-dog-6140e3ce-7726-4c90-8133-e924d1f8ba49).
 
 ## Materials
 
@@ -60,9 +59,17 @@ We can jitter the initial ray's direction by a small epsilon so it samples aroun
 
 ## OBJ Loading
 
-To allow arbitrary meshes to be rendered by the pathtracer, the TinyObj loader was used to parse OBJ files as geometry in the scene. These are broken into triangles of the same material.
+To allow arbitrary meshes to be rendered by the pathtracer, I used the [TinyObj loader](https://github.com/tinyobjloader/tinyobjloader) to parse OBJ files as geometry in the scene. These are broken down into triangles of the same material that are tested against for intersections with every ray.
 
-Heart model from [here](https://www.turbosquid.com/3d-models/iconic-heart-3ds-free/389728).
+Of course, the more complex the mesh, the more triangles it has, and the longer it takes to render the scene. In the future, I would like to implement a hierarchal data structure to speed up the rendering process.
+
+| ![](img/presentable/hearts.png) | 
+|:--:| 
+| Heart model from [here](https://www.turbosquid.com/3d-models/iconic-heart-3ds-free/389728); 1792 triangles.|
+
+| ![](img/presentable/dogs.png) | 
+|:--:| 
+| Dog model from [here](https://www.cgtrader.com/free-3d-print-models/house/decor/doberman-dog-6140e3ce-7726-4c90-8133-e924d1f8ba49); 254 triangles.|
 
 ## Procedural Shapes
 
@@ -80,14 +87,20 @@ For an implicit surface with holes like this, a small enough step is required to
 
 | ![](img/spheremarching.jpg) | 
 |:--:| 
-| Image taken from [GPU Gems 2: Chapter 8](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-8-pixel-displacement-mapping-distance-functions). |
+| Image taken from [GPU Gems 2: Chapter 8](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-8-pixel-displacement-mapping-distance-functions).|
 
 
 A signed distance function also defines a surface depending on which points make its value equal zero, but its other values have utility: they inform us **how far a point is from the surface at any point in space**. This defines how large of a step we can take when we march along the ray, clearing a distance within a sphere just like the diagram. Surfaces rendered using spheremarching can be visualized much more efficiently than surfaces rendered with regular raymarching (depending on SDF calculation complexity, of course).
 
 ## Procedural Textures
 
-another [procedural graphics project](https://j9liu.github.io/terraingen/).
+In addition to procedural shapes, I implemented three procedural textures that can be used for any object. These textures are coded using **noise functions** from another [procedural graphics project](https://j9liu.github.io/terraingen/). My textures depend on the intersection point and normal to determine how to color their objects.
+
+
+
+These can also be applied to the specular and refractive materials, though due to the different behavior of the light rays, they may not always look aesthetically pleasing.
+
+
 
 
 # Performance Analysis

@@ -152,7 +152,7 @@ __global__ void generateStratifiedSamples(glm::vec2* samples, int sqrtSamples, i
 
 // Lens effect taken from http://www.pbr-book.org/3ed-2018/Camera_Models/Projective_Camera_Models.html
 
-#define ANTI_ALIASING 0
+#define ANTI_ALIASING 1
 __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -167,7 +167,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, iter);
         #if ANTI_ALIASING
-        // TODO: implement antialiasing by jittering the ray
+        // implement antialiasing by jittering the ray
         thrust::uniform_real_distribution<float> u0505(-0.5, 0.5);
         glm::vec2 point = glm::vec2(x + u0505(rng), y + u0505(rng));
         segment.ray.direction = glm::normalize(cam.view
@@ -254,7 +254,8 @@ __global__ void computeIntersections(
             {
                 t = triangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
-            else if (geom.type == IMPLICIT) {
+            else if (geom.type == IMPLICIT)
+            {
                 t = implicitSurfaceIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
 

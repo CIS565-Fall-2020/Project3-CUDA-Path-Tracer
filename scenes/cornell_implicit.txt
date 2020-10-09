@@ -106,6 +106,18 @@ REFRIOR     0
 EMITTANCE   0
 PROCEDTEXT  2
 
+// Pink diffuse
+MATERIAL 9
+RGB         .98 .38 .58
+SPECEX      0
+SPECRGB     .38 .38 .38
+DIFF	    1
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+PROCEDTEXT  0
+
 // Camera
 CAMERA
 RES         1600 900
@@ -176,7 +188,7 @@ SCALE       .01 12 10
 // Sphere
 OBJECT 7
 twist
-material 7
+material 9
 TRANS       0 4 -1
 ROTAT       0 -10 0
 SCALE       1.9 1.9 1.9
