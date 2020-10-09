@@ -20,6 +20,17 @@ CUDA Path Tracer
 
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/antialiasing.png" width=300/>
 
+### Arbitrary Mesh Loader
+
+<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/wahoo.png" width=300/>
+Performance comparison regarding bounding volume interseciton culling (measured in time per iteration):
+
+| OBJ file | bounding volume intersection culling | naive implementation |
+| ---      | ---                                  | ---                  |
+| Sphere   | 98.122 | 129.479 |
+| Wahoo    | 1068.55 | 1453.84 |
+| Stanford Bunny | 11970.6 | 22964.9 |
+
 ### Stratified Sampling
 
 1) Comparison of stratified sampling (10x10 grid, left) and uniform random sampling (right) at 5000 iterations
