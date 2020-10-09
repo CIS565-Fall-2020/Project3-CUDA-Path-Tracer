@@ -49,9 +49,19 @@ Motion Blur is achieved by sending each ray at some random time when the shutter
 | ------------------------ | ----------------------- |
 | ![](img/motionblur0.png) | ![](img/motionblur.png) |
 
+#### Hemisphere Sampling
+
+The hemisphere sampling methods will also interfere the results of renders. I implemented stratified sampling against original random sampling. Stratified sampling requires us to estimate how many samples we'll use. I rendered with 200 iterations and 8 depths. You can see the slightly different shadows in the following renders. 
+
+| Random Sampling     | Stratified Sampling     |
+| ------------------- | ----------------------- |
+| ![](img/random.png) | ![](img/stratified.png) |
+
 #### OBJ Loading 
 
 I implemented arbitrary OBJ mesh loading and rendering. I use [tinyObj](https://github.com/tinyobjloader/tinyobjloader) for loading the OBJ files. In order to accelerate the rendering, I create bounding volume for meshes and do intersection culling by first testing the bounding box before testing the triangles.
+
+![](img/bunny.png)
 
 ### Optimizations
 
