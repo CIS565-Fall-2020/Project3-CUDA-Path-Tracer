@@ -4,6 +4,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtx/norm.hpp"
 
+#define PROCEDURAL_TEXTURE 0
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -78,6 +80,23 @@ void scatterRay(
     glm::vec3 normal,
     const Material& m,
     thrust::default_random_engine& rng) {
+
+    //procedural colors
+    if (PROCEDURAL_TEXTURE && m.indexOfRefraction < 0) {
+        if (m.indexOfRefraction == -1) {
+            pathSegment.color *= normal;
+            pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+            pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+        }
+        else if (m.indexOfRefraction == -2) {
+            glm::vec3 rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+            glm::vec3 new_color = glm::clamp(glm::vec3(m.color.x + sin(intersect.x), m.color.y + cos(intersect.y), m.color.z + sin(intersect.z)), 0.f, 1.f);
+            pathSegment.color *= new_color;
+            pathSegment.ray.direction = rand_dir;
+            pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+        }
+        return;
+    }
 
     //specular
     if (m.hasReflective > 0) {

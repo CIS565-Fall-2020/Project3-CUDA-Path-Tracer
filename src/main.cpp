@@ -137,8 +137,8 @@ void runCuda() {
         // execute the kernel
         int frame = 0;
         pathtrace(pbo_dptr, frame, iteration);
-        double time = timer().getGpuElapsedTimeForPreviousOperation();
-        totalTime += time;
+        //double time = timer().getGpuElapsedTimeForPreviousOperation();
+        //totalTime += time;
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
