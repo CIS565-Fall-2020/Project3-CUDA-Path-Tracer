@@ -6,7 +6,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 #include "tinyobj/tiny_obj_loader.h"
 
-#define BUILD_RANDOM_SCENE 0
+#define BUILD_RANDOM_SCENE 1
 
 Scene::Scene(string filename) {
 #if BUILD_RANDOM_SCENE
@@ -281,12 +281,6 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
-}
-
-int clamp(int x, int n) {
-    x = x > n - 1 ? n - 1 : x;
-    x = x < 0 ? 0 : x;
-    return x;
 }
 
 void Scene::addSphereByMaterial(Geom& geom, int id, glm::vec3 trans, float radius) {

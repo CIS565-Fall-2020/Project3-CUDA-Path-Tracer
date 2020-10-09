@@ -2,8 +2,8 @@
 
 #include "intersections.h"
 
-#define STRATIFIED_SAMPLING 1
-#define SAMPLE_SIZE 20
+#define STRATIFIED_SAMPLING 0
+#define SAMPLE_SIZE 10
 
 // CHECKITOUT
 /**

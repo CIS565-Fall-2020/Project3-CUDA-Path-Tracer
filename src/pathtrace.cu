@@ -20,12 +20,12 @@
 #define ERRORCHECK 1
 #define STREAM_COMPACTION 0
 #define SORT_BY_MATERIAL 0
-#define CACHE_ENABLE 1
+#define CACHE_ENABLE 0
 #define PROFILE_ENABLE 0
 #define DEPTH_OF_FIELD_ENABLE 0
 #define ANTIALIASING 0
 #define MOTION_BLUR_ENABLE 0
-#define AMBIENT_LIGHT_ENABLE 0
+#define AMBIENT_LIGHT_ENABLE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -186,10 +186,9 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 #if DEPTH_OF_FIELD_ENABLE
 		// depth of field
-		float lensRadius = 1.0f;
-		float focalDistance = 9.0f;
+		float lensRadius = 0.05f;
+		float focalDistance = 12.0f;
 
-		thrust::uniform_real_distribution<float> u01(-1, 1);
 		float p0 = u01(rng);
 		float p1 = u01(rng);
 		// sample a point from lens
@@ -593,7 +592,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	cudaEventElapsedTime(&t, start, stop);
 
 	totalTime += t;
-	if (countStart && iter > 100) {
+	if (countStart && iter > 20) {
 		std::cout << totalTime / iter << std::endl;
 		countStart = false;
 	}
