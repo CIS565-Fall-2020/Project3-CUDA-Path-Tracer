@@ -159,7 +159,10 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         thrust::uniform_real_distribution<float> u01(0, 1);
         glm::vec3 view = cam.view;
         float interp = u01(rng);
-        view = cam.view * (1 - interp) + (cam.view + cam.move) * interp;
+        if (cam.move != glm::vec3(0.f)) {
+            view = cam.view * (1 - interp) + (cam.view - cam.move) * interp;
+        }
+        
         segment.ray.direction = glm::normalize(view
             - cam.right * cam.pixelLength.x * ((float)x + u01(rng) - (float)cam.resolution.x * 0.5f)
             - cam.up * cam.pixelLength.y * ((float)y + u01(rng) - (float)cam.resolution.y * 0.5f)
