@@ -89,12 +89,34 @@ static ShadeableIntersection* dev_intersections = NULL;
 // ...
 static ShadeableIntersection* dev_firstIntersections = NULL; // Cache first bounce of first iter to be re-use in other iters
 static Triangle* dev_tris = NULL; // Store triangle information for meshes
+static glm::vec2* dev_samples = NULL;
+
 static std::chrono::steady_clock::time_point timePathTrace; // Measure performance
 static float motionBlurFactor = 1.f; //The higher this is, the blurrier the "motion" is
 
 // Depth of field
 static float lensRadius = 0.5f;
 static float focalDist = 10.f;
+
+static int samples1D = 2;
+
+__global__ void samplesInit(glm::vec2* samples, int samples1D) {
+  int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+  int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+  if (x >= samples1D || y >= samples1D) {
+    return;
+  }
+
+  int idx = y * samples1D + x;  
+  thrust::default_random_engine rng = makeSeededRandomEngine(x, y, 0);
+  thrust::uniform_real_distribution<float> u01(0, 1);
+  
+  float jitterX = (x + u01(rng)) / (float)samples1D;
+  float jitterY = (y + u01(rng)) / (float)samples1D;
+
+  samples[i] = glm::vec2(jitterX, jitterY);
+}
 
 void pathtraceInit(Scene* scene) {
   hst_scene = scene;
@@ -121,6 +143,17 @@ void pathtraceInit(Scene* scene) {
   // TODO: initialize any extra device memeory you need
   cudaMalloc(&dev_firstIntersections, pixelcount * sizeof(ShadeableIntersection));
   cudaMemset(dev_firstIntersections, 0, pixelcount * sizeof(ShadeableIntersection));
+  
+  int numSamples = samples1D * samples1D;
+  cudaMalloc(&dev_samples, numSamples * sizeof(glm::vec2));
+  checkCUDAError("cudaMalloc dev_samples failed");
+
+  const dim3 blockSize2d(8, 8);
+  const dim3 blocksPerGrid2d(
+    (samples1D + blockSize2d.x - 1) / blockSize2d.x,
+    (samples1D + blockSize2d.y - 1) / blockSize2d.y);
+  samplesInit << <blocksPerGrid2d, blockSize2d >> > (dev_samples, samples1D);
+  checkCUDAError("samplesInit failed");
 
   checkCUDAError("pathtraceInit");
 }
@@ -134,6 +167,7 @@ void pathtraceFree() {
   // TODO: clean up any extra device memory you created
   cudaFree(dev_tris);
   cudaFree(dev_firstIntersections);
+  cudaFree(dev_samples);
 
   checkCUDAError("pathtraceFree");
 }
