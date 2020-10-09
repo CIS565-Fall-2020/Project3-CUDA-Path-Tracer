@@ -36,29 +36,29 @@ Table of contents
 
 | Diffuse | Reflective | Refractive |
 | ------------- | ----------- |----------- |
-| ![](img/part1Diffuse.png)  | ![](img/part1Specular.png) | ![](img/refractive.png) |
+| ![](img/renders/part1Diffuse.png)  | ![](img/renders/part1Specular.png) | ![](img/renders/refractive.png) |
 | Diffuse Blue | Reflective Blue | Refractive Blue |
 | ------------- | ----------- |----------- |
-| ![](img/blueDiffuse.png)  | ![](img/blueSpecular.png) | ![](img/blueGlass.png) |
+| ![](img/renders/blueDiffuse.png)  | ![](img/renders/blueSpecular.png) | ![](img/renders/blueGlass.png) |
 
 ## Physically-based Depth-of-Field
 | No Depth of Field | Depth of Field |
 | ------------- | ----------- |
-| ![](img/part1Specular.png)  | ![](img/DOF.png) |
+| ![](img/renders/part1Specular.png)  | ![](img/renders/DOF.png) |
 
 ## Stochastic Sampled Antialiasing
 | No Antialiasing | Antialiasing |
 | ------------- | ----------- |
-| ![](img/part1Specular.png)  | ![](img/antialiasing.png) |
+| ![](img/renders/part1Specular.png)  | ![](img/renders/antialiasing.png) |
 
 ## Obj Mesh Loading
-![](img/star2500Samples.png)
+![](img/renders/star2500Samples.png)
 
 ## Procedural Shapes
-| ![](img/sdf1.png)  | ![](img/sdf2.png) |
+| ![](img/renders/sdf1.png)  | ![](img/renders/sdf2.png) |
 
 ## Procedural Textures
-| ![](img/proceduralTexture2.png)  | ![](img/proceduralTexture1.png) |
+| ![](img/renders/proceduralTexture2.png)  | ![](img/renders/proceduralTexture1.png) |
 
 ## Better Hemisphere Sampling
 
