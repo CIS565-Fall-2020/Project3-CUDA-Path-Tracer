@@ -27,8 +27,9 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
-    int meshIdx;
-    int numOfTriangles;
+    int triStart, triEnd;
+    glm::vec3 min_bound;
+    glm::vec3 max_bound;
 };
 
 struct Material {

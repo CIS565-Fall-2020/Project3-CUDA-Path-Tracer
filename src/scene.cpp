@@ -64,12 +64,12 @@ int Scene::loadGeom(std::string objectid) {
             } else if (strcmp(line.c_str(), "mesh") == 0) {
                 cout << "Creating new mesh..." << endl;
                 utilityCore::safeGetline(fp_in, line);
-                int idx = loadMesh(line);
-                if (idx < 0) {
+                newGeom.triStart = triangles.size();
+                int cnt = loadMesh(line);
+                if (cnt < 0) {
                   return -1;
                 }
-                newGeom.numOfTriangles = meshes[idx].size();
-                newGeom.meshIdx = idx;
+                newGeom.triEnd = triangles.size();
                 newGeom.type = MESH;
             }
         }
@@ -94,11 +94,11 @@ int Scene::loadGeom(std::string objectid) {
                 newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
-                auto &tris = meshes[newGeom.meshIdx];
                 if (newGeom.type == MESH) {
-                   newGeom.min_bound = tris[0].v[0];
-                   newGeom.max_bound = tris[0].v[0];
-                   for (Triangle& tri : tris) {
+                   newGeom.min_bound = triangles[newGeom.triStart].v[0];
+                   newGeom.max_bound = triangles[newGeom.triStart].v[0];
+                   for (int i = newGeom.triStart; i < newGeom.triEnd; i++) {
+                     Triangle& tri = triangles[i];
                      for (int i = 0; i < 3; i++) {
                        tri.v[i].x *= newGeom.scale[0];
                        tri.v[i].y *= newGeom.scale[1];
@@ -126,13 +126,12 @@ int Scene::loadGeom(std::string objectid) {
     return 0;
 }
 
-// Return the index of the mesh, or -1 if failed
+// Return the number of triangles of the mesh, or -1 if failed
 int Scene::loadMesh(string filename) {
    tinyobj::attrib_t attrib;
    std::vector<tinyobj::shape_t> shapes;
    std::vector<tinyobj::material_t> materials;
    std::string warn, err;
-   std::vector<Triangle> triangles;
 
    // load obj
    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
@@ -147,6 +146,8 @@ int Scene::loadMesh(string filename) {
    if (!err.empty()) {
      std::cerr << err << std::endl;
    }
+
+   int startIdx = triangles.size();
 
    // Loop over shapes
    for (const tinyobj::shape_t &shape : shapes) {
@@ -172,9 +173,7 @@ int Scene::loadMesh(string filename) {
        triangles.push_back(t);
      }
    }
-   cout << triangles.size() << " triangles loaded from " << filename.c_str() << endl;
-   meshes.push_back(triangles);
-   return meshes.size() - 1;
+   return triangles.size() - startIdx;
 }
 
 int Scene::loadCamera() {

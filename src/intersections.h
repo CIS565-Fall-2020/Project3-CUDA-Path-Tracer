@@ -6,6 +6,8 @@
 #include "sceneStructs.h"
 #include "utilities.h"
 
+#define BOUNDING_VOLUME_INTERSECTION_CULLING
+
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
  */
@@ -172,8 +174,8 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Triangle* triangles, R
    float t5 = (mesh.min_bound.z - rt.origin.z)*dirfrac.z;
    float t6 = (mesh.max_bound.z - rt.origin.z)*dirfrac.z;
 
-   float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
-   float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+   float tmin = fmax(fmax(fmin(t1, t2), fmin(t3, t4)), fmin(t5, t6));
+   float tmax = fmin(fmin(fmax(t1, t2), fmax(t3, t4)), fmax(t5, t6));
 
    // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
    if (tmax < 0 || tmin > tmax) {
@@ -184,7 +186,7 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Triangle* triangles, R
    // find intersecting triangle with minimum t
    float min_t = FLT_MAX;
    int min_idx = -1;
-   for (int i = 0; i < mesh.numOfTriangles; i++) {
+   for (int i = mesh.triStart; i < mesh.triEnd; i++) {
      Triangle tri = triangles[i];
      float t = -1;
      glm::vec3 bary;
