@@ -18,8 +18,9 @@ using utilTimer::PerformanceTimer;
 
 #define ERRORCHECK 1
 #define CACHE_BOUNCE 1
-#define MATERIAL_SORT 0
-#define DEPTH_OF_FIELD 1
+#define MATERIAL_SORT 1
+#define DEPTH_OF_FIELD 0
+#define ANTIALIASING 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -88,6 +89,13 @@ static ShadeableIntersection * dev_intersections = NULL;
 // ...
 static PathSegment * dev_cache_paths = NULL;
 static ShadeableIntersection * dev_cache_intersections = NULL;
+static Triangle* dev_triangles = NULL;
+static int* dev_idxOfEachMesh = NULL;
+static int* dev_endIdxOfEachMesh = NULL;
+
+static int mesh_size = 0;
+static int triangle_size = 0;
+static std::vector<int> indexOffset;
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
@@ -114,6 +122,23 @@ void pathtraceInit(Scene *scene) {
     cudaMalloc(&dev_cache_intersections, pixelcount * sizeof(ShadeableIntersection));
     cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
+    mesh_size = scene->meshes.size();
+    //cout << mesh_size << endl;
+    triangle_size = scene->totalTriangles;
+    cudaMalloc(&dev_triangles, triangle_size * sizeof(Triangle));
+    for (int i = 0; i < mesh_size; i++) {
+        int triangle_size_per = scene->meshes[i].size();
+        int offset = scene->idxOfEachMesh[i];
+        cudaMemcpy(dev_triangles + offset, scene->meshes[i].data(), triangle_size_per * sizeof(Triangle), cudaMemcpyHostToDevice);
+        //cout << triangle_size_per << endl;
+    }
+
+    cudaMalloc(&dev_idxOfEachMesh, mesh_size * sizeof(int));
+    cudaMemcpy(dev_idxOfEachMesh, scene->idxOfEachMesh.data(), mesh_size * sizeof(int), cudaMemcpyHostToDevice);
+
+    cudaMalloc(&dev_endIdxOfEachMesh, mesh_size * sizeof(int));
+    cudaMemcpy(dev_endIdxOfEachMesh, scene->endIdxOfEachMesh.data(), mesh_size * sizeof(int), cudaMemcpyHostToDevice);
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -126,6 +151,9 @@ void pathtraceFree() {
     // TODO: clean up any extra device memory you created
     cudaFree(dev_cache_paths);
     cudaFree(dev_cache_intersections);
+    cudaFree(dev_triangles);
+    cudaFree(dev_idxOfEachMesh);
+    cudaFree(dev_endIdxOfEachMesh);
 
     checkCUDAError("pathtraceFree");
 }
@@ -154,25 +182,38 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
 	if (x < cam.resolution.x && y < cam.resolution.y) {
+
 		int index = x + (y * cam.resolution.x);
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> u01(0, 1);
 
 		// TODO: implement antialiasing by jittering the ray
-		segment.ray.direction = glm::normalize(cam.view
-			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
-			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
-			);
+#if ANTIALIASING == 1 && CACHE_BOUNCE == 0
+
+    segment.ray.direction = glm::normalize(cam.view
+        - cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f + u01(rng) - 0.5f)
+        - cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f + u01(rng) - 0.5f)
+    );
+
+#else
+	segment.ray.direction = glm::normalize(cam.view
+		- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
+		- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
+		);
+
+#endif //ANTIALIASING
+
+
 
 #if DEPTH_OF_FIELD == 1
 
-    float discRadius = 0.5f;
-    float focalDistance = 10.5f;   // distance between the projection point and the plane where everything is in perfect focus
-    
-    thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
-    thrust::uniform_real_distribution<float> u01(0, 1);
+    float discRadius = 1.f;
+    float focalDistance = 7.f;   // distance between the projection point and the plane where everything is in perfect focus
 
     glm::vec2 sample = glm::vec2(u01(rng), u01(rng));
     glm::vec3 pLens = discRadius * squareToDiskUniform(sample);
@@ -199,8 +240,12 @@ __global__ void computeIntersections(
 	, int num_paths
 	, PathSegment * pathSegments
 	, Geom * geoms
+    , Triangle *triangles
 	, int geoms_size
 	, ShadeableIntersection * intersections
+    , int* idxOfEachMesh
+    , int* endIdxOfEachMesh
+    , int iter
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -231,8 +276,17 @@ __global__ void computeIntersections(
 			}
 			else if (geom.type == SPHERE)
 			{
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                thrust::default_random_engine rng = makeSeededRandomEngine(iter, path_index, 0);
+                thrust::uniform_real_distribution<float> u01(0, 1);
+				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside, u01(rng));
 			}
+            else if (geom.type == MESH) {
+                int startIdx = idxOfEachMesh[geom.meshIdx];
+                int endIdx = endIdxOfEachMesh[geom.meshIdx];
+                thrust::default_random_engine rng = makeSeededRandomEngine(iter, path_index, 0);
+                thrust::uniform_real_distribution<float> u01(0, 1);
+                 t = meshIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside, startIdx, endIdx, u01(rng));  
+             }
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 			// Compute the minimum t from the intersection tests to determine what
@@ -447,14 +501,17 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	    // tracing
 	    dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
+        
+
     #if CACHE_BOUNCE == 1
         if(depth == 0)
         {
             if(iter == 1)
             {   
                 computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
-		            depth, num_paths, dev_paths, dev_geoms
-		            , hst_scene->geoms.size(), dev_intersections);
+		            depth, num_paths, dev_paths, dev_geoms, dev_triangles
+		            , hst_scene->geoms.size(), dev_intersections
+                    , dev_idxOfEachMesh, dev_endIdxOfEachMesh, iter);
 
 	            checkCUDAError("trace one bounce");
 	            //cudaDeviceSynchronize();
@@ -473,8 +530,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         else
         {
             computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
-		        depth, num_paths, dev_paths, dev_geoms
-		        , hst_scene->geoms.size(), dev_intersections);
+		        depth, num_paths, dev_paths, dev_geoms, dev_triangles
+		        , hst_scene->geoms.size(), dev_intersections
+                , dev_idxOfEachMesh, dev_endIdxOfEachMesh, iter);
 
 	        checkCUDAError("trace one bounce");
 	        cudaDeviceSynchronize();
@@ -482,8 +540,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
     #else
         computeIntersections <<<numblocksPathSegmentTracing, blockSize1d>>> (
-		    depth, num_paths, dev_paths, dev_geoms
-		    , hst_scene->geoms.size(), dev_intersections);
+		    depth, num_paths, dev_paths, dev_geoms, dev_triangles
+		    , hst_scene->geoms.size(), dev_intersections
+            , dev_idxOfEachMesh, dev_endIdxOfEachMesh, iter);
 
 	    checkCUDAError("trace one bounce");
 	    cudaDeviceSynchronize();

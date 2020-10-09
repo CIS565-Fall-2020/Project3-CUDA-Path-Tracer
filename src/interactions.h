@@ -2,6 +2,8 @@
 
 #include "intersections.h"
 
+#define STRATIFIED_SAMPLEING 0
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -12,9 +14,31 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
-    float up = sqrt(u01(rng)); // cos(theta)
-    float over = sqrt(1 - up * up); // sin(theta)
-    float around = u01(rng) * TWO_PI;
+	float up = sqrt(u01(rng)); // cos(theta)
+	float over = sqrt(1 - up * up); // sin(theta)
+	float around = u01(rng) * TWO_PI;
+
+#if STRATIFIED_SAMPLEING == 1
+
+    int numSamples = 100;
+    // The square root of the number of samples 
+    int sqrtVal = (int)(std::sqrt((float)numSamples) + 0.5);
+    // A number useful for scaling a square of size sqrtVal x sqrtVal to 1 x 1
+    float invSqrtVal = 1.f / sqrtVal;
+    
+    // Ensure that the number of samples we use fits evenly within a square grid
+    numSamples = sqrtVal * sqrtVal;
+
+    int y = (int)(u01(rng) * sqrtVal);
+    int x = (int)(u01(rng) * numSamples) % sqrtVal;
+
+    glm::vec2 sample = glm::vec2((float)x + u01(rng), (float)y + u01(rng)) * invSqrtVal;
+
+	up = sqrt(sample.x); // cos(theta)
+	over = sqrt(1 - up * up); // sin(theta)
+	around = sample.y * TWO_PI;
+    
+#endif //STRATIFIED_SAMPLEING
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
