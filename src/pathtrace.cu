@@ -21,6 +21,7 @@ using utilTimer::PerformanceTimer;
 #define MATERIAL_SORT 1
 #define DEPTH_OF_FIELD 0
 #define ANTIALIASING 0
+#define GPU_TIMER 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -97,6 +98,10 @@ static int mesh_size = 0;
 static int triangle_size = 0;
 static std::vector<int> indexOffset;
 
+cudaEvent_t start, stop;
+float totalTime = 0.f;
+bool timerStart = true;
+
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
@@ -138,6 +143,9 @@ void pathtraceInit(Scene *scene) {
 
     cudaMalloc(&dev_endIdxOfEachMesh, mesh_size * sizeof(int));
     cudaMemcpy(dev_endIdxOfEachMesh, scene->endIdxOfEachMesh.data(), mesh_size * sizeof(int), cudaMemcpyHostToDevice);
+
+    cudaEventCreate(&start);
+	cudaEventCreate(&stop);
 
     checkCUDAError("pathtraceInit");
 }
@@ -466,6 +474,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
     //timer().startGpuTimer();
 
+#if GPU_TIMER == 1
+	cudaEventRecord(start);
+#endif // GPU_TIMER
+
 #if CACHE_BOUNCE == 1
 
     if(iter == 1)
@@ -587,6 +599,18 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         }
     }
     //timer().endGpuTimer();
+
+#if GPU_TIMER == 1
+	cudaEventRecord(stop);
+	cudaEventSynchronize(stop);
+	float t;
+	cudaEventElapsedTime(&t, start, stop);
+	totalTime += t;
+	if (timerStart && iter > 50) {
+		std::cout << " time per iteration is: " << totalTime / iter << " ms" <<std::endl;
+		timerStart = false;
+	}
+#endif // GPU_TIMER
 
     //printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(CUDA Measured)");
 

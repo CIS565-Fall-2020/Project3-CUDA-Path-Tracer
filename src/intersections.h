@@ -6,7 +6,7 @@
 #include "sceneStructs.h"
 #include "utilities.h"
 
-#define BOUNDING_VOLUME 1
+#define BOUNDING_VOLUME 0
 #define MOTION_BLUR 0
 
 /**
