@@ -6,6 +6,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include "tiny_obj_loader.h"
 
+#define OCTREE 1
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -31,7 +32,7 @@ Scene::Scene(string filename) {
                 loadGeom(tokens[1]);
                 cout << " " << endl;
             }
-            else if (strcmp(tokens[0].c_str(), "OBJECTGLTF") == 0) {
+            else if (strcmp(tokens[0].c_str(), "OBJECTOBJ") == 0) {
                 loadGeomFromGLTF(tokens[1]);
                 cout << " " << endl;
             }
@@ -195,6 +196,13 @@ int Scene::loadGeomFromGLTF(string objectid) {
             utilityCore::safeGetline(fp_in, line);
         }
 
+        Octree mesh_tree(newGeom.bboxMin.x, newGeom.bboxMin.y, newGeom.bboxMin.z,
+            newGeom.bboxMax.x, newGeom.bboxMax.y, newGeom.bboxMax.z);
+        for (int i = 0; i < triangles.size(); i++) {
+            Triangle& tri = triangles[i];
+            mesh_tree.insert(i, tri.vert[0], tri.vert[1], tri.vert[2]);
+
+        }
         newGeom.endTriangleIndex = triangles.size() - 1;
 
         newGeom.transform = utilityCore::buildTransformationMatrix(

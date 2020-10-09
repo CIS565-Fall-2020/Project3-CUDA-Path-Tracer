@@ -2,7 +2,7 @@
 
 #include "intersections.h"
 
-#define STRATIFIED 1
+#define STRATIFIED 0
 
 // CHECKITOUT
 /**

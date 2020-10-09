@@ -139,12 +139,12 @@ ROTAT       0 0 0
 SCALE       .01 10 10
 
 // Sphere
-OBJECTTXT 6
-sphere
+OBJECTOBJ 6
+../models/cube.obj
 material 6
-TRANS       0 3 0
+TRANS       0 0 0
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       1 1 1
 
 
 

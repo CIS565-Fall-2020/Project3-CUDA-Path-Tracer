@@ -19,10 +19,13 @@ struct Ray {
 };
 
 struct Triangle {
+    int idx;
     glm::vec3 vert[3];
-
-    bool hasNormal;
     glm::vec3 nor;
+public:
+    Triangle() : idx(-1) {}
+    Triangle(int index) : idx(index) {}
+
 };
 
 struct Geom {
