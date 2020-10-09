@@ -61,6 +61,7 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    glm::vec3 move;
 };
 
 struct RenderState {

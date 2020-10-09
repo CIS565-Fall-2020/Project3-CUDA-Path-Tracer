@@ -41,7 +41,8 @@ void checkCUDAErrorFn(const char *msg, const char *file, int line) {
 #define SORTMATERIAL 0
 #define CACHE 0
 #define ANTIALISING 1
-#define DEPTH_OF_FIELD 1
+#define DEPTH_OF_FIELD 0
+#define DIRECT_LIGHT 1
 
 __host__ __device__
 thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int depth) {
@@ -156,8 +157,10 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 #if ANTIALISING
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
         thrust::uniform_real_distribution<float> u01(0, 1);
-
-        segment.ray.direction = glm::normalize(cam.view
+        glm::vec3 view = cam.view;
+        float interp = u01(rng);
+        view = cam.view * (1 - interp) + (cam.view + cam.move) * interp;
+        segment.ray.direction = glm::normalize(view
             - cam.right * cam.pixelLength.x * ((float)x + u01(rng) - (float)cam.resolution.x * 0.5f)
             - cam.up * cam.pixelLength.y * ((float)y + u01(rng) - (float)cam.resolution.y * 0.5f)
         );
@@ -282,8 +285,11 @@ __global__ void shadeFakeMaterial (
 
       // If the material indicates that the object was a light, "light" the ray
       if (material.emittance > 0.0f) {
+#if DIRECT_LIGHT
+#else if
         pathSegments[idx].color *= (materialColor * material.emittance);
         pathSegments[idx].remainingBounces = 0;
+#endif
       }
       // Otherwise, do some pseudo-lighting computation. This is actually more
       // like what you would expect from shading in a rasterizer like OpenGL.
