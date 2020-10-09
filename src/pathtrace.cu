@@ -98,7 +98,7 @@ static float motionBlurFactor = 1.f; //The higher this is, the blurrier the "mot
 static float lensRadius = 0.5f;
 static float focalDist = 10.f;
 
-static int samples1D = 2;
+static int samples1D = 1024;
 
 __global__ void samplesInit(glm::vec2* samples, int samples1D) {
   int x = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -302,6 +302,8 @@ __global__ void shadeMaterial(
   , ShadeableIntersection* shadeableIntersections
   , PathSegment* pathSegments
   , Material* materials
+  , glm::vec2* samples
+  , int sample1D
 )
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -335,7 +337,7 @@ __global__ void shadeMaterial(
           pathSegments[idx].color = glm::vec3(0.f);
         }
         else {
-          scatterRay(pathSegments[idx], isectLoc, intersection.surfaceNormal, material, rng);
+          scatterRay(pathSegments[idx], isectLoc, intersection.surfaceNormal, material, rng, samples, sample1D);
         }
       }
     }
@@ -587,7 +589,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
       num_paths,
       dev_intersections,
       dev_paths,
-      dev_materials
+      dev_materials,
+      dev_samples,
+      samples1D
       );
     dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_path_end, pathIsAlive());
     num_paths = dev_path_end - dev_paths;

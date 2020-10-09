@@ -2,7 +2,7 @@
 
 #include "intersections.h"
 
-#define STRATIFIEDSAMPLING 1
+#define ENHANCEDSAMPLING 0
 
 // CHECKITOUT
 /**
@@ -11,32 +11,21 @@
  */
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
-  glm::vec3 normal, thrust::default_random_engine& rng) {
-  thrust::uniform_real_distribution<float> u01(0, 1);
-
-  float jitterX = u01(rng);
-  float jitterY = u01(rng);
-
-#ifdef STRATIFIEDSAMPLING
-  float numGridStratifiedSampling = 100.f;
-  float gridSize = 1.f / (float)numGridStratifiedSampling;
-  thrust::uniform_real_distribution<float>u0GridSize(0, gridSize);
-  thrust::uniform_int_distribution<int> ui0GridCount(0, numGridStratifiedSampling);
- 
-  // Choose grid
-  float gridX = (float)ui0GridCount(rng) / (float) numGridStratifiedSampling;
-  float gridY = (float)ui0GridCount(rng) / (float)numGridStratifiedSampling;
-
-  // Choose jitter within grid
-  jitterX = u0GridSize(rng) + gridX;
-  jitterY = u0GridSize(rng) + gridY;
-
+  glm::vec3 normal, thrust::default_random_engine& rng, glm::vec2* samples, int samples1D) {
+  
+  glm::vec2 jitter;
+#ifdef ENHANCEDSAMPLING
+  thrust::uniform_int_distribution<int> ui(0, samples1D);
+  jitter = samples[ui(rng) * samples1D + ui(rng)];
+#else
+  thrust::uniform_real_distribution<float> ur01(0, 1);
+  jitter = glm::vec2(ur01(rng), ur01(rng));
 #endif
 
 
-  float up = sqrt(jitterX); // cos(theta)
+  float up = sqrt(jitter.x); // cos(theta)
   float over = sqrt(1 - up * up); // sin(theta)
-  float around = jitterY * TWO_PI;
+  float around = jitter.y * TWO_PI;
 
   // Find a direction that is not the normal based off of whether or not the
   // normal's components are all equal to sqrt(1/3) or whether or not at
@@ -96,14 +85,17 @@ void scatterRay(
   glm::vec3 intersect,
   glm::vec3 normal,
   const Material& m,
-  thrust::default_random_engine& rng) {
+  thrust::default_random_engine& rng,
+  glm::vec2* samples,
+  int samples1D
+  ) {
   // TODO: implement this.
   // A basic implementation of pure-diffuse shading will just call the
   // calculateRandomDirectionInHemisphere defined above.
   pathSegment.color *= m.color;
   pathSegment.ray.origin = intersect + 0.001f * normal;
   if (m.hasRefractive == 0.f && m.hasReflective == 0.f) {
-    pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng, samples, samples1D);
   }
   else if (m.hasRefractive == 0.f) {
     pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
