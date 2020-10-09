@@ -7,6 +7,7 @@
 #include "gltf-loader.h"
 #include "glm/gtc/matrix_inverse.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include "warpfunctions.h"
 
 __host__ __device__
 glm::mat4 getTansformation(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale) 
@@ -251,4 +252,42 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 	}
 
 	return -1;
+}
+
+__host__ __device__ ShadeableIntersection getSampleOnSphere(const glm::vec2& xi, float* pdf, const Geom& geom)
+{
+	glm::vec3 pObj = WarpFunctions::squareToSphereUniform(xi);
+
+	ShadeableIntersection it;
+	it.surfaceNormal = glm::normalize(glm::vec3(geom.invTranspose * glm::vec4(pObj, 1)));
+	it.point = glm::vec3(geom.transform * glm::vec4(pObj, 1));
+
+	float area = 4.f * PI * geom.scale.x * geom.scale.x;
+	*pdf = 1.0f / area;
+
+	return it;
+}
+
+__host__ __device__ ShadeableIntersection getSampleOnSquare(const glm::vec2& xi, float* pdf, const Geom& geom)
+{
+	ShadeableIntersection it;
+	glm::vec4 localPoint = glm::vec4(xi.x - 0.5f, -1.0f, xi.y - 0.5f, 1);
+	glm::vec3 worldPoint = multiplyMV(geom.transform, localPoint);
+	glm::vec4 localNormal(0);
+	float minScale = min(geom.scale.x, min(geom.scale.y, geom.scale.z));
+	if (minScale == geom.scale.x)
+		localNormal.x = -1;
+	else if (minScale == geom.scale.y)
+		localNormal.y = -1;
+	else
+		localNormal.z = -1;
+
+	glm::vec3 worldNormal = glm::normalize(multiplyMV(geom.invTranspose, localNormal));
+
+	it.point = worldPoint;
+	it.surfaceNormal = worldNormal;
+	float area = max(geom.scale.x * geom.scale.y, max(geom.scale.y * geom.scale.z, geom.scale.x * geom.scale.z));
+	*pdf = 1.f / area;
+
+	return it;
 }

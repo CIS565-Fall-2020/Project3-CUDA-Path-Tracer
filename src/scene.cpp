@@ -11,11 +11,14 @@ Scene::Scene(string filename)
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
     fp_in.open(fname);
-    if (!fp_in.is_open()) {
+    if (!fp_in.is_open()) 
+    {
         cout << "Error reading from file - aborting!" << endl;
         throw;
     }
-    while (fp_in.good()) {
+
+    while (fp_in.good()) 
+    {
         string line;
         utilityCore::safeGetline(fp_in, line);
         if (!line.empty()) {
@@ -32,6 +35,7 @@ Scene::Scene(string filename)
             }
         }
     }
+    collectLightGeoms();
 }
 
 Scene::~Scene()
@@ -42,7 +46,8 @@ int Scene::getMeshesSize() const
     return meshes.size();
 }
 
-int Scene::loadGeom(string objectid) {
+int Scene::loadGeom(string objectid) 
+{
     int id = atoi(objectid.c_str());
     if (id != geoms.size())
     {
@@ -186,14 +191,16 @@ int Scene::loadGeom(string objectid) {
     }
 }
 
-int Scene::loadCamera() {
+int Scene::loadCamera() 
+{
     cout << "Loading Camera ..." << endl;
     RenderState &state = this->state;
     Camera &camera = state.camera;
     float fovy;
 
     //load static properties
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 7; i++) 
+    {
         string line;
         utilityCore::safeGetline(fp_in, line);
         vector<string> tokens = utilityCore::tokenizeString(line);
@@ -230,7 +237,8 @@ int Scene::loadCamera() {
 
     string line;
     utilityCore::safeGetline(fp_in, line);
-    while (!line.empty() && fp_in.good()) {
+    while (!line.empty() && fp_in.good())
+    {
         vector<string> tokens = utilityCore::tokenizeString(line);
         if (strcmp(tokens[0].c_str(), "EYE") == 0) {
             camera.position = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
@@ -264,7 +272,8 @@ int Scene::loadCamera() {
     return 1;
 }
 
-int Scene::loadMaterial(string materialid) {
+int Scene::loadMaterial(string materialid) 
+{
     int id = atoi(materialid.c_str());
     if (id != materials.size()) {
         cout << "ERROR: MATERIAL ID does not match expected number of materials" << endl;
@@ -305,5 +314,16 @@ int Scene::loadMaterial(string materialid) {
         }
         materials.push_back(newMaterial);
         return 1;
+    }
+}
+
+void  Scene::collectLightGeoms()
+{
+    for (const Geom& geom : geoms)
+    {
+        if (materials[geom.materialid].emittance > 0.0f)
+        {// Found a light source
+            lightGeoms.push_back(geom);
+        }
     }
 }

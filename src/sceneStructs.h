@@ -90,18 +90,9 @@ struct PathSegment {
 struct ShadeableIntersection {
 	float t;
 	glm::vec3 surfaceNormal;
+	glm::vec3 point;
 	int materialId;
-};
-
-struct GltfMesh
-{
-
-};
-
-struct Test
-{
-	int* x;
-	int num;
+	Geom* hitGeom;
 };
 
 struct material_comp
@@ -126,30 +117,4 @@ __host__ __device__ inline void setGeomTransform(Geom* geom, const glm::mat4& tr
 	geom->transform = trans;
 	geom->inverseTransform = glm::inverse(trans);
 	geom->invTranspose = glm::inverseTranspose(trans);
-}
-
-
-__host__ __device__ inline glm::vec2 concentricSampleDisk(const glm::vec2& u)
-{
-	// Map uniform random numbers to [-1, 1]^2
-	glm::vec2 uOffset = 2.f * u - glm::vec2(1, 1);
-
-	// Handle degeneracy at the origin
-	if (uOffset.x == 0.f && uOffset.y == 0.f)
-		return glm::vec2(0);
-
-	// Apply concentric mapping to point
-	float theta, r;
-	if (std::abs(uOffset.x) > std::abs(uOffset.y))
-	{
-		r = uOffset.x;
-		theta = PI_OVER_4 * (uOffset.y / uOffset.x);
-	}
-	else
-	{
-		r = uOffset.y;
-		theta = PI_OVER_2 - PI_OVER_4 * (uOffset.x / uOffset.y);
-	}
-
-	return r * glm::vec2(std::cos(theta), std::sin(theta));
 }

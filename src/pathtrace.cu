@@ -15,6 +15,7 @@
 #include "pathtrace.h"
 #include "intersections.h"
 #include "interactions.h"
+#include "warpfunctions.h"
 
 #define ERRORCHECK 1
 #define RECORDEDITERATION 100
@@ -22,6 +23,7 @@
 #define DEPTHOFFIELD false
 #define ANTIALIASING true
 #define CACHEFIRSTBOUNCE !ANTIALIASING
+#define DIRECTLIGHTING true
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -83,6 +85,7 @@ static float gpu_time_accumulator = 0.0f;
 static Scene* hst_scene = nullptr;
 static glm::vec3* dev_image = nullptr;
 static Geom* dev_geoms = nullptr;
+static Geom* dev_light_geoms = nullptr;
 static Material* dev_materials = nullptr;
 static PathSegment* dev_paths = nullptr;
 static ShadeableIntersection* dev_intersections = nullptr;
@@ -133,6 +136,9 @@ void pathtraceInit(Scene* scene)
 
 	cudaMalloc(&dev_first_intersections, pixelcount * sizeof(ShadeableIntersection));
 	cudaMemset(dev_first_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
+
+	cudaMalloc(&dev_light_geoms, scene->lightGeoms.size() * sizeof(Geom));
+	cudaMemcpy(dev_light_geoms, scene->lightGeoms.data(), scene->lightGeoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
 
 	cudaEventCreate(&iter_event_start);
 	cudaEventCreate(&iter_event_end);
@@ -195,7 +201,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		if (cam.lensRadius > 0)
 		{
 			// Sample point on lens
-			glm::vec2 pLens = cam.lensRadius * concentricSampleDisk(glm::vec2(u01(rng), u01(rng)));
+			glm::vec2 pLens = cam.lensRadius * WarpFunctions::squareToDiskConcentric(glm::vec2(u01(rng), u01(rng)));
 			// Compute point on plane of focus
 			glm::vec3 pFocus = segment.ray.origin + cam.focalDist * segment.ray.direction;
 			// Update ray for effect of lens
@@ -298,9 +304,10 @@ __global__ void computeIntersections(int depth,
 		{
 			// The ray hits something
 			intersections[path_index].t = t_min;
+			intersections[path_index].point = getPointOnRay(pathSegment.ray, t_min);
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
-			// intersections[path_index].hitGeom = &geoms[hit_geom_index];
+			intersections[path_index].hitGeom = &geoms[hit_geom_index];
 		}
 	}
 }
@@ -348,7 +355,9 @@ __global__ void shadeMaterial(int iter,
 							  int num_paths,
 							  ShadeableIntersection* shadeableIntersections,
 							  PathSegment* pathSegments,
-							  Material* materials)
+							  Material* materials,
+							  Geom* lightGeoms,
+							  int num_lights)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < num_paths)
@@ -370,7 +379,11 @@ __global__ void shadeMaterial(int iter,
 			}
 			else
 			{
-				scatterRay(pathSegments[idx], intersection, material, rng);
+#if DIRECTLIGHTING
+				scatterDirectRay(pathSegments[idx], intersection, material, rng, lightGeoms, num_lights);
+#else
+				scatterIndirectRay(pathSegments[idx], intersection, material, rng);
+#endif // DIRECTLIGHTING
 			}
 		}
 		else
@@ -500,12 +513,14 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 		thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + cur_num_paths, dev_paths, material_comp());
 
 		// Shade path segments based on intersections and generate new rays by evaluating the BSDF.
-		shadeMaterial<<<numblocksPathSegmentTracing, blockSize1d>>>(
+		shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (
 			iter,
 			cur_num_paths,
 			dev_intersections,
 			dev_paths,
-			dev_materials
+			dev_materials,
+			dev_light_geoms,
+			hst_scene->lightGeoms.size()
 		);
 
 		// Stream compact away all of the terminated paths.

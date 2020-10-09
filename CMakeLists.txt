@@ -78,6 +78,7 @@ set(headers
     src/preview.h
     src/utilities.h
     src/fresnel.h
+    src/warpfunctions.h
     )
 
 set(sources
