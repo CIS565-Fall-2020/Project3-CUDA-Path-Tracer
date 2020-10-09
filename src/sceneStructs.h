@@ -28,6 +28,7 @@ struct Geom {
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
     int meshIdx;
+    int numOfTriangles;
 };
 
 struct Material {

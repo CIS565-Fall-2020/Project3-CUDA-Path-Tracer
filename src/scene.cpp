@@ -1,20 +1,21 @@
 #include <iostream>
-#include "scene.h"
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include "scene.h"
 
-#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobj.h"
 
+using namespace std;
 
 Scene::Scene(string filename) {
-    cout << "Reading scene from " << filename << " ..." << endl;
-    cout << " " << endl;
+    std::cout << "Reading scene from " << filename << " ..." << endl;
+    std::cout << " " << endl;
     char* fname = (char*)filename.c_str();
     fp_in.open(fname);
     if (!fp_in.is_open()) {
-        cout << "Error reading from file - aborting!" << endl;
+        std::cout << "Error reading from file - aborting!" << endl;
         throw;
     }
     while (fp_in.good()) {
@@ -24,18 +25,21 @@ Scene::Scene(string filename) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             if (strcmp(tokens[0].c_str(), "MATERIAL") == 0) {
                 loadMaterial(tokens[1]);
-                cout << " " << endl;
-            } else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
-                loadGeom(tokens[1]);
-                cout << " " << endl;
-            } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
-                loadCamera();
-                cout << " " << endl;
+                std::cout << " " << endl;
             }
+            else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
+                loadGeom(tokens[1]);
+                std::cout << " " << endl;
+            }
+            else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
+                loadCamera();
+                std::cout << " " << endl;
+            }
+        }
     }
 }
 
-int Scene::loadGeom(string objectid) {
+int Scene::loadGeom(std::string objectid) {
     int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
         cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
@@ -61,6 +65,7 @@ int Scene::loadGeom(string objectid) {
                 if (idx < 0) {
                   return -1;
                 }
+                newGeom.numOfTriangles = meshes[idx].size();
                 newGeom.meshIdx = idx;
                 newGeom.type = MESH;
             }
@@ -99,6 +104,7 @@ int Scene::loadGeom(string objectid) {
         geoms.push_back(newGeom);
         return 1;
     }
+    return 0;
 }
 
 // Return the index of the mesh, or -1 if failed

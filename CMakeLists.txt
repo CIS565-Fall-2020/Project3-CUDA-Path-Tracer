@@ -85,6 +85,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/tinyobj.cc
     )
 
 list(SORT headers)

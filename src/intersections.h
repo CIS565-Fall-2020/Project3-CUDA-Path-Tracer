@@ -184,7 +184,7 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Triangle* triangles, R
    // find intersecting triangle with minimum t
    float min_t = FLT_MAX;
    int min_idx = -1;
-   for (int i = 0; i < mesh.num_triangles; i++) {
+   for (int i = 0; i < mesh.numOfTriangles; i++) {
      Triangle tri = triangles[i];
      float t = -1;
      glm::vec3 bary;
