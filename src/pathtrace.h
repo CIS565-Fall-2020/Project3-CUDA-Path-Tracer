@@ -4,11 +4,9 @@
 #include "scene.h"
 #include "utilities.h"
 
-constexpr std::size_t log2SqrtNumStratifiedSamples = 5;
-constexpr std::size_t sqrtNumStratifiedSamples = 1 << log2SqrtNumStratifiedSamples;
-constexpr std::size_t numStratifiedSamples = sqrtNumStratifiedSamples * sqrtNumStratifiedSamples;
-
-void pathtraceInit(Scene *scene);
+void pathtraceInit(Scene *scene, int sqrtStratifiedSamples);
 void pathtraceFree();
-void pathtrace(uchar4 *pbo, int frame, int iteration, int lightMis, float stratifiedRange);
-void updateStratifiedSamples(const std::vector<StratifiedSampler> &samplers);
+void pathtrace(uchar4 *pbo, int frame, int iteration, int directLight, int numLights);
+void updateStratifiedSamples(
+	const std::vector<std::vector<IntersectionSample>> &samplers, const std::vector<CameraSample> &camSamples
+);

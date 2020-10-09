@@ -5,6 +5,14 @@
 #include "preview.h"
 #include "pathtrace.h"
 
+
+constexpr std::size_t log2SqrtNumStratifiedSamples = 5;
+constexpr std::size_t sqrtNumStratifiedSamples = 1 << log2SqrtNumStratifiedSamples;
+constexpr std::size_t numStratifiedSamples = sqrtNumStratifiedSamples * sqrtNumStratifiedSamples;
+
+constexpr bool enableMultipleImportanceSampling = true;
+
+
 static std::string startTimeString;
 
 // For camera controls
@@ -28,7 +36,8 @@ Scene *scene;
 RenderState *renderState;
 int iteration;
 
-std::vector<StratifiedSampler> samplers;
+std::default_random_engine randGen;
+std::vector<int> directLightingSamples;
 
 int width;
 int height;
@@ -68,6 +77,7 @@ int main(int argc, char** argv) {
             stk.emplace_back(scene->aabbTree[node].rightChild, depth + 1);
         }
     }
+    std::cout << "Total primitives: " << scene->geoms.size() << "\n";
     std::cout << "AABB tree depth: " << max << "\n";
 
     // Set up camera stuff from loaded path tracer settings
@@ -86,9 +96,8 @@ int main(int argc, char** argv) {
 
     // compute phi (horizontal) and theta (vertical) relative 3D axis
     // so, (0 0 1) is forward, (0 1 0) is up
-    glm::vec3 viewXZ = glm::vec3(view.x, 0.0f, view.z);
     glm::vec3 viewZY = glm::vec3(0.0f, view.y, view.z);
-    phi = glm::acos(glm::dot(glm::normalize(viewXZ), glm::vec3(0, 0, -1)));
+    phi = glm::atan(view.z, view.x);
     theta = glm::acos(glm::dot(glm::normalize(viewZY), glm::vec3(0, 1, 0)));
     ogLookAt = cam.lookAt;
     zoom = glm::length(cam.position - ogLookAt);
@@ -140,7 +149,6 @@ void runCuda() {
         cam.up = glm::cross(r, v);
         cam.right = r;
 
-        cam.position = cameraPosition;
         cameraPosition += cam.lookAt;
         cam.position = cameraPosition;
         camchanged = false;
@@ -151,21 +159,43 @@ void runCuda() {
 
     if (iteration == 0) {
         pathtraceFree();
-        pathtraceInit(scene);
-        // reset samplers
-        samplers.resize(scene->state.traceDepth);
-        for (auto &s : samplers) {
-            s.resize(sqrtNumStratifiedSamples);
-        }
+        pathtraceInit(scene, sqrtNumStratifiedSamples);
+        /*randGen = std::default_random_engine(std::random_device{}());*/
+        randGen = std::default_random_engine(1998);
         startTime = std::chrono::high_resolution_clock::now();
     }
 
     if (iteration < renderState->iterations) {
         if (iteration % numStratifiedSamples == 0) {
-            for (auto &s : samplers) {
-                s.restart();
+            std::vector<std::vector<IntersectionSample>> isectVecs;
+            for (int i = 0; i < renderState->traceDepth; ++i) {
+                std::vector<glm::vec2>
+                    out = generateStratifiedSamples2D(sqrtNumStratifiedSamples, randGen),
+                    mis1 = generateStratifiedSamples2D(sqrtNumStratifiedSamples, randGen),
+                    mis2 = generateStratifiedSamples2D(sqrtNumStratifiedSamples, randGen);
+                std::vector<IntersectionSample> layer(numStratifiedSamples);
+                for (std::size_t i = 0; i < numStratifiedSamples; ++i) {
+                    layer[i].out = out[i];
+                    layer[i].mis1 = mis1[i];
+                    layer[i].mis2 = mis2[i];
+                }
+                isectVecs.emplace_back(std::move(layer));
             }
-            updateStratifiedSamples(samplers);
+            
+            std::vector<glm::vec2>
+                pixel = generateStratifiedSamples2D(sqrtNumStratifiedSamples, randGen),
+                dof = generateStratifiedSamples2D(sqrtNumStratifiedSamples, randGen);
+            std::vector<CameraSample> cameraVec(numStratifiedSamples);
+            for (std::size_t i = 0; i < numStratifiedSamples; ++i) {
+                cameraVec[i].pixel = pixel[i];
+                cameraVec[i].dof = dof[i];
+            }
+
+            updateStratifiedSamples(isectVecs, cameraVec);
+        }
+        if (iteration % scene->lightPoolMis.size() == 0) {
+            directLightingSamples = scene->lightPoolMis;
+            std::shuffle(directLightingSamples.begin(), directLightingSamples.end(), randGen);
         }
         iteration++;
 
@@ -174,7 +204,12 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration, -1, samplers[0].range());
+        int misLight = -1;
+        if (enableMultipleImportanceSampling) {
+            misLight =
+                directLightingSamples.empty() ? -1 : directLightingSamples[iteration % directLightingSamples.size()];
+        }
+        pathtrace(pbo_dptr, frame, iteration, misLight, scene->lightPoolMis.size());
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);

@@ -117,7 +117,7 @@ void Scene::loadGeom() {
                 ++matIter;
             }
 
-            if (materials[curMaterialId].type == MaterialType::emitter) {
+            if (materials[curMaterialId].type == MaterialType::emissive && !materials[curMaterialId].emitterNoMis) {
                 lightPoolMis.emplace_back(geoms.size());
             }
 
@@ -213,6 +213,12 @@ template <> struct TypedReader<glm::vec3> {
         in >> v.x >> v.y >> v.z;
     }
 };
+template <> struct TypedReader<bool> {
+    inline static void read(std::istream &in, bool &v) {
+        v = true; // if nothing's specified, treat it as a 'set flag' declaration
+        in >> v;
+    }
+};
 
 struct ReaderBase {
     virtual ~ReaderBase() = default;
@@ -229,6 +235,9 @@ template <typename T> struct Reader : public ReaderBase {
 
     T *ptr;
 };
+template <typename T> std::shared_ptr<Reader<T>> makeReader(T *ptr) {
+    return std::make_shared<Reader<T>>(ptr);
+}
 
 using MatAttrMapping = std::unordered_map<std::string, std::shared_ptr<ReaderBase>>;
 bool readMaterialAttr(std::istream &in, const MatAttrMapping &map) {
@@ -260,39 +269,40 @@ void Scene::loadMaterial(std::string materialid) {
     std::string type;
     fp_in >> type;
     MatAttrMapping attributes;
-    if (type == "emitter") {
-        newMaterial.type = MaterialType::emitter;
+    if (type == "emissive") {
+        newMaterial.type = MaterialType::emissive;
         attributes = MatAttrMapping({
-            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) }
+            { "RGB", makeReader(&newMaterial.baseColorLinear) },
+            { "NOMIS", makeReader(&newMaterial.emitterNoMis) }
         });
     } else if (type == "diffuse") {
         newMaterial.type = MaterialType::diffuse;
         attributes = MatAttrMapping({
-            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) }
+            { "RGB", makeReader(&newMaterial.baseColorLinear) }
         });
     } else if (type == "specularReflection") {
         newMaterial.type = MaterialType::specularReflection;
         attributes = MatAttrMapping({
-            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) }
+            { "RGB", makeReader(&newMaterial.baseColorLinear) }
         });
     } else if (type == "specularTransmission") {
         newMaterial.type = MaterialType::specularTransmission;
         attributes = MatAttrMapping({
-            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) },
-            { "IOR", std::make_shared<Reader<float>>(&newMaterial.specularTransmission.indexOfRefraction) }
+            { "RGB", makeReader(&newMaterial.baseColorLinear) },
+            { "IOR", makeReader(&newMaterial.specularTransmission.indexOfRefraction) }
         });
     } else if (type == "disney") {
         newMaterial.type = MaterialType::disney;
         attributes = MatAttrMapping({
-            { "RGB", std::make_shared<Reader<glm::vec3>>(&newMaterial.baseColorLinear) },
-            { "ROUGHNESS", std::make_shared<Reader<float>>(&newMaterial.disney.roughness) },
-            { "METALLIC", std::make_shared<Reader<float>>(&newMaterial.disney.metallic) },
-            { "SPECULAR", std::make_shared<Reader<float>>(&newMaterial.disney.specular) },
-            { "SPECULAR_TINT", std::make_shared<Reader<float>>(&newMaterial.disney.specularTint) },
-            { "SHEEN", std::make_shared<Reader<float>>(&newMaterial.disney.sheen) },
-            { "SHEEN_TINT", std::make_shared<Reader<float>>(&newMaterial.disney.sheenTint) },
-            { "CLEARCOAT", std::make_shared<Reader<float>>(&newMaterial.disney.clearcoat) },
-            { "CLEARCOAT_GLOSS", std::make_shared<Reader<float>>(&newMaterial.disney.clearcoatGloss) }
+            { "RGB", makeReader(&newMaterial.baseColorLinear) },
+            { "ROUGHNESS", makeReader(&newMaterial.disney.roughness) },
+            { "METALLIC", makeReader(&newMaterial.disney.metallic) },
+            { "SPECULAR", makeReader(&newMaterial.disney.specular) },
+            { "SPECULAR_TINT", makeReader(&newMaterial.disney.specularTint) },
+            { "SHEEN", makeReader(&newMaterial.disney.sheen) },
+            { "SHEEN_TINT", makeReader(&newMaterial.disney.sheenTint) },
+            { "CLEARCOAT", makeReader(&newMaterial.disney.clearcoat) },
+            { "CLEARCOAT_GLOSS", makeReader(&newMaterial.disney.clearcoatGloss) }
         });
     }
     while (readMaterialAttr(fp_in, attributes)) {
@@ -543,6 +553,25 @@ void Scene::buildTree() {
                         std::swap(leaves[i], leaves[pivot++]);
                     }
                 }
+                // handle objects with overlapping centroids
+                if (pivot == step.rangeBeg || pivot == step.rangeEnd) {
+                    pivot = (step.rangeBeg + step.rangeEnd) / 2;
+
+                    leftMin = leaves[step.rangeBeg].aabbMin;
+                    leftMax = leaves[step.rangeBeg].aabbMax;
+                    for (std::size_t i = step.rangeBeg + 1; i < pivot; ++i) {
+                        leftMin = glm::min(leftMin, leaves[i].aabbMin);
+                        leftMax = glm::min(leftMax, leaves[i].aabbMax);
+                    }
+
+                    rightMin = leaves[pivot].aabbMin;
+                    rightMax = leaves[pivot].aabbMax;
+                    for (std::size_t i = pivot; i < step.rangeEnd; ++i) {
+                        rightMin = glm::min(rightMin, leaves[i].aabbMin);
+                        rightMax = glm::min(rightMax, leaves[i].aabbMax);
+                    }
+                }
+
                 int nodeIndex = alloc++;
                 *step.parentPtr = nodeIndex;
                 AABBTreeNode &n = aabbTree[nodeIndex];
@@ -550,10 +579,6 @@ void Scene::buildTree() {
                 n.leftAABBMax = leftMax;
                 n.rightAABBMin = rightMin;
                 n.rightAABBMax = rightMax;
-                // handle duplicate triangles
-                if (pivot == step.rangeBeg || pivot == step.rangeEnd) {
-                    pivot = (step.rangeBeg + step.rangeEnd) / 2;
-                }
                 q.emplace_back(&n.leftChild, step.rangeBeg, pivot);
                 q.emplace_back(&n.rightChild, pivot, step.rangeEnd);
             }

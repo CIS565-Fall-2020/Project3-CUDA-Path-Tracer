@@ -16,14 +16,16 @@
 #include "interactions.h"
 
 
-/*#define CHECK_NAN
-#define CHECK_NEGATIVE*/
-
-/*#define STRATIFIED_SPLAT*/
+/*
+#define CHECK_NAN
+#define CHECK_INF
+#define CHECK_NEGATIVE
+*/
 
 
 constexpr bool
 	sortByMaterial = false,
+	stratifiedSplat = true,
 	cacheFirstBounce = false;
 
 
@@ -63,19 +65,24 @@ __global__ void sendImageToPBO(uchar4 *pbo, glm::ivec2 resolution, int iter, glm
 
 	if (x < resolution.x && y < resolution.y) {
 		int index = x + (y * resolution.x);
-		glm::vec3 pix = image[index] / static_cast<float>(iter);
-		pix = glm::pow(pix, glm::vec3(1.0f / 2.2f));
+		glm::vec3 raw = image[index] / static_cast<float>(iter);
+		glm::vec3 pix = glm::pow(raw, glm::vec3(1.0f / 2.2f));
 #if defined(CHECK_NAN) || defined(CHECK_NEGATIVE)
 		{
 			glm::vec3 newPix = glm::clamp(pix * 0.2f, 0.0f, 0.2f);
 #	ifdef CHECK_NAN
-			if (glm::any(glm::isnan(pix))) {
+			if (glm::any(glm::isnan(raw))) {
 				newPix.x = 1.0f;
 			}
 #	endif
-#	ifdef CHECK_NEGATIVE
-			if (glm::any(glm::lessThan(pix, glm::vec3(0.0f)))) {
+#	ifdef CHECK_INF
+			if (glm::any(glm::isinf(raw))) {
 				newPix.y = 1.0f;
+			}
+#	endif
+#	ifdef CHECK_NEGATIVE
+			if (glm::any(glm::lessThan(raw, glm::vec3(0.0f)))) {
+				newPix.z = 1.0f;
 			}
 #	endif
 			pix = newPix;
@@ -104,9 +111,13 @@ static int aabbTreeRoot;
 
 static bool firstBounceCached = false;
 static ShadeableIntersection *dev_firstBounceIntersections = nullptr;
-static glm::vec2 *dev_samplePool = nullptr;
 
-void pathtraceInit(Scene *scene) {
+static int numStratifiedSamples;
+static float stratifiedSamplingRange;
+static IntersectionSample *dev_samplePool = nullptr;
+static CameraSample *dev_camSamplePool = nullptr;
+
+void pathtraceInit(Scene *scene, int sqrtNumStratifiedSamples) {
 	hst_scene = scene;
 	const Camera &cam = hst_scene->state.camera;
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -134,7 +145,10 @@ void pathtraceInit(Scene *scene) {
 	cudaMalloc(&dev_aabbTree, scene->aabbTree.size() * sizeof(AABBTreeNode));
 	cudaMemcpy(dev_aabbTree, scene->aabbTree.data(), scene->aabbTree.size() * sizeof(AABBTreeNode), cudaMemcpyHostToDevice);
 
-	cudaMalloc(&dev_samplePool, scene->state.traceDepth * numStratifiedSamples * sizeof(glm::vec2));
+	stratifiedSamplingRange = 1.0f / sqrtNumStratifiedSamples;
+	numStratifiedSamples = sqrtNumStratifiedSamples * sqrtNumStratifiedSamples;
+	cudaMalloc(&dev_samplePool, scene->state.traceDepth * numStratifiedSamples * sizeof(IntersectionSample));
+	cudaMalloc(&dev_camSamplePool, numStratifiedSamples * sizeof(CameraSample));
 
 	aabbTreeRoot = scene->aabbTreeRoot;
 
@@ -154,8 +168,17 @@ void pathtraceFree() {
 	}
 	cudaFree(dev_aabbTree);
 	cudaFree(dev_samplePool);
+	cudaFree(dev_camSamplePool);
 
 	checkCUDAError("pathtraceFree");
+}
+
+__host__ __device__ int stratifiedSampleIndex(int iter, int pixelIndex, int total) {
+	if (stratifiedSplat) {
+		return iter % total; // "splatting"
+	} else {
+		return (iter + utilhash(pixelIndex)) % total; // full stratified
+	}
 }
 
 /**
@@ -166,7 +189,10 @@ void pathtraceFree() {
 * motion blur - jitter rays "in time"
 * lens effect - jitter ray origin positions based on a lens
 */
-__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment *pathSegments) {
+__global__ void generateRayFromCamera(
+	Camera cam, int iter, int traceDepth, PathSegment *pathSegments,
+	const CameraSample *samples, int numStratifiedSamples, float stratifiedSamplingRange
+) {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
@@ -174,33 +200,36 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		return;
 	}
 
-
 	int index = x + (y * cam.resolution.x);
 	PathSegment &segment = pathSegments[index];
 
 	thrust::default_random_engine rand = makeSeededRandomEngine(iter, index, -1);
-	thrust::uniform_real_distribution<float> dist(0.0f, 1.0f);
+	thrust::uniform_real_distribution<float> dist(0.0f, stratifiedSamplingRange);
 
-	segment.color = glm::vec3(1.0f);
+	segment.colorThroughput = glm::vec3(1.0f);
 	segment.colorAccum = glm::vec3(0.0f);
 
+	CameraSample sample = samples[stratifiedSampleIndex(iter, index, numStratifiedSamples)];
+
 	// implement antialiasing by jittering the ray
+	glm::vec2 pixelOffset = sample.pixel + glm::vec2(dist(rand), dist(rand));
 	glm::vec3 dir =
 		cam.view -
-		cam.right * (cam.pixelLength.x * ((static_cast<float>(x) + dist(rand) - 0.5f) / cam.resolution.x - 0.5f)) -
-		cam.up * (cam.pixelLength.y * ((static_cast<float>(y) + dist(rand) - 0.5f) / cam.resolution.x - 0.5f));
+		cam.right * (cam.pixelLength.x * ((static_cast<float>(x) + pixelOffset.x - 0.5f) / cam.resolution.x - 0.5f)) -
+		cam.up * (cam.pixelLength.y * ((static_cast<float>(y) + pixelOffset.y - 0.5f) / cam.resolution.x - 0.5f));
 
 	// depth of field
 	dir *= cam.focalDistance;
-	glm::vec2 aperture = sampleUnitDiskUniform(glm::vec2(dist(rand), dist(rand))) * cam.aperture;
+	glm::vec2 aperture = sampleUnitDiskUniform(sample.dof + glm::vec2(dist(rand), dist(rand))) * cam.aperture;
 	glm::vec3 dofOffset = aperture.x * cam.right + aperture.y * cam.up;
 
 	segment.ray.origin = cam.position + dofOffset;
 	segment.ray.direction = glm::normalize(dir - dofOffset);
 
 	segment.pixelIndex = index;
-	segment.remainingBounces = traceDepth;
 	segment.lastGeom = -1;
+	segment.remainingBounces = traceDepth;
+	segment.prevBounceNoMis = true; // so that light sources are rendered correctly
 }
 
 
@@ -245,17 +274,9 @@ __global__ void computeIntersections(
 	}
 }
 
-__host__ __device__ int stratifiedSampleIndex(int iter, int pixelIndex) {
-#ifdef STRATIFIED_SPLAT
-	return iter % numStratifiedSamples; // "splatting"
-#else
-	return (iter + utilhash(pixelIndex)) % numStratifiedSamples; // full stratified
-#endif
-}
-
 __global__ void shade(
 	int iter, int depth, int num_paths, ShadeableIntersection *intersections, PathSegment *paths,
-	glm::vec2 *samplePool, glm::vec2 *samplePoolMis, float stratifiedRange, int geomMis,
+	IntersectionSample *samplePool, float stratRange, int stratCount, int lightMis, int numLights,
 	const Geom *geoms, const Material *materials, const AABBTreeNode *tree, int treeRoot
 ) {
 	int iSelf = blockIdx.x * blockDim.x + threadIdx.x;
@@ -268,19 +289,34 @@ __global__ void shade(
 
 	if (intersection.materialId != -1) {
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, iSelf, depth);
-		thrust::uniform_real_distribution<float> dist(0.0f, stratifiedRange);
+		thrust::uniform_real_distribution<float> dist(0.0f, stratRange);
 
-		glm::vec2
-			sample = samplePool[stratifiedSampleIndex(iter, path.pixelIndex)] + glm::vec2(dist(rng), dist(rng)),
-			misSample = samplePoolMis[stratifiedSampleIndex(iter, path.pixelIndex)] + glm::vec2(dist(rng), dist(rng));
+		IntersectionSample sample = samplePool[stratifiedSampleIndex(iter, path.pixelIndex, stratCount)];
+		sample.out += glm::vec2(dist(rng), dist(rng));
+		sample.mis1 += glm::vec2(dist(rng), dist(rng));
+		sample.mis2 += glm::vec2(dist(rng), dist(rng));
 
+		glm::vec3 intersectPoint = path.ray.origin + path.ray.direction * intersection.t;
+		const Material &mat = materials[intersection.materialId];
+
+		bool isSpecular =
+			mat.type == MaterialType::specularReflection || mat.type == MaterialType::specularTransmission;
+		if (lightMis != -1 && !isSpecular) {
+			multipleImportanceSampling(
+				path, intersectPoint, intersection.geometricNormal, intersection.shadingNormal,
+				mat, sample.mis1, sample.mis2, lightMis, numLights,
+				geoms, materials, tree, treeRoot
+			);
+		}
 		scatterRay(
-			path, path.ray.origin + path.ray.direction * intersection.t,
-			intersection.geometricNormal, intersection.shadingNormal, materials[intersection.materialId],
-			sample, misSample, geomMis, geoms, materials, tree, treeRoot
+			path, intersectPoint,
+			intersection.geometricNormal, intersection.shadingNormal, mat,
+			sample.out,
+			depth == 0 || lightMis == -1 || geoms[path.lastGeom].type != GeomType::TRIANGLE
 		);
+		path.prevBounceNoMis = isSpecular;
 	} else {
-		path.color = glm::vec3(0.0f);
+		path.colorThroughput = glm::vec3(0.0f);
 		path.remainingBounces = 0;
 	}
 	paths[iSelf] = path;
@@ -312,7 +348,7 @@ struct MaterialCompare {
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
-void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, float stratifiedRange) {
+void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, int numLights) {
 	const int traceDepth = hst_scene->state.traceDepth;
 	const Camera &cam = hst_scene->state.camera;
 	const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -355,7 +391,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, float stratifiedR
 	// * Finally, add this iteration's results to the image. This has been done
 	//   for you.
 
-	generateRayFromCamera<<<blocksPerGrid2d, blockSize2d>>>(cam, iter, traceDepth, dev_paths);
+	generateRayFromCamera<<<blocksPerGrid2d, blockSize2d>>>(
+		cam, iter, traceDepth, dev_paths, dev_camSamplePool, numStratifiedSamples, stratifiedSamplingRange
+	);
 	checkCUDAError("generate camera ray");
 
 	PathSegment* dev_path_end = dev_paths + pixelcount;
@@ -405,11 +443,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, float stratifiedR
 			);
 		}
 
-		// TODO proper mis pools
 		shade<<<numblocksPathSegmentTracing, blockSize1d>>>(
 			iter, depth, num_paths, dev_intersections, dev_paths,
-			dev_samplePool + depth * numStratifiedSamples, dev_samplePool + depth * numStratifiedSamples,
-			stratifiedRange, lightMis,
+			dev_samplePool + depth * numStratifiedSamples, stratifiedSamplingRange, numStratifiedSamples,
+			lightMis, numLights,
 			dev_geoms, dev_materials, dev_aabbTree, aabbTreeRoot
 		);
 
@@ -432,12 +469,17 @@ void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, float stratifiedR
 	checkCUDAError("pathtrace");
 }
 
-void updateStratifiedSamples(const std::vector<StratifiedSampler> &samplers) {
-	glm::vec2 *dev_ptr = dev_samplePool;
-	for (std::size_t i = 0; i < samplers.size(); ++i) {
+void updateStratifiedSamples(
+	const std::vector<std::vector<IntersectionSample>> &pools, const std::vector<CameraSample> &camSamples
+) {
+	IntersectionSample *dev_ptr = dev_samplePool;
+	for (std::size_t i = 0; i < pools.size(); ++i) {
 		cudaMemcpy(
-			dev_ptr, samplers[i].pool().data(), numStratifiedSamples * sizeof(glm::vec2), cudaMemcpyHostToDevice
+			dev_ptr, pools[i].data(), pools[i].size() * sizeof(IntersectionSample), cudaMemcpyHostToDevice
 		);
-		dev_ptr += numStratifiedSamples;
+		dev_ptr += pools[i].size();
 	}
+	cudaMemcpy(
+		dev_camSamplePool, camSamples.data(), camSamples.size() * sizeof(CameraSample), cudaMemcpyHostToDevice
+	);
 }

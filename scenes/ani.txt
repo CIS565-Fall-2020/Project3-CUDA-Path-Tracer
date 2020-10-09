@@ -12,13 +12,14 @@ UP          0 1 0
 
 // sun
 MATERIAL sun
-emitter
+emissive
 RGB         6 6 6
 END
 
 // sky
 MATERIAL sky
-emitter
+emissive
+NOMIS
 RGB         0.2 0.4 0.6
 END
 

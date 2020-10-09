@@ -47,7 +47,7 @@ struct Geom {
 
 enum class MaterialType : unsigned char {
 	invalid,
-	emitter,
+	emissive,
 	diffuse,
 	specularReflection,
 	specularTransmission,
@@ -71,6 +71,7 @@ struct DisneyMaterial {
 
 struct Material {
 	union {
+		bool emitterNoMis;
 		SpecularTransmissionMaterial specularTransmission;
 		DisneyMaterial disney;
 	};
@@ -87,7 +88,7 @@ struct Camera {
 	glm::vec3 right;
 	glm::vec2 pixelLength;
 	float fovy;
-	float aperture = 0.0f, focalDistance = 10.0f;
+	float aperture = 0.3f, focalDistance = 20.0f;
 };
 
 struct RenderState {
@@ -99,11 +100,12 @@ struct RenderState {
 };
 
 struct PathSegment {
-	glm::vec3 color, colorAccum;
-	int remainingBounces;
+	glm::vec3 colorThroughput, colorAccum;
 	Ray ray;
 	int pixelIndex;
 	int lastGeom;
+	int16_t remainingBounces;
+	bool prevBounceNoMis;
 };
 
 // Use with a corresponding PathSegment to do:
@@ -118,4 +120,11 @@ struct ShadeableIntersection {
 struct AABBTreeNode {
 	glm::vec3 leftAABBMin, leftAABBMax, rightAABBMin, rightAABBMax;
 	int leftChild, rightChild;
+};
+
+struct IntersectionSample {
+	glm::vec2 mis1, mis2, out;
+};
+struct CameraSample {
+	glm::vec2 pixel, dof;
 };

@@ -26,42 +26,24 @@ namespace utilityCore {
     extern std::istream& safeGetline(std::istream& is, std::string& t); //Thanks to http://stackoverflow.com/a/6089413
 }
 
-struct StratifiedSampler {
-public:
-    void resize(std::size_t size) {
-        _sqrtSize = size;
-        _samples.resize(size * size);
-        _current = size * size;
-    }
-    void restart() {
-        _samples.clear();
-        float rng = range();
-        for (std::size_t y = 0; y < _sqrtSize; ++y) {
-            for (std::size_t x = 0; x < _sqrtSize; ++x) {
-                _samples.emplace_back(x * rng, y * rng);
-            }
+template <typename Rand> inline std::vector<glm::vec2> generateStratifiedSamples2D(std::size_t sqrtCount, Rand &rand) {
+    std::vector<glm::vec2> samples;
+    samples.reserve(sqrtCount * sqrtCount);
+    float rng = 1.0f / sqrtCount;
+    for (std::size_t y = 0; y < sqrtCount; ++y) {
+        for (std::size_t x = 0; x < sqrtCount; ++x) {
+            samples.emplace_back(x * rng, y * rng);
         }
-
-        std::default_random_engine rand(std::random_device{}());
-        std::shuffle(_samples.begin(), _samples.end(), rand);
-        _current = 0;
     }
-
-    const std::vector<glm::vec2> &pool() const {
-        return _samples;
+    std::shuffle(samples.begin(), samples.end(), rand);
+    return samples;
+}
+template <typename Rand> inline std::vector<int> generateStratifiedSamplesChoice(std::size_t count, Rand &rand) {
+    std::vector<int> samples;
+    samples.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        samples.emplace_back(static_cast<int>(i));
     }
-    float range() const {
-        return 1.0f / _sqrtSize;
-    }
-
-    glm::vec2 next() {
-        if (_current >= _samples.size()) {
-            restart();
-        }
-        return _samples[_current++];
-    }
-protected:
-    std::size_t _current = std::numeric_limits<std::size_t>::max();
-    std::size_t _sqrtSize = 0;
-    std::vector<glm::vec2> _samples;
-};
+    std::shuffle(samples.begin(), samples.end(), rand);
+    return samples;
+}
