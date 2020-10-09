@@ -50,9 +50,9 @@ EMITTANCE   0
 
 // Glass
 MATERIAL 5
-RGB         .98 .98 .98
+RGB         .68 .98 .98
 SPECEX      0
-SPECRGB     .98 .98 .98
+SPECRGB     .68 .98 .98
 REFL        0
 REFR        1
 REFRIOR     1.5
@@ -122,7 +122,7 @@ SCALE       .01 10 10
 OBJECT 6
 sphere
 material 5
-TRANS       1 4 1
+TRANS       0 4 0
 ROTAT       0 0 0
-SCALE       5 5 5
+SCALE       3 3 3
 

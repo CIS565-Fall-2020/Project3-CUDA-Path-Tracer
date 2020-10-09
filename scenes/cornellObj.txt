@@ -40,12 +40,12 @@ EMITTANCE   0
 
 // Specular white
 MATERIAL 4
-RGB         .98 .98 .98
+RGB         .68 .98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
-REFR        1
-REFRIOR     1.5
+REFR        0
+REFRIOR     0
 EMITTANCE   0
 
 // Camera
@@ -111,8 +111,8 @@ SCALE       .01 10 10
 // Obj Cone
 OBJECT 6
 obj
-../models/cone.obj
+../models/cube.obj
 material 4
-TRANS       0 4 0
-ROTAT       0 45 0
-SCALE       2 2 2
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       5 1 5
