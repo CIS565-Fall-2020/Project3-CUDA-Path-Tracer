@@ -54,6 +54,10 @@ When applying antialiasing, the ray direction from camera is jittered along stra
 
 ### Sobol sequence
 
+Sobol sequence is a low discrepency sequence generated using some direction vectors. I used the same vectors as those in Unreal Engine. The result is pretty "random" and it is distributed more uniformly in space.
+
+![](./img/sobolSamples.png)
+
 Sobol sequence can to some extent make the ray tracing process converge faster. However, it is prone to some structural artifacts in the rendered image, as you can see below.
 
 ![](./img/SobolSequence.png)
