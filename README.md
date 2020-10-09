@@ -28,21 +28,23 @@ Dog model from [here](https://www.cgtrader.com/free-3d-print-models/house/decor/
 
 ![](img/presentable/materials_guide.png)
 
-In this pathtracer, three basic material types exist: **diffuse**, **reflective**, and **refractive**. Their interactions with rays of light are handled by bidirectional scattering distribution functions, or BSDFs, based on the directions of the input and output rays (thus *bi-directional*). The BSDF for each material type handles their light rays differently:
+In this pathtracer, three basic material types exist: **diffuse**, **reflective**, and **refractive**. Their interactions with rays of light are handled by bidirectional scattering distribution functions, or BSDFs, based on the directions of the input and output rays. The BSDF for each material type handles their light rays differently:
 
-- **Diffuse**: samples a hemisphere of space around the intersection normal that is incident to the surface.
-- **Reflective**: reflects the light ray about the surface normal. 
-- **Refractive**: refracts the ray through the material according to Snell's law of refraction.
+- **diffuse**: samples a hemisphere of space around the intersection normal that is incident to the surface.
+- **reflective**: reflects the light ray about the surface normal. 
+- **refractive**: refracts the ray through the material according to Snell's law of refraction.
 
 In the spirit of the PBR textbook, I handle materials using BSDF "flags" that are parsed from the scene file. When an object has more than one material flag, all rays that hit it will choose randomly between the flagged materials, sample the randomly chosen material, then divide its contribution by the probability of choosing it (to upscale its contribution). This allows for mixed materials, such as a half specular, half diffuse material.
 
-Here, a compound reflective and refractive effect is implemented through a [Fresnel](https://www.dorian-iten.com/fresnel/) material, which reflects light rays that are more tangent to its surface. This creates an effect where rays passing through the material are refracted, while rays grazing the sides of the material are reflected. Instead of directly calculating the Fresnel component, I estimate it using Schlick's approximation, just as [this raytracer's implementation](https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/refraction) does. For comparison, these renders below feature a purely refractive sphere on the left, and Fresnel glass spheres in the middle and right.
+Here, a compound reflective and refractive effect is implemented through a [Fresnel](https://www.dorian-iten.com/fresnel/) material, which reflects light rays that are more tangent to its surface. This creates an effect where rays passing through the material are refracted, while rays grazing the sides of the material are reflected. Instead of directly calculating the Fresnel component, I estimate it using **Schlick's approximation**, just as [this raytracer's implementation](https://raytracing.github.io/books/RayTracingInOneWeekend.html#dielectrics/refraction) does.
+
+For comparison, these renders below feature a **purely refractive** sphere on the left, and **Fresnel glass** spheres in the middle and right.
 
 ![](img/presentable/glassmaterials.png)
 
 ## Depth of Field
 
-The basic implementation of a pathtracer interprets the world through a pinhole camera, which doesn't factor in any effects that would occur through a real camera lens. This results in an image where everything is in equal focus. Simulating a depth of field effect requires a bit more work: the rays need to simulate being passed through a thin lens camera that is focusing on objects on a plane some focal distance away. To achieve this, the pathtracer's initial rays are jittered on a circular space that represents the lens, and their directions are refocused to a point on the focal distance plane. This can then be used to give some blur to the foreground or background of our scenes.
+The basic implementation of a pathtracer interprets the world through a pinhole camera, which doesn't factor in any effects that would occur through a real camera lens. This results in an image where everything is in equal focus. Simulating a depth of field effect requires a bit more work: the rays need to simulate being passed through a **thin lens camera** that is focusing on objects on a plane some **focal distance** away. To achieve this, the pathtracer's initial rays are jittered on a circular space that represents the lens, and their directions are refocused to a point on the focal distance plane. This can then be used to give some blur to the foreground or background of our scenes.
 
 ![](img/presentable/dof.png)
 
@@ -60,6 +62,8 @@ We can jitter the initial ray's direction by a small epsilon so it samples aroun
 
 To allow arbitrary meshes to be rendered by the pathtracer, the TinyObj loader was used to parse OBJ files as geometry in the scene. These are broken into triangles of the same material.
 
+Heart model from [here](https://www.turbosquid.com/3d-models/iconic-heart-3ds-free/389728).
+
 ## Procedural Shapes
 
 In contrast to the primitives and OBJs that are explicitly defined in the scene, implicit surfaces are defined by functions that equal zero for points that are on the surface. In order to find these points, we need to use a technique called **raymarching** to find points on or close to the surface.
@@ -74,13 +78,17 @@ These surfaces can be given specular materials, but there is noise due to the mo
 
 For an implicit surface with holes like this, a small enough step is required to properly capture the surface. Yet, the surface is a good distance away from the camera, and some rays may never hit the surface at all. This results in an extensive amount of time taken to process these surfaces, especially without a bounding volume hierarchy. There is a technique to find implicitly defined surfaces that contrasts this: **sphere-marching** using [signed distance functions](https://iquilezles.org/www/articles/distfunctions/distfunctions.htm) (SDFs).
 
-![](img/spheremarching.jpg)
+| ![](img/spheremarching.jpg) | 
+|:--:| 
+| Image taken from [GPU Gems 2: Chapter 8](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-8-pixel-displacement-mapping-distance-functions). |
 
-[GPU Gems 2: Chapter 8](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-8-pixel-displacement-mapping-distance-functions)
 
-A signed distance function also defines a surface depending on which points make its value equal zero, but its other values have utility: they inform us how far a point is from the surface at any point in space. This defines how large of a step we can take when we march along the ray, clearing a distance within a sphere just like the diagram. Surfaces rendered using spheremarching can be visualized much more efficiently than surfaces rendered with regular raymarching (depending on SDF calculation complexity, of course).
+A signed distance function also defines a surface depending on which points make its value equal zero, but its other values have utility: they inform us **how far a point is from the surface at any point in space**. This defines how large of a step we can take when we march along the ray, clearing a distance within a sphere just like the diagram. Surfaces rendered using spheremarching can be visualized much more efficiently than surfaces rendered with regular raymarching (depending on SDF calculation complexity, of course).
 
 ## Procedural Textures
+
+another [procedural graphics project](https://j9liu.github.io/terraingen/).
+
 
 # Performance Analysis
 
@@ -137,6 +145,8 @@ The performance of all the optimizations combined is shown below.
 ![](img/graphs/optimization_graph.png)
 
 # Bugs and Bloopers
+## Initial Implementation Bloopers
+
 ## Stream Compaction-less Issues
 
 My pathtracer cannot render images properly without using stream compaction. Here are two bloopers from when I was trying to debug this issue:
@@ -145,3 +155,23 @@ My pathtracer cannot render images properly without using stream compaction. Her
 ![](img/bloopers/without_stream_compaction.png)
 
 The intense brightness of these renders comes from overcounting the dead rays in the final product. But despite consistent checks that the rays aren't terminated, the images produced are still taking too much light into account, light that shouldn't exist with the terminated rays. It may have to do with shading and overcounting *intersection* data; I would need to spend more time to figure out how.
+
+## Refraction Bloopers
+
+The process of implementing refractive materials gave me a headache with how many bloopers I got. Here's a sample of many similar-looking, erroneous renders.
+
+![](img/bloopers/refractive.png)
+
+## Depth of Field Bloopers
+
+While implementing depth of field, I got some wonky renders that made it appear like the walls were twisting around each other.
+
+![](img/bloopers/dof1.png)
+
+![](img/bloopers/dof2.png)
+
+## OBJ Loading Bloopers
+
+I call this one, "Who knew OBJS were made of trapezoids?"
+
+![](img/bloopers/obj.png)

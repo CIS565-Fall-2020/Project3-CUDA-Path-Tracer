@@ -179,8 +179,6 @@ __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
 //  IMPLICIT SURFACES
 ////////////////////////////
 
-// Source of SDFs: https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-
 #define MAX_STEPS 1000
 #define CUTOFF 20.0f
 #define I_EPSILON 0.005f
@@ -197,10 +195,7 @@ __host__ __device__ float torusFunction(Geom surface, glm::vec3 p) {
     return -1.0f;
 }
 
-__host__ __device__ float tanglecubeFunction(Geom surface, glm::vec3 p) {
-    // First handle transformed point
-    // Assume uniform scaling
-
+__host__ __device__ float tanglecubeFunction(glm::vec3 p) {
     float x2 = p.x * p.x,
         y2 = p.y * p.y,
         z2 = p.z * p.z,
@@ -210,16 +205,45 @@ __host__ __device__ float tanglecubeFunction(Geom surface, glm::vec3 p) {
     return x4 - 5.f * x2 + y4 - 5.f * y2 + z4 - 5.f * z2 + 11.8f;
 }
 
-__host__ __device__ glm::vec3 tanglecubeNormal(Geom surface, glm::vec3 p) {
-    float nx = tanglecubeFunction(surface, glm::vec3(p.x + N_EPSILON, p.y, p.z))
-        - tanglecubeFunction(surface, glm::vec3(p.x - N_EPSILON, p.y, p.z));
-    float ny = tanglecubeFunction(surface, glm::vec3(p.x, p.y + N_EPSILON, p.z))
-        - tanglecubeFunction(surface, glm::vec3(p.x, p.y - N_EPSILON, p.z));
-    float nz = tanglecubeFunction(surface, glm::vec3(p.x, p.y, p.z + N_EPSILON))
-        - tanglecubeFunction(surface, glm::vec3(p.x, p.y, p.z - N_EPSILON));
+__host__ __device__ glm::vec3 tanglecubeNormal(glm::vec3 p) {
+    float nx = tanglecubeFunction(glm::vec3(p.x + N_EPSILON, p.y, p.z))
+             - tanglecubeFunction(glm::vec3(p.x - N_EPSILON, p.y, p.z));
+    float ny = tanglecubeFunction(glm::vec3(p.x, p.y + N_EPSILON, p.z))
+             - tanglecubeFunction(glm::vec3(p.x, p.y - N_EPSILON, p.z));
+    float nz = tanglecubeFunction(glm::vec3(p.x, p.y, p.z + N_EPSILON))
+             - tanglecubeFunction(glm::vec3(p.x, p.y, p.z - N_EPSILON));
     return glm::normalize(glm::vec3(nx, ny, nz));
 }
 
+// Source of SDFs: https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+__host__ __device__ float cappedConeSDF(glm::vec3 p, float h, float r1, float r2) {
+    glm::vec2 q = glm::vec2(glm::length(glm::vec2(p.x, p.z)), p.y);
+    glm::vec2 k1 = glm::vec2(r2, h);
+    glm::vec2 k2 = glm::vec2(r2 - r1, 2.0f * h);
+    glm::vec2 ca = glm::vec2(q.x - glm::min(q.x, (q.y < 0.f) ? r1 : r2), glm::abs(q.y) - h);
+    glm::vec2 cb = q - k1 + k2 * glm::clamp(glm::dot(k1 - q, k2) / glm::dot(k2, k2), 0.f, 1.f);
+    float s = (cb.x < 0.f && ca.y < 0.f) ? -1.f : 1.f;
+    return s * glm::sqrt(glm::min(glm::dot(ca, ca), glm::dot(cb, cb)));
+}
+
+__host__ __device__ float twistFunction(glm::vec3 p) {
+    const float k = 2.5f; // twist amount
+    float c = glm::cos(k * p.y);
+    float s = glm::sin(k * p.y);
+    glm::mat2 m = glm::mat2(c, -s, s, c);
+    glm::vec3 q = glm::vec3(m * glm::vec2(p.x, p.z), p.y);
+    return cappedConeSDF(q, 1.0, 1., 0.5);
+}
+
+__host__ __device__ glm::vec3 twistNormal(glm::vec3 p) {
+    float nx = twistFunction(glm::vec3(p.x + N_EPSILON, p.y, p.z))
+             - twistFunction(glm::vec3(p.x - N_EPSILON, p.y, p.z));
+    float ny = twistFunction(glm::vec3(p.x, p.y + N_EPSILON, p.z))
+             - twistFunction(glm::vec3(p.x, p.y - N_EPSILON, p.z));
+    float nz = twistFunction(glm::vec3(p.x, p.y, p.z + N_EPSILON))
+             - twistFunction(glm::vec3(p.x, p.y, p.z - N_EPSILON));
+    return glm::normalize(glm::vec3(nx, ny, nz));
+}
 
 __host__ __device__ float implicitSurfaceIntersectionTest(Geom surface, Ray r,
     glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
@@ -234,13 +258,22 @@ __host__ __device__ float implicitSurfaceIntersectionTest(Geom surface, Ray r,
         float dist = 1e38f;
         switch (surface.implicit.type) {
         case TANGLECUBE:
-            dist = scale * tanglecubeFunction(surface, localPoint / scale);
+            dist = scale * tanglecubeFunction(localPoint / scale);
+        case TWIST:
+            dist = scale * twistFunction(localPoint / scale);
         }
 
         if (dist < I_EPSILON) {
              t -= surface.implicit.shadowEpsilon;
              intersectionPoint = r.origin + t * r.direction;
-             normal = tanglecubeNormal(surface, localPoint / scale);
+             switch (surface.implicit.type) {
+             case TANGLECUBE:
+                 normal = tanglecubeNormal(localPoint / scale);
+                 break;
+             case TWIST:
+                 normal = twistNormal(localPoint / scale);
+                 break;
+             }
              return t;
          }
 

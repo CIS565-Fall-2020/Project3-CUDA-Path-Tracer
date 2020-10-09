@@ -163,10 +163,10 @@ int Scene::loadGeom(string objectid) {
             newGeom.implicit.sdf = false;
             newGeom.implicit.shadowEpsilon = 0.07f;
         }
-        else if (strcmp(line.c_str(), "torus") == 0) {
-            cout << "Creating new torus..." << endl;
+        else if (strcmp(line.c_str(), "twist") == 0) {
+            cout << "Creating new twist..." << endl;
             newGeom.type = IMPLICIT;
-            newGeom.implicit.type = TORUS;
+            newGeom.implicit.type = TWIST;
             newGeom.implicit.sdf = true;
             newGeom.implicit.shadowEpsilon = 0.01f;
         }
@@ -359,7 +359,7 @@ int Scene::loadCamera() {
     return 1;
 }
 
-#define numProperties 8
+#define numProperties 9
 
 int Scene::loadMaterial(string materialid) {
     int id = atoi(materialid.c_str());
@@ -393,6 +393,8 @@ int Scene::loadMaterial(string materialid) {
                 newMaterial.indexOfRefraction = atof(tokens[1].c_str());
             } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
                 newMaterial.emittance = atof(tokens[1].c_str());
+            } else if (strcmp(tokens[0].c_str(), "PROCEDTEXT") == 0) {
+                newMaterial.proceduralTexture = atoi(tokens[1].c_str());
             }
         }
         materials.push_back(newMaterial);

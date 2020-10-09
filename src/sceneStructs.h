@@ -16,7 +16,7 @@ enum GeomType {
 
 enum ImplicitGeomType {
     TANGLECUBE,
-    TORUS
+    TWIST
 };
 
 struct Ray {
@@ -66,6 +66,7 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    int   proceduralTexture;
 };
 
 struct Camera {

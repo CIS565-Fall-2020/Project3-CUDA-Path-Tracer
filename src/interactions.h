@@ -1,6 +1,7 @@
 #pragma once
 
 #include "intersections.h"
+#include "textures.h"
 
 // CHECKITOUT
 /**
@@ -106,6 +107,26 @@ glm::vec3 calculateSampleDirectionInHemisphere(glm::vec3 normal, glm::vec2 sampl
 
 }
 
+__host__ __device__ bool handleProceduralTextures(PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m) {
+    switch (m.proceduralTexture) {
+    case 1:
+        pathSegment.color *= proceduralTexture1(pathSegment, intersect, normal);
+        return true;
+    case 2:
+        pathSegment.color *= proceduralTexture2(pathSegment, intersect, normal);
+        return true;
+    case 3:
+        pathSegment.color *= proceduralTexture3(pathSegment, intersect, normal);
+        return true;
+    case 0:
+    default:
+        return false;
+    }
+}
+
 __host__ __device__ void calculateDiffuse(PathSegment& pathSegment,
     glm::vec3 intersect,
     glm::vec3 normal,
@@ -121,7 +142,9 @@ __host__ __device__ void calculateDiffuse(PathSegment& pathSegment,
     #endif
     r.origin = intersect + 0.0001f * normal;
     r.direction = hemiDir;
-    pathSegment.color *= m.color;
+    if (!handleProceduralTextures(pathSegment, intersect, normal, m)) {
+        pathSegment.color *= m.color;
+    }
 }
 
 __host__ __device__ void calculateReflect(PathSegment& pathSegment,
@@ -138,10 +161,12 @@ __host__ __device__ void calculateReflect(PathSegment& pathSegment,
     r.origin = intersect + 0.0001f * normal;
     r.direction = reflectedDir;
 
-    if (m.specular.exponent > 0) {
-        glm::vec3 specularColor = m.specular.color;
-        r.direction = reflectedDir;
-        pathSegment.color *= specularColor;
+    if (!handleProceduralTextures(pathSegment, intersect, normal, m)) {
+        if (m.specular.exponent > 0) {
+            glm::vec3 specularColor = m.specular.color;
+            r.direction = reflectedDir;
+            pathSegment.color *= specularColor;
+        }
     }
 }
 
@@ -170,6 +195,8 @@ __host__ __device__ void calculateRefract(PathSegment& pathSegment,
     else {
         r.direction = refractedDir;
     }
+
+    handleProceduralTextures(pathSegment, intersect, normal, m);
 }
 __host__ __device__ void calculateGlass(PathSegment& pathSegment,
     glm::vec3 intersect,
@@ -208,6 +235,8 @@ __host__ __device__ void calculateGlass(PathSegment& pathSegment,
     else {
         r.direction = refractedDir;
     }
+
+    handleProceduralTextures(pathSegment, intersect, normal, m);
 }
 
 /**
