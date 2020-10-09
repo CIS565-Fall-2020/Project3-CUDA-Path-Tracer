@@ -10,7 +10,7 @@ EMITTANCE   5
 
 // Diffuse white
 MATERIAL 1
-RGB         .98 .98 .98
+RGB         .98 0.98 0.98
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -56,6 +56,26 @@ SPECRGB     .98 .98 .98
 REFL        1
 REFR        1
 REFRIOR     1.5
+EMITTANCE   0
+
+// Glass
+MATERIAL 6
+RGB         .98 .98 .98
+SPECEX      0.2
+SPECRGB     .98 .98 .98
+REFL        1
+REFR        1
+REFRIOR     2
+EMITTANCE   0
+
+// Glass
+MATERIAL 7
+RGB         .98 .98 .98
+SPECEX      0.2
+SPECRGB     .98 .98 .98
+REFL        1
+REFR        1
+REFRIOR     2.5
 EMITTANCE   0
 
 // Camera
@@ -118,11 +138,43 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Object
+// Sphere
 OBJECT 6
+sphere
+material 5
+TRANS       -3 4 -1
+ROTAT       0 0 0
+SCALE       3 3 3
+
+// Sphere
+OBJECT 7
+sphere
+material 5
+TRANS       0 4 -1
+ROTAT       0 0 0
+SCALE       2 2 2
+
+// Sphere
+OBJECT 8
 mesh
-../scenes/wahoo.obj
+../scenes/sphere.obj
 material 1
-TRANS       0 2 -1
+TRANS       3 4 -1
+ROTAT       0 0 0
+SCALE       4 4 4
+
+// Cube
+OBJECT 9
+cube
+material 2
+TRANS       3 4 -1
+ROTAT       0 0 0
+SCALE       1 1 1
+
+// Cube
+OBJECT 10
+cube
+material 3
+TRANS       -3 4 -1
 ROTAT       0 0 0
 SCALE       1 1 1

@@ -41,6 +41,8 @@ void checkCUDAErrorFn(const char *msg, const char *file, int line) {
 #define SORTMATERIAL 0
 #define CACHE 0
 #define ANTIALISING 1
+#define DEPTH_OF_FIELD 1
+
 __host__ __device__
 thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int depth) {
     int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
@@ -77,6 +79,9 @@ static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
 static Triangle * dev_tris = NULL;
+static int num_samples = 9;
+static float lens_r = 0.4f;
+static float f = 10.f;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 #if CACHE
@@ -372,6 +377,51 @@ struct sort_material {
         return intersect1.materialId > intersect2.materialId;
     }
 };
+
+__host__ __device__ glm::vec2 concentricSampleDisk(glm::vec2 u) {
+    glm::vec2 uOffset = 2.f * u - glm::vec2(1.f);
+    if (uOffset.x == 0 && uOffset.y == 0) {
+        return glm::vec2(0.f);
+    }
+    float theta, r;
+    float PiOver4 = PI / 4.f;
+    float PiOver2 = PI / 2.f;
+    if (std::abs(uOffset.x) > std::abs(uOffset.y)) {
+        r = uOffset.x;
+        theta = PiOver4 * (uOffset.y / uOffset.x);
+    }
+    else {
+        r = uOffset.y;
+        theta = PiOver2 - PiOver4 * (uOffset.x / uOffset.y);
+    }
+    return r * glm::vec2(std::cos(theta), std::sin(theta));
+        
+}
+
+__global__ void updateRayForDepth(Camera cam, float f, float lens_r, PathSegment* pathSegments, int iter)
+{
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    if (x >= cam.resolution.x && y >= cam.resolution.y) {
+        return;
+    }
+    int index = x + (y * cam.resolution.x);
+    if (lens_r > 0.f) {
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
+        thrust::uniform_real_distribution<float> u01(-1, 1);
+
+        float rand_x = u01(rng);
+        float rand_y = u01(rng);
+        glm::vec2 pLens = lens_r * concentricSampleDisk(glm::vec2(rand_x, rand_y));
+        
+        float ft = glm::abs(f / pathSegments[index].ray.direction.z);
+        glm::vec3 pFocus = ft * pathSegments[index].ray.direction + pathSegments[index].ray.origin;
+
+        pathSegments[index].ray.origin += glm::vec3(pLens.x, pLens.y, 0);
+        pathSegments[index].ray.direction = glm::normalize(pFocus - pathSegments[index].ray.origin);
+    }
+    
+}
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
@@ -425,6 +475,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 	generateRayFromCamera <<<blocksPerGrid2d, blockSize2d >>>(cam, iter, traceDepth, dev_paths);
 	checkCUDAError("generate camera ray");
+#if DEPTH_OF_FIELD
+    updateRayForDepth << <blocksPerGrid2d, blockSize2d >> > (cam, f, lens_r, dev_paths, iter);
+    checkCUDAError("depth of field");
+#endif
 	int depth = 0;
     int ctr = 0;
 	PathSegment* dev_path_end = dev_paths + pixelcount;
@@ -500,14 +554,14 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 #if SORTMATERIAL
         thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections+num_paths, dev_paths, sort_material());
 #endif
-        shadeBSDF<<<numblocksPathSegmentTracing, blockSize1d>>> (
+
+        shadeBSDF << <numblocksPathSegmentTracing, blockSize1d >> > (
             iter,
             num_paths,
             dev_intersections,
             dev_paths,
             dev_materials
         );
-
         dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_path_end, bounce_end());
         if (dev_path_end == dev_paths) {
             iterationComplete = true;

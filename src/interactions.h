@@ -4,6 +4,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtx/norm.hpp"
 #include<iostream>
+#define BETTER_SAMPLING 0
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -13,11 +14,44 @@ __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-
+    int num_samples_squared = 10;
+#if BETTER_SAMPLING
+    float side_len = 1.f / (float)num_samples_squared;
+    int idx = (int)(u01(rng) * num_samples_squared * num_samples_squared);
+    int i = idx / num_samples_squared;
+    int j = idx % num_samples_squared;
+    float center_x = i * side_len + u01(rng) * side_len;
+    float center_y = j * side_len + u01(rng) * side_len;
+    float up = sqrt(center_x); // cos(theta)
+    float over = sqrt(1 - up * up); // sin(theta)
+    float around = (center_y)*TWO_PI;
+    /*
+    // shirley mapping, creates darker images
+    float s;
+    float t;
+    float s_prime;
+    float t_prime;
+    if (s < 0.5f) {
+        s_prime = -0.5f + sqrt(2.f * s);
+}
+    else {
+        s_prime = 1.5f - sqrt(2.f - 2.f * s);
+    }
+    if (t < 0.5f) {
+        t_prime = -0.5f + sqrt(2.f * t);
+    }
+    else {
+        t_prime = 1.5f - sqrt(2.f - 2.f * t);
+    }
+    float up = sqrt(s_prime); // cos(theta)
+    float over = sqrt(1 - up * up); // sin(theta)
+    float around = (t_prime) * TWO_PI;
+    */
+#else
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
-
+#endif
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
     // least one component is less than sqrt(1/3). Learned this trick from

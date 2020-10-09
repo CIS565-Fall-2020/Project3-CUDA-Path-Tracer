@@ -36,6 +36,8 @@ struct Geom {
     glm::mat4 invTranspose;
     int startidx;
     int endidx;
+    glm::vec3 min_coord;
+    glm::vec3 max_coord;
 };
 
 struct Material {

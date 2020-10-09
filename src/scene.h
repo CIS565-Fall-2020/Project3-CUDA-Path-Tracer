@@ -15,7 +15,7 @@ private:
     int loadMaterial(string materialid);
     int loadGeom(string objectid);
     int loadCamera();
-    int loadOBJ(string line);
+    int loadOBJ(string line, glm::vec3& min_coord, glm::vec3& max_coord);
 public:
     Scene(string filename);
     ~Scene();

@@ -6,6 +6,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#define BOUNDING_BOX 1
+
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
@@ -34,7 +36,7 @@ Scene::Scene(string filename) {
     }
 }
 
-int Scene::loadOBJ(string line) {
+int Scene::loadOBJ(string line, glm::vec3& min_coord, glm::vec3& max_coord) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -72,13 +74,21 @@ int Scene::loadOBJ(string line) {
                 tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
                 tri.verts[v] = glm::vec3(vx, vy, vz);
                 tri.normal[v] = glm::vec3(nx, ny, nz);
+#if BOUNDING_BOX
+                min_coord[0] = fmin(min_coord[0], vx);
+                min_coord[1] = fmin(min_coord[1], vy);
+                min_coord[2] = fmin(min_coord[2], vz);
+                max_coord[0] = fmax(max_coord[0], vx);
+                max_coord[1] = fmax(max_coord[1], vy);
+                max_coord[2] = fmax(max_coord[2], vz);
+#endif
             }
             //tri.normal = glm::normalize(glm::cross(tri.verts[0] - tri.verts[1], tri.verts[0] - tri.verts[2]));
             tris.push_back(tri);
             index_offset += fv;
 
             // per-face material
-            shapes[s].mesh.material_ids[f];
+            //shapes[s].mesh.material_ids[f];
         }
     }
     std::cout << "part finished" << std::endl;
@@ -111,7 +121,9 @@ int Scene::loadGeom(string objectid) {
                 newGeom.type = MESH;
                 newGeom.startidx = tris.size();
                 utilityCore::safeGetline(fp_in, line);
-                Scene::loadOBJ(line);
+                newGeom.min_coord = glm::vec3(FLT_MAX);
+                newGeom.max_coord = glm::vec3(FLT_MIN);
+                Scene::loadOBJ(line, newGeom.min_coord, newGeom.max_coord);
                 newGeom.endidx = tris.size();
             }
         }
