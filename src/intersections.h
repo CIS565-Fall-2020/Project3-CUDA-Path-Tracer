@@ -224,3 +224,115 @@ __host__ __device__ float triangleIntersectionTest(Geom geom, Triangle *triangle
 
     return tMin;
 }
+
+
+
+// Find intersection of mesh bounding box and ray
+__host__ __device__ float AABBIntersectionTest(Geom geom, Ray r, glm::vec3 &v1, glm::vec3 &v2) {
+    Ray q;
+    q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float tmin = -1e38f;
+    float tmax = 1e38f;
+    glm::vec3 tmin_n;
+    glm::vec3 tmax_n;
+    for (int xyz = 0; xyz < 3; ++xyz) {
+        float qdxyz = q.direction[xyz];
+        /*if (glm::abs(qdxyz) > 0.00001f)*/ {
+            float t1 = (v1[xyz] - q.origin[xyz]) / qdxyz;
+            float t2 = (v2[xyz] - q.origin[xyz]) / qdxyz;
+            float ta = glm::min(t1, t2);
+            float tb = glm::max(t1, t2);
+            glm::vec3 n;
+            n[xyz] = t2 < t1 ? +1 : -1;
+            if (ta > 0 && ta > tmin) {
+                tmin = ta;
+                tmin_n = n;
+            }
+            if (tb < tmax) {
+                tmax = tb;
+                tmax_n = n;
+            }
+        }
+    }
+
+    if (tmax >= tmin && tmax > 0) {
+
+        return tmin;
+    }
+    return -1;
+}
+
+__host__ __device__
+float find(Geom geom, Triangle* triangles, OctreeNode * octreeNodes, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside, int n) {
+    Ray q;
+    q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float t_min = -1;
+    int i_min = -1;
+    
+    for (int i = 0; i < n; i++) {
+        OctreeNode &oc = octreeNodes[i];
+        glm::vec3 v1 = oc.bboxMin;
+        glm::vec3 v2 = oc.bboxMax;
+        
+        if (oc.triangleIdx > 0) {
+            float ss = 01;
+        }
+        // If there is no intersection of the ray and AABB
+        if (oc.triangleIdx == -2 &&  AABBIntersectionTest(geom, r, oc.bboxMin, oc.bboxMax) == -1) {
+            continue;
+        }
+        // This is an internal node
+        // Skip to find its children
+        if (oc.triangleIdx == -2) {
+            i = oc.childStartIndex - 1;
+            continue;
+
+        }
+        // This is a leaf empty node
+        if (oc.triangleIdx == -1) {
+            continue;
+        }
+
+        //if (oc.triangleIdx < 0) continue;
+        // This is a leaf node, check intersection
+        glm::vec3 baryPosition;
+        Triangle& tri = triangles[oc.triangleIdx];
+        bool isIntersect = glm::intersectRayTriangle(q.origin, q.direction, tri.vert[0], tri.vert[1], tri.vert[2], baryPosition);
+        if (!isIntersect) {
+            continue;
+        }
+        float t = baryPosition.z;
+        if (t_min == -1 || (t > 0 && t < t_min)) {
+            i_min = oc.triangleIdx;
+            t_min = t;
+        }
+        break;
+    }
+
+    intersectionPoint = multiplyMV(geom.transform, glm::vec4(getPointOnRay(q, t_min), 1.0f));
+    normal = glm::normalize(multiplyMV(geom.transform, glm::vec4(triangles[i_min].nor, 0.0f)));
+    if (glm::dot(normal, r.direction) < 0) {
+        outside = true;
+    }
+    else {
+        outside = false;
+    }
+
+    return t_min;
+
+}
+
+__host__ __device__
+float octreeIntersectionTest(Geom geom, Triangle* triangles, OctreeNode* octrees, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside, int numObjects) {
+    float t = -1;
+    //glm::vec3 ss(mesh.children[0]->bottomRightBack);
+    //return (AABBIntersectionTest(geom, r, mesh->children[1]->topLeftFront, mesh->children[1]->bottomRightBack));
+
+    return find(geom, triangles,octrees, r, intersectionPoint, normal, outside, numObjects);
+}

@@ -10,8 +10,6 @@
 #include "octree.h"
 
 
-
-
 using namespace std;
 
 
@@ -22,6 +20,9 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
     int loadGeomFromGLTF(string filename);
+    void Scene::flatten(Octree* &o);
+
+    void printOctreeFlatten();
 public:
     Scene(string filename);
     ~Scene();
@@ -29,6 +30,6 @@ public:
     std::vector<Geom> geoms;
     std::vector<Material> materials;
     std::vector<Triangle> triangles; // store all the triangles in ths scene
-    std::vector<Octree> octrees; // Use octree to store mesh
+    std::vector<OctreeNode> octrees; // Use octree to store mesh
     RenderState state;
 };

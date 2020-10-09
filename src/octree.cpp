@@ -23,8 +23,12 @@ Octree::Octree(float x1, float y1, float z1, float x2, float y2, float z2)
 
     curTri = nullptr;
 	for (int i = 0; i < 8; i++) {
-		children[i] = new Octree();
+        children[i] = nullptr;
 	}
+
+    for (int i = TopLeftFront; i <= BottomLeftBack; ++i) {
+        children[i] = new Octree();
+    }
 }
 
 void Octree::insert(int Idx, const glm::vec3 &vert1, const glm::vec3& vert2, const glm::vec3& vert3)
@@ -83,6 +87,7 @@ void Octree::insert(int Idx, const glm::vec3 &vert1, const glm::vec3& vert2, con
     if (children[pos]->curTri->idx == -1) {
         delete children[pos];
         children[pos] = new Octree(Idx, vert1, vert2, vert3);
+        return;
     }
     else {
         glm::vec3 vert1_ = children[pos]->curTri->vert[0];
@@ -91,7 +96,8 @@ void Octree::insert(int Idx, const glm::vec3 &vert1, const glm::vec3& vert2, con
         int idx_ = children[pos]->curTri->idx;
 
         delete children[pos];
-        
+        children[pos] = nullptr;
+
         if (pos == TopLeftFront) {
             children[pos] = new Octree(topLeftFront.x,
                 topLeftFront.y,
@@ -110,7 +116,7 @@ void Octree::insert(int Idx, const glm::vec3 &vert1, const glm::vec3& vert2, con
                 midz);
         }
         else if (pos == BottomRightFront) {
-            children[pos] = new Octree(midx + 1,
+            children[pos] = new Octree(midx + EPSILON,
                 midy + EPSILON,
                 topLeftFront.z,
                 bottomRightBack.x,
@@ -161,3 +167,28 @@ void Octree::insert(int Idx, const glm::vec3 &vert1, const glm::vec3& vert2, con
         children[pos]->insert(Idx, vert1, vert2, vert3);
     }
 }
+
+void helper(Octree* o, glm::vec3& v, int &res) {
+    if (o->curTri != nullptr && o->curTri->idx == -1) {
+        return;
+    }
+
+    if (o->curTri != nullptr) {
+        if (o->curTri->vert[0] == v || o->curTri->vert[1] == v || o->curTri->vert[2] == v) {
+            res = o->curTri->idx;
+        }
+        return;
+    }
+
+    for (int i = 0; i < 8; i++) {
+        helper(o->children[i], v, res);
+    }
+}
+int Octree::find(glm::vec3& v, int &res)
+{
+
+    helper(this, v, res);
+    return -1;
+}
+
+

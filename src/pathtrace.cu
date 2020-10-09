@@ -20,6 +20,7 @@
 #define SORTBYMATERIAL 0
 #define CACHE 1
 #define DOF 0
+#define OCTREE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -83,6 +84,7 @@ static ShadeableIntersection * dev_intersections = NULL;
 static PathSegment* dev_paths_cache = NULL;
 static ShadeableIntersection* dev_intersections_cache = NULL;
 static Triangle* dev_triangles = NULL;
+static OctreeNode* dev_octrees = NULL;
 
 
 
@@ -114,6 +116,9 @@ void pathtraceInit(Scene *scene) {
     cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
     cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
 
+    cudaMalloc(&dev_octrees, scene->octrees.size() * sizeof(OctreeNode));
+    cudaMemcpy(dev_octrees, scene->octrees.data(), scene->octrees.size() * sizeof(OctreeNode), cudaMemcpyHostToDevice);
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -125,6 +130,8 @@ void pathtraceFree() {
   	cudaFree(dev_intersections);
     // TODO: clean up any extra device memory you created
     cudaFree(dev_triangles);
+    cudaFree(dev_octrees);
+
     checkCUDAError("pathtraceFree");
 }
 
@@ -187,7 +194,9 @@ __global__ void computeIntersections(
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections,
-    Triangle* triangles
+    Triangle* triangles,
+    OctreeNode* octrees,
+    int numOctreeNodes
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -222,16 +231,22 @@ __global__ void computeIntersections(
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
             else if (geom.type == MESH) {
+
                 // Check bbox
                 t = meshBboxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
-                
+
                 if (t != -1) {
-                   // for (int i = geom.startTriangleIndex; i <= geom.endTriangleIndex; ++i) {
-                       // Triangle &tri = triangles[2];
-                        t = triangleIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                    // for (int i = geom.startTriangleIndex; i <= geom.endTriangleIndex; ++i) {
+                        // Triangle &tri = triangles[2];
+#if OCTREE
+
+                    t = octreeIntersectionTest(geom, triangles, octrees, pathSegment.ray, tmp_intersect, tmp_normal, outside, numOctreeNodes);
+#else
+                    t = triangleIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+#endif
+
                     //}
-                 }
-                
+                }
                 
             }
 			// Compute the minimum t from the intersection tests to determine what
@@ -377,6 +392,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
+    int num_octreeNodes = hst_scene->octrees.size();
     float lensRadius = 0.01;
     float focalDistance = 8;
     printf("\n\niter: %d   \n", iter);
@@ -450,8 +466,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             , hst_scene->geoms.size()
             , dev_intersections
             , dev_triangles
+            , dev_octrees
+            , num_octreeNodes
             );
-        checkCUDAError("trace one bounce");
+        checkCUDAError("octree failure");
         cudaDeviceSynchronize();
         //cudaMemcpy(dev_paths_cache, dev_paths, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
         cudaMemcpy(dev_intersections_cache, dev_intersections, num_paths * sizeof(ShadeableIntersection), cudaMemcpyDeviceToDevice);
@@ -469,8 +487,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             , hst_scene->geoms.size()
             , dev_intersections
             , dev_triangles
+            , dev_octrees
+            , num_octreeNodes
             );
-        checkCUDAError("trace one bounce");
+        checkCUDAError("octree failure");
         cudaDeviceSynchronize();
     }
 #else

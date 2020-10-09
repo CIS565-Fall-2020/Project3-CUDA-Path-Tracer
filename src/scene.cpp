@@ -196,13 +196,22 @@ int Scene::loadGeomFromGLTF(string objectid) {
             utilityCore::safeGetline(fp_in, line);
         }
 
-        Octree mesh_tree(newGeom.bboxMin.x, newGeom.bboxMin.y, newGeom.bboxMin.z,
+        Octree* mesh_tree = new Octree(newGeom.bboxMin.x, newGeom.bboxMin.y, newGeom.bboxMin.z,
             newGeom.bboxMax.x, newGeom.bboxMax.y, newGeom.bboxMax.z);
-        for (int i = 0; i < triangles.size(); i++) {
+        for (int i = 0; i < 12; i++) {
             Triangle& tri = triangles[i];
-            mesh_tree.insert(i, tri.vert[0], tri.vert[1], tri.vert[2]);
+            tri.idx = i;
+            mesh_tree->insert(i, tri.vert[0], tri.vert[1], tri.vert[2]);
 
         }
+
+        // BFS to put all octree nodes into the vector
+
+        //int index;
+        //mesh_tree->find(glm::vec3(0.0f, 2.0f, 2.0f), index);
+        flatten(mesh_tree);
+        //glm::vec3 ss = mesh_tree.children[0]->bottomRightBack;
+        printOctreeFlatten();
         newGeom.endTriangleIndex = triangles.size() - 1;
 
         newGeom.transform = utilityCore::buildTransformationMatrix(
@@ -367,6 +376,57 @@ int Scene::loadMaterial(string materialid) {
         }
         materials.push_back(newMaterial);
         return 1;
+    }
+}
+
+// Use BFS to flatten octree
+void Scene::flatten(Octree * &o)
+{
+    int idx = 0;
+    int count = 1;
+    std::queue<Octree*> q;
+
+    q.push(o);
+
+    while (!q.empty()) {
+        Octree* cur = q.front();
+        q.pop();
+        int triIndex = -2; // means this is a internal node
+        if (cur->curTri != nullptr) {
+            triIndex = cur->curTri->idx;
+        }
+        OctreeNode node(idx++, cur->topLeftFront, cur->bottomRightBack, triIndex);
+
+        octrees.push_back(node);
+        cout << node.idx << endl;
+        if (cur->curTri != nullptr) {
+            // Leaf node
+            continue;
+        }
+        cur->children[0]->parentIndexInFlattenArr = octrees.size() - 1;
+        // internal node
+        for (int i = 0; i < 8; i++) {
+            if (i == 0) {
+                octrees[cur->children[i]->parentIndexInFlattenArr].childStartIndex = count;
+            }
+            count++;
+            q.push(cur->children[i]);
+        }
+    }
+}
+
+void Scene::printOctreeFlatten()
+{
+    for (OctreeNode n : octrees) {
+        printf("idx: %d   triangleIdx: %d  child: %d\n", n.idx, n.triangleIdx, n.childStartIndex);
+        printf("min: % f %f %f\n", n.bboxMin.x, n.bboxMin.y, n.bboxMin.z);
+        printf("max: % f %f %f\n", n.bboxMax.x, n.bboxMax.y, n.bboxMax.z);
+
+        if (n.triangleIdx >= 0) {
+            printf("vert1: %f %f %f\n", triangles[n.triangleIdx].vert[0].x, triangles[n.triangleIdx].vert[0].y, triangles[n.triangleIdx].vert[0].z);
+            printf("vert2: %f %f %f\n", triangles[n.triangleIdx].vert[1].x, triangles[n.triangleIdx].vert[1].y, triangles[n.triangleIdx].vert[1].z);
+            printf("vert3: %f %f %f\n", triangles[n.triangleIdx].vert[2].x, triangles[n.triangleIdx].vert[2].y, triangles[n.triangleIdx].vert[2].z);
+        }
     }
 }
 

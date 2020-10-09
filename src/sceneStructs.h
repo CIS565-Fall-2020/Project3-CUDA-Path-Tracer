@@ -25,7 +25,17 @@ struct Triangle {
 public:
     Triangle() : idx(-1) {}
     Triangle(int index) : idx(index) {}
+};
 
+struct OctreeNode {
+    int idx;
+    glm::vec3 bboxMin;
+    glm::vec3 bboxMax;
+    int triangleIdx;
+    int childStartIndex;
+    OctreeNode(int index, glm::vec3 minV, glm::vec3 maxV, int triangleIdx) : 
+        idx(index), bboxMin(minV), bboxMax(maxV), triangleIdx(triangleIdx)
+    {}
 };
 
 struct Geom {
@@ -41,6 +51,9 @@ struct Geom {
     int endTriangleIndex;
     glm::vec3 bboxMin;
     glm::vec3 bboxMax;
+
+    int startOctreeIndex;
+    int endOctreeIndex;
     //Triangle* triangles;
 };
 
