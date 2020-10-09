@@ -28,7 +28,10 @@ Scene::Scene(string filename) {
                 std::cout << " " << endl;
             }
             else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
-                loadGeom(tokens[1]);
+                if (loadGeom(tokens[1]) < 0) {
+                  std::cout << "Load Object " << tokens[1] << " failed" << endl;  
+                  throw;
+                }
                 std::cout << " " << endl;
             }
             else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
@@ -91,6 +94,22 @@ int Scene::loadGeom(std::string objectid) {
                 newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                auto &tris = meshes[newGeom.meshIdx];
+                if (newGeom.type == MESH) {
+                   newGeom.min_bound = tris[0].v[0];
+                   newGeom.max_bound = tris[0].v[0];
+                   for (Triangle& tri : tris) {
+                     for (int i = 0; i < 3; i++) {
+                       tri.v[i].x *= newGeom.scale[0];
+                       tri.v[i].y *= newGeom.scale[1];
+                       tri.v[i].z *= newGeom.scale[2];
+                       newGeom.min_bound = glm::min(newGeom.min_bound, tri.v[i]);
+                       newGeom.max_bound = glm::max(newGeom.max_bound, tri.v[i]);
+                     }
+                   }
+                   // Reset geometry scale to 1.0
+                   newGeom.scale = glm::vec3(1.0f);
+                }
             }
 
             utilityCore::safeGetline(fp_in, line);
@@ -117,6 +136,7 @@ int Scene::loadMesh(string filename) {
 
    // load obj
    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
+     std::cout << "tinyobj load " << filename << " failed " << std::endl;
      return -1;
    }
 
