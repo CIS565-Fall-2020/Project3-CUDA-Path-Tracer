@@ -8,19 +8,21 @@ CUDA Path Tracer
 
 ### Part 2
 ### Refraction
+Refraction rendering with Frensel effects using Schlick's approximation
 
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/refract.png" width=300/>
 
 ### Depth of Field
+From left to right: focus on foreground, focus on background
 
 <nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/dof_close.png" width=300/>
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/dof_far.png" width=300/></nobr>
 
-### Antialiasing
+### Stochastic Sampled Antialiasing
 
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/antialiasing.png" width=300/>
 
-### Arbitrary Mesh Loader
+### Arbitrary OBJ Mesh Loader
 
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/wahoo.png" width=300/>
 Performance comparison regarding bounding volume interseciton culling (measured in time per iteration):
@@ -30,6 +32,8 @@ Performance comparison regarding bounding volume interseciton culling (measured 
 | Sphere   | 98.122 | 129.479 |
 | Wahoo    | 1068.55 | 1453.84 |
 | Stanford Bunny | 11970.6 | 22964.9 |
+
+We observe that such optimization reduces the run time per iteration consistenly across different obj files, specifically, the more vertices an obj file has, we observe more significant improvement using bounding volume intersection culling.
 
 ### Stratified Sampling
 
@@ -42,11 +46,11 @@ Performance comparison regarding bounding volume interseciton culling (measured 
 <nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/strat_100iter_10x10.png" width=300/><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/ref_100iter_10x10.png" width=300/></nobr>
 
 ### Motion Blur
-1) Defined motion
+1) Defined motion in scene file
 
 <nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/defined_motion1.png" width=300/><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/defined_motion2.png" width=300/></nobr>
 
-2) Real time camera motion
+2) User input camera motion (user drag the camera while rendering)
 
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/real_time_motion.png" width=300/>
 
