@@ -54,10 +54,12 @@ Table of contents
 ![](img/renders/star2500Samples.png)
 
 ## Procedural Shapes
+| Box Border Signed Distance Function | Sphere with Displacement Signed Distance Function |
 | ------------- | ----------- |
 | ![](img/renders/sdf1.png)  | ![](img/renders/sdf2.png) |
 
 ## Procedural Textures
+| Based on Intersect Position | Based on Normal |
 | ------------- | ----------- |
 | ![](img/renders/proceduralTexture2.png)  | ![](img/renders/proceduralTexture1.png) |
 
