@@ -6,8 +6,34 @@ CUDA Path Tracer
 * Weiyu Du
 * Tested on: CETS Virtual Lab
 
+### Part 2
+### Refraction
+<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/refract.png" width=300/>
+
+### Depth of Field
+<nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/dof_close.png" width=300/>
+<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/dof_far.png" width=300/></nobr>
+
+### Antialiasing
+<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/antialiasing.png" width=300/>
+
+### Stratified Sampling
+1) Comparison of stratified sampling (10x10 grid, left) and uniform random sampling (right) at 5000 iterations
+<nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/strat_5000.png" width=300/><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/ref_5000.png" width=300/></nobr>
+
+2) Comparison of stratified sampling (10x10 grid, left) and uniform random sampling (right) at 100 iterations
+<nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/strat_100iter_10x10.png" width=300/><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/ref_100iter_10x10.png" width=300/></nobr>
+
+### Motion Blur
+1) Defined motion
+<nobr><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/defined_motion1.png" width=300/><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/defined_motion2.png" width=300/></nobr>
+
+2) Real time camera motion
+<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/real_time_motion.png" width=300/>
+
+### Part 1
 ### Render Result
-<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/mid-project-submission/img/render_res.png" width=600/>
+<img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/mid-project-submission/img/render_res.png" width=300/>
 
 ### Analysis
 1) Plot of elapsed time per iteration versus max ray depth (timed when sorting_material set to true)
