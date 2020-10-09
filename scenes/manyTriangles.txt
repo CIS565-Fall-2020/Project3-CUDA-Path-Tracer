@@ -126,7 +126,7 @@ TRANS       2 7 2
 ROTAT       0 0 0
 SCALE       3 3 3
 
-// Mesh
+// Mesh 1
 OBJECT 7
 mesh
 material 1
@@ -135,7 +135,7 @@ TRANS     0 3 -1.3
 ROTAT      0 0 0
 SCALE      1 1 1
 
-// Mesh
+// Mesh 2
 OBJECT 8
 mesh
 material 1
@@ -144,7 +144,7 @@ TRANS     -2 5 -1.3
 ROTAT      0 0 0
 SCALE      0.2 0.2 0.2
 
-// Mesh
+// Mesh 3
 OBJECT 9
 mesh
 material 1
@@ -153,11 +153,20 @@ TRANS     3 7 1.3
 ROTAT      0 0 0
 SCALE      0.2 0.2 0.2
 
-// Mesh
+// Mesh 4
 OBJECT 10
 mesh
 material 1
 gltf     "../scenes/pumpkin.gltf"
 TRANS     -3 0 2.5
+ROTAT      0 0 0
+SCALE      0.2 0.2 0.2
+
+// Mesh 5
+OBJECT 11
+mesh
+material 1
+gltf     "../scenes/pumpkin.gltf"
+TRANS     -1 8 1.5
 ROTAT      0 0 0
 SCALE      0.2 0.2 0.2

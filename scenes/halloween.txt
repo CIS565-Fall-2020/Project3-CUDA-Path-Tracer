@@ -1,6 +1,6 @@
-// Emissive material (light)
+// Yellow Light
 MATERIAL 0
-RGB         0.7 0.7 0
+RGB         0.8 0.8 0.2
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -78,6 +78,16 @@ REFR        0
 REFRIOR     0
 EMITTANCE   5
 
+// Purple diffuse
+MATERIAL 8
+RGB         0.98 0.1 0.98
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
 // Camera
 CAMERA
 RES         800 800
@@ -89,15 +99,13 @@ EYE         0.0 5 10.5
 LOOKAT      0 5 0
 UP          0 1 0
 
-// Mesh
+// Right wall
 OBJECT 0
-mesh
-material 1
-gltf     "../scenes/Cube.gltf"
-TRANS     -1.2 1.1 -1.3
-ROTAT      0 0 0
-SCALE      1 1 1
-
+cube
+material 3
+TRANS       5 5 0
+ROTAT       0 0 0
+SCALE       .01 10 10
 
 // Floor
 OBJECT 1
@@ -131,48 +139,72 @@ TRANS       -5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Right wall
+// Ceiling light
 OBJECT 5
 cube
-material 3
-TRANS       5 5 0
+material 0
+TRANS       0 10 0
 ROTAT       0 0 0
-SCALE       .01 10 10
+SCALE       3 .3 3
 
 // Big Sphere Mirror
 OBJECT 6
 sphere
 material 5
-TRANS       2 7 -2
+TRANS       -3.4 5 -3.4
 ROTAT       0 0 0
 SCALE       3 3 3
 
-// Tiny ball
+// Mesh
 OBJECT 7
-sphere
-material 0
-TRANS       -1.3 2.125 -1.1
-ROTAT       0 0 0
-SCALE       .25 .25 .25
+mesh
+material 1
+gltf     "../scenes/pumpkin.gltf"
+TRANS     0 1 0.5
+ROTAT      0 150 0
+SCALE      1 1 1
 
+// Inner Light
 OBJECT 8
 sphere
-material 6
-TRANS       -2 7 -2
+material 7
+TRANS       1.5 1.5 -2.4
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       2.2 2.2 2.2
 
 OBJECT 9
 sphere
-material 7
-TRANS       2 4 -3
+material 4
+TRANS       -2.8 0.75 2
 ROTAT       0 0 0
-SCALE       2 2 2
+SCALE       1.5 1.5 1.5
 
-// Tiny ball
 OBJECT 10
-sphere
-material 7
-TRANS       -1.6 2.125 -1
-ROTAT       0 0 0
-SCALE       .25 .25 .25
+cube
+material 1
+TRANS       -5 2 -5
+ROTAT       0 45 0
+SCALE       8 4 8
+
+OBJECT 11
+cube
+material 1
+TRANS       3.8 0.35 2
+ROTAT       0 37 0
+SCALE       0.7 0.7 0.7
+
+OBJECT 12
+cube
+material 3
+TRANS       2.8 0.35 1.5
+ROTAT       0 30 0
+SCALE       0.7 0.7 0.7
+
+OBJECT 13
+cube
+material 8
+TRANS       3.3 1.05 1.7
+ROTAT       0 34 0
+SCALE       0.7 0.7 0.7
+
+
