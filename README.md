@@ -54,6 +54,8 @@ CUDA Path Tracer
 | ------------------------ | ----------------------- |
 | ![](img/naive_sample_200.png) | ![](img/Stratified_200.png) |
 
+For stratified sampling comparsion, it can be seen from the figure that the difference is not very large, but some subtle differences can be found, for example, the shadow of the stratified sampling is a little bit more concentrated.
+
 **Object motion and motion blur**
 
 | Without Motion | Motion and motion blur |
@@ -63,7 +65,7 @@ CUDA Path Tracer
 
 ### Performance Analysis
 
-![](img/analysis.png)
+![](img/Analysis.png)
 
 I calculated the average time spent in each depth loop in 200 iterations and got the result shown in the figure above. 
 
