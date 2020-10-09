@@ -19,7 +19,7 @@ From left to right: focus on foreground, focus on background
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/dof_far.png" width=300/></nobr>
 
 ### Stochastic Sampled Antialiasing
-From left to right: rendering with antialiasing, rendering without antialiasing. Please zoom in to see the difference on the edge of the sphere. The left has a smooth edge around the sphere while the one on the right is more rigged.
+From left to right: rendering with antialiasing, rendering without antialiasing. Please zoom in to see the difference on the edge of the sphere. The left has a smooth edge while the one on the right is more rigged.
 
 <img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/antialiasing.png" width=300/><img src="https://github.com/WeiyuDu/Project3-CUDA-Path-Tracer/blob/master/img/ref_antialiasing.png" width=300/>
 
