@@ -41,6 +41,8 @@ int Scene::loadGeom(string objectid) {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
+		newGeom.modelid = -1;
+		newGeom.numOfTriangles = 0;
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -51,8 +53,23 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
-            }
+            } else if (strcmp(line.c_str(), "obj") == 0) {
+				cout << "Creating new obj..." << endl;
+				newGeom.type = OBJMODEL;
+			}
         }
+
+		// load objmodel
+		if (newGeom.type == OBJMODEL)
+		{
+			utilityCore::safeGetline(fp_in, line);
+			if (!line.empty() && fp_in.good()) {
+				vector<string> tokens = utilityCore::tokenizeString(line);
+				int id = loadObjModel(tokens[0]);
+				newGeom.modelid = id;
+				newGeom.numOfTriangles = objModels[id].triangles.size() / 3;
+			}
+		}
 
         //link material
         utilityCore::safeGetline(fp_in, line);
@@ -61,6 +78,7 @@ int Scene::loadGeom(string objectid) {
             newGeom.materialid = atoi(tokens[1].c_str());
             cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
         }
+
 
         //load transformations
         utilityCore::safeGetline(fp_in, line);
@@ -155,6 +173,55 @@ int Scene::loadCamera() {
 
     cout << "Loaded camera!" << endl;
     return 1;
+}
+
+int Scene::loadObjModel(const string& filename)
+{
+	cout << "Loading obj model..." << filename << endl;
+	std::string warn;
+	std::string err;
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+
+	// Triangulate by default
+	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str());
+
+	if (!warn.empty()) {
+		std::cout << "WARN: " << warn << std::endl;
+	}
+
+	if (!err.empty()) {
+		std::cerr << "ERR: " << err << std::endl;
+	}
+
+	if (!ret) {
+		std::cerr << "Failed to load obj" << std::endl;
+		return -1;
+	}
+
+	OBJModel objModel;
+	bool hasNormal = !attrib.normals.empty();
+	for (size_t s = 0; s < shapes.size(); ++s)
+	{
+		int pointSize = shapes[s].mesh.indices.size();
+		int triangleSize = pointSize / 3;
+		for (size_t f = 0; f < triangleSize; ++f)
+		{
+			int idx0 = shapes[s].mesh.indices[3 * f + 0].vertex_index;
+			int idx1 = shapes[s].mesh.indices[3 * f + 1].vertex_index;
+			int idx2 = shapes[s].mesh.indices[3 * f + 2].vertex_index;
+			glm::vec3 pos0 = glm::vec3(attrib.vertices[3 * idx0 + 0], attrib.vertices[3 * idx0 + 1], attrib.vertices[3 * idx0 + 2]);
+			glm::vec3 pos1 = glm::vec3(attrib.vertices[3 * idx1 + 0], attrib.vertices[3 * idx1 + 1], attrib.vertices[3 * idx1 + 2]);
+			glm::vec3 pos2 = glm::vec3(attrib.vertices[3 * idx2 + 0], attrib.vertices[3 * idx2 + 1], attrib.vertices[3 * idx2 + 2]);
+
+			objModel.triangles.emplace_back(pos0);
+			objModel.triangles.emplace_back(pos1);
+			objModel.triangles.emplace_back(pos2);
+		}
+	}
+	objModels.emplace_back(objModel);
+	return objModels.size() - 1;
 }
 
 int Scene::loadMaterial(string materialid) {

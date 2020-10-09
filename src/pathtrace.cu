@@ -19,7 +19,7 @@
 
 #define STREAM_COMPACTION
 #define SORT_MATERIAL
-#define DEPTH_OF_FIELD
+// #define DEPTH_OF_FIELD
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -113,6 +113,11 @@ static ShadeableIntersection * dev_intersections = NULL;
 static PathSegment* dev_cachedFirstPaths = NULL;
 static ShadeableIntersection* dev_cachedFirstIntersections = NULL;
 
+// Store all triangles used in obj models
+static int modelNum = 0;
+static glm::vec3** host_modelTriangles = NULL;
+static glm::vec3** dev_modelTriangles = NULL;
+
 void pathtraceInit(Scene *scene) {
 	hst_scene = scene;
 	const Camera &cam = hst_scene->state.camera;
@@ -137,6 +142,17 @@ void pathtraceInit(Scene *scene) {
 	cudaMalloc(&dev_cachedFirstIntersections, pixelcount * sizeof(ShadeableIntersection));
 	cudaMemset(dev_cachedFirstIntersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
+	modelNum = scene->objModels.size();
+	host_modelTriangles = new glm::vec3*[modelNum];
+	for (int i = 0; i < modelNum; ++i)
+	{
+		cudaMalloc(&(host_modelTriangles[i]), scene->objModels[i].triangles.size() * sizeof(glm::vec3));
+		cudaMemcpy(host_modelTriangles[i], scene->objModels[i].triangles.data(),
+			scene->objModels[i].triangles.size() * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+	}
+	cudaMalloc(&dev_modelTriangles, modelNum * sizeof(glm::vec3*));
+	cudaMemcpy(dev_modelTriangles, host_modelTriangles, modelNum * sizeof(glm::vec3*), cudaMemcpyHostToDevice);
+
 	checkCUDAError("pathtraceInit");
 }
 
@@ -149,6 +165,14 @@ void pathtraceFree() {
 	// TODO: clean up any extra device memory you created
 	cudaFree(dev_cachedFirstIntersections);
 	cudaFree(dev_cachedFirstPaths);
+
+	for (int i = 0; i < modelNum; ++i)
+	{
+		cudaFree(host_modelTriangles[i]);
+	}
+	delete[] host_modelTriangles;
+	cudaFree(dev_modelTriangles);
+
 	checkCUDAError("pathtraceFree");
 }
 
@@ -200,7 +224,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
 __global__ void computeIntersections(int depth, int num_paths, 
-	PathSegment * pathSegments, Geom * geoms, int geoms_size, ShadeableIntersection * intersections)
+	PathSegment * pathSegments, Geom * geoms, int geoms_size, 
+	ShadeableIntersection * intersections, glm::vec3 ** modelTriangles)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -233,6 +258,11 @@ __global__ void computeIntersections(int depth, int num_paths,
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
+			else if (geom.type == OBJMODEL)
+			{
+				glm::vec3* triangle = modelTriangles[geom.modelid];
+				t = objIntersectionTest(geom, pathSegment.ray, triangle, tmp_intersect, tmp_normal, outside);
+			}
 
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
@@ -396,7 +426,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 		cudaMemset(dev_cachedFirstIntersections, 0, pixelcount * sizeof(ShadeableIntersection));
 		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (depth, num_paths,
-			dev_cachedFirstPaths, dev_geoms, hst_scene->geoms.size(), dev_cachedFirstIntersections);
+			dev_cachedFirstPaths, dev_geoms, hst_scene->geoms.size(), dev_cachedFirstIntersections,
+			dev_modelTriangles);
 		checkCUDAError("trace one bounce");
 		cudaDeviceSynchronize();
 	}
@@ -421,7 +452,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 
 			// tracing
 			computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (depth, num_paths,
-				dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections);
+				dev_paths, dev_geoms, hst_scene->geoms.size(), dev_intersections,
+				dev_modelTriangles);
 			checkCUDAError("trace one bounce");
 			cudaDeviceSynchronize();
 		}
