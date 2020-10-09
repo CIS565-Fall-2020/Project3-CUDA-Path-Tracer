@@ -53,6 +53,10 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    glm::vec3 motion;
+    bool depth_of_field;
+    float lens_radius;
+    float focal_distance;
 };
 
 struct Triangle {

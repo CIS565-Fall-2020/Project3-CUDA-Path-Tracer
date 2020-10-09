@@ -211,6 +211,14 @@ int Scene::loadCamera() {
             camera.lookAt = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
         } else if (strcmp(tokens[0].c_str(), "UP") == 0) {
             camera.up = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        } else if (strcmp(tokens[0].c_str(), "MOTION") == 0) {
+            camera.motion = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        } else if (strcmp(tokens[0].c_str(), "DOF") == 0) {
+            camera.depth_of_field = atoi(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "LENSR") == 0) {
+            camera.lens_radius = atof(tokens[1].c_str());
+        } else if (strcmp(tokens[0].c_str(), "FD") == 0) {
+            camera.focal_distance = atof(tokens[1].c_str());
         }
 
         utilityCore::safeGetline(fp_in, line);
