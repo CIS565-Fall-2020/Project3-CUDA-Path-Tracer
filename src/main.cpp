@@ -26,7 +26,7 @@ static bool cacheChanged = true;
 static bool sortMaterialChanged = true;
 static bool useBoundChanged = true;
 static bool cacheFirstBounce = false;
-static bool sortByMaterial = true;
+static bool sortByMaterial = false;
 static bool useMeshBounds = false;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;

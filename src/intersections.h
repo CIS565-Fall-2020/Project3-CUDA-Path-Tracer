@@ -198,3 +198,131 @@ __host__ __device__ float triangleIntersectionTest(Geom triangle, Ray r,
     return t;
 }
 
+__host__ __device__ float computeTanglecubeSDF(glm::vec3& currPos) {
+    float x4 = currPos.x * currPos.x * currPos.x * currPos.x;
+    float x2 = currPos.x * currPos.x;
+    float y4 = currPos.y * currPos.y * currPos.y * currPos.y;
+    float y2 = currPos.y * currPos.y;
+    float z4 = currPos.z * currPos.z * currPos.z * currPos.z;
+    float z2 = currPos.z * currPos.z;
+    return x4 - 5.f * x2 + y4 - 5.f * y2 + z4 - 5.f * z2 + 11.8f;
+}
+__host__ __device__ void computeTanglecubeNormal(const glm::vec3& p, glm::vec3& nor)
+{
+    glm::vec3 pxl = p + glm::vec3(-1e-6, 0.0, 0.0);
+    float distxl = computeTanglecubeSDF(pxl);
+
+    glm::vec3 pxh = p + glm::vec3(1e-6, 0.0, 0.0);
+    float distxh = computeTanglecubeSDF(pxh);
+
+    glm::vec3 pyl = p + glm::vec3(0.0, -1e-6, 0.0);
+    float distyl = computeTanglecubeSDF(pyl);
+
+    glm::vec3 pyh = p + glm::vec3(0.0, 1e-6, 0.0);
+    float distyh = computeTanglecubeSDF(pyh);
+
+    glm::vec3 pzl = p + glm::vec3(0.0, 0.0, -1e-6);
+    float distzl = computeTanglecubeSDF(pzl);
+
+    glm::vec3 pzh = p + glm::vec3(0.0, 0.0, 1e-6);
+    float distzh = computeTanglecubeSDF(pzh);
+
+    nor = glm::normalize(glm::vec3(distxh - distxl, distyh - distyl, distzh - distzl));
+}
+
+__host__ __device__ float tanglecubeIntersectionTest(Geom tanglecube, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    float radius = .5;
+
+    glm::vec3 ro = multiplyMV(tanglecube.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(tanglecube.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    Ray rt;
+    rt.origin = ro;
+    rt.direction = rd;
+    glm::vec3 currPos = ro;
+    bool intersected = false;
+    float threshold = 0.01f;
+    float t = 0;
+
+    while (t < 20.f) {
+        float d = computeTanglecubeSDF(currPos);
+        if (fabs(d) < threshold) {
+            intersected = true;
+            // compute normal
+            computeTanglecubeNormal(currPos, normal);
+            intersectionPoint = multiplyMV(tanglecube.transform, glm::vec4(currPos, 1.f));
+            normal = glm::normalize(multiplyMV(tanglecube.invTranspose, glm::vec4(normal, 0.f)));
+            break;
+        }
+        currPos = ro + rd * t;
+        t += 0.0001f;
+    }
+    if (!intersected) t = -1.f;
+    return t;
+}
+
+__host__ __device__ float computeBoundBoxSDF(glm::vec3& currPos) {
+    glm::vec3 p = currPos;
+    glm::vec3 b(1.f, 1.f, 1.f);
+    float e = 0.1f;
+    p = glm::abs(p) - b;
+    glm::vec3 q = glm::abs(p + e) - e;
+    return glm::min(glm::min(glm::length(glm::max(glm::vec3(p.x, q.y, q.z), 0.f)) + glm::min(glm::max(p.x, glm::max(q.y, q.z)), 0.f),
+        glm::length(glm::max(glm::vec3(q.x, p.y, q.z), 0.f)) + glm::min(glm::max(q.x, glm::max(p.y, q.z)), 0.f)),
+        glm::length(glm::max(glm::vec3(q.x, q.y, p.z), 0.f)) + glm::min(glm::max(q.x, glm::max(q.y, p.z)), 0.f));
+}
+__host__ __device__ void computeBoundBoxNormal(const glm::vec3& p, glm::vec3& nor)
+{
+    glm::vec3 pxl = p + glm::vec3(-1e-6, 0.0, 0.0);
+    float distxl = computeBoundBoxSDF(pxl);
+
+    glm::vec3 pxh = p + glm::vec3(1e-6, 0.0, 0.0);
+    float distxh = computeBoundBoxSDF(pxh);
+
+    glm::vec3 pyl = p + glm::vec3(0.0, -1e-6, 0.0);
+    float distyl = computeBoundBoxSDF(pyl);
+
+    glm::vec3 pyh = p + glm::vec3(0.0, 1e-6, 0.0);
+    float distyh = computeBoundBoxSDF(pyh);
+
+    glm::vec3 pzl = p + glm::vec3(0.0, 0.0, -1e-6);
+    float distzl = computeBoundBoxSDF(pzl);
+
+    glm::vec3 pzh = p + glm::vec3(0.0, 0.0, 1e-6);
+    float distzh = computeBoundBoxSDF(pzh);
+
+    nor = glm::normalize(glm::vec3(distxh - distxl, distyh - distyl, distzh - distzl));
+}
+
+__host__ __device__ float boundBoxIntersectionTest(Geom boundBox, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    float radius = .5;
+
+    glm::vec3 ro = multiplyMV(boundBox.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(boundBox.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    Ray rt;
+    rt.origin = ro;
+    rt.direction = rd;
+    glm::vec3 currPos = ro;
+    bool intersected = false;
+    float threshold = 0.01f;
+    float t = 0;
+
+    while (t < 20.f) {
+        float d = computeBoundBoxSDF(currPos);
+        if (fabs(d) < threshold) {
+            intersected = true;
+            // compute normal
+            computeBoundBoxNormal(currPos, normal);
+            intersectionPoint = multiplyMV(boundBox.transform, glm::vec4(currPos, 1.f));
+            normal = glm::normalize(multiplyMV(boundBox.invTranspose, glm::vec4(normal, 0.f)));
+            break;
+        }
+        currPos = ro + rd * t;
+        t += 0.001f;
+    }
+    if (!intersected) t = -1.f;
+    return t;
+}

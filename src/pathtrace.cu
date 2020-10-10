@@ -592,7 +592,7 @@ __global__ void computeIntersections(
                 if (useBound) {
                     if (MeshBoundsTest(geom, pathSegment.ray, invDir)) {
                         // check for intersection against each triangle
-                        for (int j = geom.triangleStart; j < geom.numTriangles; ++j) {
+                        for (int j = geom.triangleStart; j < geom.numTriangles + geom.triangleStart; ++j) {
                             t = triangleIntersectionTest(triangles[j], pathSegment.ray, tmp_intersect, tmp_normal, outside);
                             if (t > 0.0f && t_min > t)
                             {
@@ -606,7 +606,7 @@ __global__ void computeIntersections(
                 }
                 else {
                     // check for intersection against each triangle
-                    for (int j = geom.triangleStart; j < geom.numTriangles; ++j) {
+                    for (int j = geom.triangleStart; j < geom.numTriangles + geom.triangleStart; ++j) {
                         t = triangleIntersectionTest(triangles[j], pathSegment.ray, tmp_intersect, tmp_normal, outside);
                         if (t > 0.0f && t_min > t)
                         {
@@ -617,6 +617,12 @@ __global__ void computeIntersections(
                         }
                     }
                 }
+            }
+            else if (geom.type == TANGLECUBE) {
+                t = tanglecubeIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+            }
+            else if (geom.type == BOUND_BOX) {
+                t = boundBoxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
             }
 
 			// Compute the minimum t from the intersection tests to determine what
@@ -856,6 +862,7 @@ __global__ void shadeFakeMaterial (
     , int totalIters
     , Camera cam
     , int depth
+    , int totalDepth
 	)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -884,13 +891,13 @@ __global__ void shadeFakeMaterial (
           //pathSegments[idx].color = material.color;
           switch (material.type) {
             case DIFFUSE:
-                diffuseScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng, iter, totalIters, cam.pixelLength);
+                diffuseScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng, iter, totalIters, depth, totalDepth);
                 break;
             case MIRROR:
                 mirrorScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
                 break;
             case GLOSSY:
-                glossyScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng, iter, totalIters, cam.pixelLength);
+                glossyScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng, iter, totalIters, depth, totalDepth);
                 break;
             case DIELECTRIC:
                 dielectricScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, ior1, ior2, rng);
@@ -1096,7 +1103,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
     dev_materials,
     totalIterations,
     cam,
-    depth
+    depth,
+    hst_scene->state.traceDepth
   );
 
   // Perform stream compaction

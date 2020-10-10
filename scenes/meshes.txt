@@ -8,6 +8,7 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   5
+TEXTURE     0
 
 // Diffuse white
 MATERIAL 1
@@ -19,6 +20,7 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
 
 // Diffuse red
 MATERIAL 2
@@ -30,6 +32,7 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
 
 // Diffuse green
 MATERIAL 3
@@ -41,24 +44,27 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
 
-// Glossy blue
+// diffuse
 MATERIAL 4
 TYPE       DIFFUSE
 RGB        0.55 0.56 0.86
-SPECEX     4.5
+SPECEX     0
 SPECRGB    0.55 0.56 0.86
 REFL       0
 RERF       0
 REFRIOR    0
 EMITTANCE  0
+TEXTURE    1
+fbm
 
 
 // Camera
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS 1500
+ITERATIONS  5000
 DEPTH       8
 FILE        cornell
 LENS        0
@@ -72,9 +78,9 @@ UP          0 1 0
 OBJECT 0
 cube
 material 0
-TRANS       0 10 1
+TRANS       0 10 2
 ROTAT       0 0 0
-SCALE       4 .3 4
+SCALE       3 .3 3
 
 // Floor
 OBJECT 1
@@ -116,10 +122,10 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
+// Sphere
 OBJECT 6
-mesh
-../scenes/meshes/icosahedron.gltf
+sphere
 material 4
-TRANS    0 4 1
-ROTAT    30 45 0
-SCALE    3 3 3
+TRANS 0 5 0
+ROTAT 0 0 0
+SCALE 5 5 5

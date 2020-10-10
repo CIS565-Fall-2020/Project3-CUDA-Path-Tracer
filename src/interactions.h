@@ -3,20 +3,37 @@
 #include "intersections.h"
 
 #define RAY_EPSILON 0.0005f
+#define NUM_OCTAVES 12
 
 
 __host__ __device__
 glm::vec2 calculateStratifiedSample(
-    int iter, int totalIters, thrust::default_random_engine& rng, glm::vec2 pixelLength) {
-
+    int iter, int totalIters, thrust::default_random_engine& rng, int depth, int totalDepth) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    // Split the pixel into totalIters grids (if possible)
-    int grid = (int)(glm::sqrt((float)totalIters) + 0.5f);
-    float invGrid = 1.f / grid;
+    if (depth == 0) {
+        // Split the pixel into totalIters grids (if possible)
+        int grid = (int)(glm::sqrt((float)totalIters) + 0.5f);
+        float invGrid = 1.f / grid;
 
-    // Find the grid where current iteration is at
-    glm::vec2 topLeft((iter - 1) % grid * invGrid, (iter - 1) / grid * invGrid);
-    return glm::vec2(topLeft.x + invGrid * u01(rng), topLeft.y + invGrid * u01(rng));
+        // Find the grid where current iteration is at
+        glm::vec2 topLeft(((iter - 1) + depth) % grid * invGrid, ((iter - 1) + depth) / grid * invGrid);
+        return glm::vec2(topLeft.x + invGrid * u01(rng), topLeft.y + invGrid * u01(rng));
+    }
+    else {
+       return glm::vec2(u01(rng), u01(rng));
+    }
+
+}
+
+__host__ __device__
+glm::vec2 calculateGaussianSampling(
+    thrust::default_random_engine& rng) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float s = u01(rng);
+    float t = u01(rng);
+    float a = 0.4f * glm::sqrt(-2.f * glm::log(s));
+    float b = 2 * PI * t;
+    return glm::vec2(0.5f + a * glm::sin(b), 0.5f + a * glm::cos(b));
 }
 
 // CHECKITOUT
@@ -26,12 +43,10 @@ glm::vec2 calculateStratifiedSample(
  */
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
-        glm::vec3 normal, thrust::default_random_engine &rng, int iter, int totalIters, glm::vec2 pixelLength) {
+        glm::vec3 normal, thrust::default_random_engine &rng, int iter, int totalIters, int depth, int totalDepth) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    //glm::vec2 sample(calculateStratifiedSample(iter, totalIters, rng, pixelLength));
-    glm::vec2 sample(u01(rng), u01(rng));
-    float sx = sample.x;
-    float sy = sample.y;
+    float sx = u01(rng);
+    float sy = u01(rng);
 
     float up = sqrt(sx); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
@@ -67,9 +82,9 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 */
 __host__ __device__
 glm::vec3 calculateImperfectSpecularDirection(
-    glm::vec3 normal, float spec_exp, thrust::default_random_engine& rng, int iter, int totalIters, glm::vec2 pixelLength) {
+    glm::vec3 normal, float spec_exp, thrust::default_random_engine& rng, int iter, int totalIters, int depth, int totalDepth) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    glm::vec2 sample(u01(rng), u01(rng));//calculateStratifiedSample(iter, totalIters, rng, pixelLength);
+    glm::vec2 sample(calculateStratifiedSample(iter, totalIters, rng, depth, totalDepth));
     float s1 = sample.x;
     float s2 = sample.y;
     float theta = glm::acos(glm::pow(s1, 1.f / (spec_exp + 1.f)));
@@ -91,6 +106,101 @@ glm::vec3 calculateImperfectSpecularDirection(
     // Transform sample from specular space to tangent space
     glm::mat3 transform(tangent, bitangent, normal);
     return glm::normalize(transform * sample_dir);
+}
+
+// Helper functions for FBM
+
+__host__ __device__
+float random(glm::vec2 st) {
+    return glm::fract(glm::sin(glm::dot(glm::vec2(st.x, st.y), glm::vec2(12.9898, 78.233))) * 43758.5453123);
+}
+
+__host__ __device__
+glm::mat2 rotate2d(float angle) {
+    return glm::mat2(cos(angle), -sin(angle),
+        sin(angle), cos(angle));
+}
+
+__host__ __device__
+float noise(glm::vec2 st) {
+    glm::vec2 i = glm::floor(st);
+    glm::vec2 f = glm::fract(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + glm::vec2(1.f, 0.f));
+    float c = random(i + glm::vec2(0.f, 1.f));
+    float d = random(i + glm::vec2(1.f, 1.f));
+
+    glm::vec2 u = f * f * (3.f - 2.f * f);
+
+    return glm::mix(a, b, u.x) +
+        (c - a) * u.y * (1.f - u.x) +
+        (d - b) * u.x * u.y;
+}
+
+__host__ __device__
+float lines(glm::vec2 pos, float b) {
+    float scale = 10.0;
+    pos *= scale;
+    return glm::smoothstep(0.0f,
+        .5f + b * .5f,
+        abs((sin(pos.x * 3.1415f) + b * 2.0f)) * .5f);
+}
+
+__host__ __device__
+float fbm(glm::vec2 st) {
+    float v = 0.f;
+    float a = 0.5f;
+    glm::vec2 shift = glm::vec2(100.f);
+    // Rotate to reduce axial bias
+    glm::mat2 rot = glm::mat2(glm::cos(0.5f), glm::sin(0.5f),
+        -glm::sin(0.5f), glm::cos(0.5f));
+    for (int i = 0; i < NUM_OCTAVES; ++i) {
+        v += a * noise(st);
+        st = rot * st * 2.f + shift;
+        a *= 0.5f;
+    }
+    return v;
+}
+
+__host__ __device__
+glm::vec3 calculateFBMTexture(
+    glm::vec3 normal,
+    const Material& m)
+{
+    glm::vec2 st(normal.x, normal.y);
+    st *= glm::abs(normal.z);
+    glm::vec2 q = glm::vec2(0.f);
+    q.x = fbm(st);
+    q.y = fbm(st + glm::vec2(1.f));
+
+    glm::vec2 r = glm::vec2(0.f);
+    r.x = fbm(st + 1.f * q + glm::vec2(1.7f, 9.2f) + 0.15f);
+    r.y = fbm(st + 1.f * q + glm::vec2(8.3f, 2.8f) + 0.126f);
+
+    float f = fbm(st + r);
+
+    return glm::vec3((f * f * f + .7f * f * f + .8f * f) * m.color);
+}
+
+__host__ __device__
+glm::vec3 calculateNoiseTexture(
+    glm::vec3 normal,
+    const Material& m)
+{
+    glm::vec2 st(normal.x, normal.y);
+    st *= glm::abs(normal.z);
+    glm::vec2 pos = glm::vec2(st.x, st.y) * glm::vec2(10.f, 3.f);
+
+    float pattern = pos.x;
+
+    // Add noise
+    pos = rotate2d(noise(pos)) * pos;
+
+    // Draw lines
+    pattern = lines(pos, .5f);
+    return glm::vec3(pattern);
 }
 
 /**
@@ -127,13 +237,19 @@ void diffuseScatter(PathSegment& pathSegment,
     thrust::default_random_engine& rng,
     int iter,
     int totalIters,
-    glm::vec2 pixelLength) {
+    int depth,
+    int totalDepth) {
 
-    glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng, iter, totalIters, pixelLength);
+    glm::vec3 color = m.color;
+    if (m.hasTexture) {
+        if (m.texture == FBM) color = calculateFBMTexture(normal, m);
+        if (m.texture == NOISE) color = calculateNoiseTexture(normal, m);
+    }
+    glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng, iter, totalIters, depth, totalDepth);
 
     // uniform diffuse
     pathSegment.ray.direction = diffuseDir;
-    pathSegment.color *= m.color;
+    pathSegment.color *= color;
 
     glm::vec3 originOffset = RAY_EPSILON * normal;
     originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
@@ -147,11 +263,17 @@ void mirrorScatter(PathSegment& pathSegment,
     const Material& m,
     thrust::default_random_engine& rng) {
 
+    glm::vec3 color = m.specular.color;
+    if (m.hasTexture) {
+        if (m.texture == FBM) color = calculateFBMTexture(normal, m);
+        if (m.texture == NOISE) color = calculateNoiseTexture(normal, m);
+    }
+
     glm::vec3 reflectDir = glm::reflect(pathSegment.ray.direction, normal);
 
     // perfect specular
     pathSegment.ray.direction = reflectDir;
-    pathSegment.color *= m.specular.color;
+    pathSegment.color *= color;
 
     glm::vec3 originOffset = RAY_EPSILON * normal;
     originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
@@ -166,13 +288,20 @@ void glossyScatter(PathSegment& pathSegment,
     thrust::default_random_engine& rng,
     int iter,
     int totalIters,
-    glm::vec2 pixelLength) {
+    int depth,
+    int totalDepth) {
 
-    glm::vec3 reflectDir = calculateImperfectSpecularDirection(normal, m.specular.exponent, rng, iter, totalIters, pixelLength);
+    glm::vec3 color = m.specular.color;
+    if (m.hasTexture) {
+        if (m.texture == FBM) color = calculateFBMTexture(normal, m);
+        if (m.texture == NOISE) color = calculateNoiseTexture(normal, m);
+    }
+
+    glm::vec3 reflectDir = calculateImperfectSpecularDirection(normal, m.specular.exponent, rng, iter, totalIters, depth, totalDepth);
 
     // imperfect specular
     pathSegment.ray.direction = reflectDir;
-    pathSegment.color *= m.specular.color;
+    pathSegment.color *= color;
 
     glm::vec3 originOffset = RAY_EPSILON * normal;
     originOffset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? originOffset : -originOffset;
@@ -186,6 +315,12 @@ void dielectricScatter(PathSegment& pathSegment,
     const Material& m,
     float ior1, float ior2,
     thrust::default_random_engine& rng) {
+
+    glm::vec3 color = m.specular.color;
+    if (m.hasTexture) {
+        if (m.texture == FBM) color = calculateFBMTexture(normal, m);
+        if (m.texture == NOISE) color = calculateNoiseTexture(normal, m);
+    }
 
     float cosine;
     float reflect_prob;
@@ -211,7 +346,7 @@ void dielectricScatter(PathSegment& pathSegment,
         refractDir = glm::reflect(pathSegment.ray.direction, normal);
     }
     pathSegment.ray.direction = refractDir;
-    pathSegment.color *= m.specular.color;
+    pathSegment.color *= color;
     pathSegment.ray.origin = intersect + RAY_EPSILON * refractDir;
 }
 
@@ -223,6 +358,12 @@ void glassScatter(PathSegment& pathSegment,
     float ior1, float ior2,
     thrust::default_random_engine& rng) {
 
+    glm::vec3 color = m.specular.color;
+    if (m.hasTexture) {
+        if (m.texture == FBM) color = calculateFBMTexture(normal, m);
+        if (m.texture == NOISE) color = calculateNoiseTexture(normal, m);
+    }
+
     bool entering = glm::dot(-pathSegment.ray.direction, normal) > 0;
     float etaI = entering ? ior1 : ior2;
     float etaT = entering ? ior2 : ior1;
@@ -233,7 +374,7 @@ void glassScatter(PathSegment& pathSegment,
     }
 
     pathSegment.ray.direction = glm::normalize(refractDir);
-    pathSegment.color *= m.specular.color;
+    pathSegment.color *= color;
     pathSegment.ray.origin = intersect + RAY_EPSILON * refractDir; // avoid shadow acne
 }
 

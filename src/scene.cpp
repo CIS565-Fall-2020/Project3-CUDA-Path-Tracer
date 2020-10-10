@@ -69,6 +69,12 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
+            } else if (strcmp(line.c_str(), "tanglecube") == 0) {
+                cout << "Creating new tanglecube..." << endl;
+                newGeom.type = TANGLECUBE;
+            } else if (strcmp(line.c_str(), "bound box") == 0) {
+                cout << "Creating new bound box..." << endl;
+                newGeom.type = BOUND_BOX;
             } else if (strcmp(line.c_str(), "mesh") == 0) {
                 cout << "Creating new mesh..." << endl;
                 newGeom.type = MESH;
@@ -322,7 +328,7 @@ int Scene::loadMaterial(string materialid) {
         Material newMaterial;
 
         //load static properties
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 9; i++) {
             string line;
             utilityCore::safeGetline(fp_in, line);
             vector<string> tokens = utilityCore::tokenizeString(line);
@@ -357,6 +363,22 @@ int Scene::loadMaterial(string materialid) {
                 newMaterial.indexOfRefraction = atof(tokens[1].c_str());
             } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
                 newMaterial.emittance = atof(tokens[1].c_str());
+            } else if (strcmp(tokens[0].c_str(), "TEXTURE") == 0) {
+                newMaterial.hasTexture = atof(tokens[1].c_str());
+                if (newMaterial.hasTexture) {
+                    // read the texture type
+                    utilityCore::safeGetline(fp_in, line);
+                    if (!line.empty() && fp_in.good()) {
+                        if (strcmp(line.c_str(), "fbm") == 0) {
+                            newMaterial.texture = FBM;
+                        } else if (strcmp(line.c_str(), "noise") == 0) {
+                            newMaterial.texture = NOISE;
+                        } else {
+                            // no texture
+                            newMaterial.texture = NO_TEXTURE;
+                        }
+                    }
+                }
             }
         }
         materials.push_back(newMaterial);

@@ -12,6 +12,8 @@ enum GeomType {
     CUBE,
     MESH,
     TRIANGLE,
+    TANGLECUBE,
+    BOUND_BOX,
 };
 
 enum MaterialType {
@@ -21,6 +23,12 @@ enum MaterialType {
     DIELECTRIC,
     GLASS,
     EMISSIVE,
+};
+
+enum TextureType {
+    NO_TEXTURE,
+    FBM,
+    NOISE,
 };
 
 struct Ray {
@@ -68,6 +76,8 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    float hasTexture;
+    enum TextureType texture;
 };
 
 struct Camera {
