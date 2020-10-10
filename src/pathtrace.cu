@@ -20,7 +20,7 @@
 
 #define DEPTH_OF_FIELD 0
 #define BOUNDING_BOX 1
-#define ANTIALIASING 1
+#define ANTIALIASING 0
 #define SORT_MATERIAL 0
 #define CACHE_FIRST_ISECT 0
 
@@ -424,7 +424,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
     bool iterationComplete = false;
 
-    timer().startGpuTimer();
+    //timer().startGpuTimer();
     while (!iterationComplete) {
         dim3 numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
 
@@ -468,7 +468,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
             iterationComplete = true;
         }
     }
-    timer().endGpuTimer();
+    //timer().endGpuTimer();
 
     // Assemble this iteration and apply it to the image
     //dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
