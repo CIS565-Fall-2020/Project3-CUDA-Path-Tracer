@@ -1,6 +1,9 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
+#include <string>
 
 static std::string startTimeString;
 
@@ -26,12 +29,72 @@ int iteration;
 int width;
 int height;
 
+void loadGLtf(const char* filename) {
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err;
+    std::string warn;
+
+    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+
+    if (!warn.empty()) {
+        printf("Warn %s \n", warn.c_str());
+    }
+    if (!err.empty()) {
+        printf("Error %s \n", err.c_str());
+    }
+    if (!ret) {
+        printf("Parsing Failed \n");
+    }
+    if (ret && warn.empty() && err.empty()) {
+        printf("GLtf loading completed successfully \n");
+    }
+    
+    tinygltf::Mesh& modelMesh = model.meshes[0];
+    
+    for (tinygltf::Primitive& primitive : modelMesh.primitives) {
+        std::cout << "Next Primitive" << std::endl;
+        const tinygltf::Accessor& accessorPos = model.accessors[primitive.attributes["POSITION"]];
+        const tinygltf::BufferView& bufferViewPos = model.bufferViews[accessorPos.bufferView];
+        const tinygltf::Buffer& bufferPos = model.buffers[bufferViewPos.buffer];
+
+        const tinygltf::Accessor& accessorNor = model.accessors[primitive.attributes["NORMAL"]];
+        const tinygltf::BufferView& bufferViewNor = model.bufferViews[accessorNor.bufferView];
+        const tinygltf::Buffer& bufferNor = model.buffers[bufferViewNor.buffer];
+
+        const tinygltf::Accessor& accessorIdx = model.accessors[primitive.attributes["indices"]];
+        const tinygltf::BufferView& bufferViewIdx = model.bufferViews[accessorIdx.bufferView];
+        const tinygltf::Buffer& bufferIdx = model.buffers[bufferViewIdx.buffer];
+        
+        const float* positions = reinterpret_cast<const float*>(&bufferPos.data[bufferViewPos.byteOffset + accessorPos.byteOffset]);
+        const float* normals = reinterpret_cast<const float*>(&bufferNor.data[bufferViewNor.byteOffset + accessorNor.byteOffset]);
+        const unsigned short* indices = reinterpret_cast<const unsigned short*>(&bufferIdx.data[bufferViewIdx.byteOffset + accessorIdx.byteOffset]);
+
+        std::cout << "Position Count " << accessorPos.count << std::endl;
+        std::cout << "Normal Count " << accessorNor.count << std::endl;
+        std::cout << "Index Count " << accessorIdx.count << std::endl;
+
+        //for (size_t i = 0; i < accessorIdx.count; i+=1) {
+        //    // Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
+        //    //std::cout << "(" << positions[i * 3 + 0] << ", "// x
+        //    //    << positions[i * 3 + 1] << ", " // y
+        //    //    << positions[i * 3 + 2] << ")" // z
+        //    //    << "\n";
+        //    std::cout << "(" << indices[i] << ")" << std::endl;
+
+        //}
+    }
+
+}
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
 
 int main(int argc, char** argv) {
     startTimeString = currentTimeString();
+
+    loadGLtf("../scenes/gltf_examples/2.0/Duck/gltf/Duck.gltf");
 
     if (argc < 2) {
         printf("Usage: %s SCENEFILE.txt\n", argv[0]);

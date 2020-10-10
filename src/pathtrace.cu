@@ -20,7 +20,13 @@
 
 #define ERRORCHECK 1
 #define sortByMaterial false
-#define cacheFirstBounce true
+#define cacheFirstBounce false
+#define stochasticAlias true
+#define directLighting true
+#define depthOfField false
+#define focalLength 6.f
+#define lensRadius 0.5f
+#define M_PI 3.14159265358979323846264338327950288
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -143,7 +149,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		// TODO: implement antialiasing by jittering the ray
 		segment.ray.direction = glm::normalize(cam.view
@@ -154,6 +160,41 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}
+}
+
+__global__ void generateStochasticRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments)
+{
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    thrust::default_random_engine rng = makeSeededRandomEngine(x, y, 0);
+    thrust::uniform_real_distribution<float> u(-1, 1);
+
+    if (x < cam.resolution.x && y < cam.resolution.y) {
+        int index = x + (y * cam.resolution.x);
+        PathSegment& segment = pathSegments[index];
+
+        segment.ray.origin = cam.position;
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+
+        // TODO: implement antialiasing by jittering the ray
+        segment.ray.direction = glm::normalize(cam.view
+            - cam.right * cam.pixelLength.x * ((float)x + u(rng) - (float)cam.resolution.x * 0.5f)
+            - cam.up * cam.pixelLength.y * ((float)y + u(rng) - (float)cam.resolution.y * 0.5f)
+        );
+
+        segment.pixelIndex = index;
+        segment.remainingBounces = traceDepth;
+
+        if (depthOfField) {
+
+            glm::vec3 focalPoint = segment.ray.origin + segment.ray.direction * focalLength;
+            glm::vec3 rand{ u(rng) / 2 , u(rng) / 2 , 0 };
+            rand *= lensRadius;
+            segment.ray.origin = segment.ray.origin + rand;
+            segment.ray.direction = glm::normalize(focalPoint - segment.ray.origin);
+        }
+
+    }
 }
 
 // TODO:
@@ -199,6 +240,9 @@ __global__ void computeIntersections(
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
+            else if (geom.type == TRIANGLE) {
+                t = triangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+            }
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 			// Compute the minimum t from the intersection tests to determine what
@@ -283,7 +327,8 @@ __global__ void BSDFShader(int iter
                          , int num_paths
                          , ShadeableIntersection* shadeableIntersections
                          , PathSegment* pathSegments
-                         , Material* materials)  
+                         , Material* materials
+                         , glm::vec3 globalLight)  
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_paths) { return; }
@@ -312,10 +357,10 @@ __global__ void BSDFShader(int iter
     // Else we handle the case that we hit a regular object
     // First we update the color of the path segment, then we can compute the new ray direction
     thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
-    scatterRay(segment, getPointOnRay(segment.ray, intersection.t), intersection.surfaceNormal, material, rng);
+    scatterRay(segment, getPointOnRay(segment.ray, intersection.t), intersection.surfaceNormal, material, rng, iter, segment.remainingBounces);
 
     if (segment.remainingBounces == 0) {
-        segment.color = glm::vec3(0.0f);
+        segment.color *= globalLight;
     }
     pathSegments[idx] = segment;
 }
@@ -346,6 +391,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
+    glm::vec3 globalLight = hst_scene->globalLight; 
+    if (!directLighting) {
+        globalLight = glm::vec3(0, 0, 0);
+    }
 
 	// 2D block for generating ray from camera
     const dim3 blockSize2d(8, 8);
@@ -356,9 +405,19 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 	// 1D block for path tracing
 	const int blockSize1d = 128;
 
+    if (cacheFirstBounce && stochasticAlias) {
+        std::cout << "Cannot use both stochastic Alias and first bounce caching" << std::endl;
+        throw std::exception();
+    }
+
     // generate rays if we are not caching first bounce or if we are on the fisrt iteration
     if (iter == 1 || !cacheFirstBounce) {
-        generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+        if (stochasticAlias) {
+            generateStochasticRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+        }
+        else {
+            generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
+        }
         checkCUDAError("generate camera ray");
     }
     else {
@@ -415,7 +474,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         num_paths,
         dev_intersections,
         dev_paths,
-        dev_materials
+        dev_materials,
+        globalLight
         );
         checkCUDAError("shade bounce");
         cudaDeviceSynchronize();
