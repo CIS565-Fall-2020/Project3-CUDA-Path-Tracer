@@ -40,20 +40,25 @@ Material shading is split into different BSDF evaluation functions based on mate
 
 **Imperfect Specular Reflection**
 
-<img src="img/renders/dode_glossy_2.1exp_10000samples.png" alt="sneak peek" width=300> <img src="img/renders/dode_glossy_4.5exp_10000samples.png" alt="sneak peek" width=300> <img src="img/renders/dode_glossy_8.5exp_10000samples.png" alt="sneak peek" width=300>
-***Material type:** Glossy  **Geometry:** Dodecahedron (imported mesh)  **Specular exponents:** 2.1 (left), 4.5 (middle), 8.5 (right)*
+Exponent = 2.1 | Exponent = 4.5 | Exponent = 8.5
+:---: | :---: | :---: 
+<img src="img/renders/dode_glossy_2.1exp_10000samples.png" alt="sneak peek" width=300> | <img src="img/renders/dode_glossy_4.5exp_10000samples.png" alt="sneak peek" width=300> | <img src="img/renders/dode_glossy_8.5exp_10000samples.png" alt="sneak peek" width=300>
 
 Lower specular exponent values give results that are closer to diffuse scattering while larger specular exponent values result in larger highlights.
 
 ## Insights ##
 
-It is important to note that anti-aliasing and first bounce cache do not work together, since the pixel samples will differ per iteration and cached first bounces from the first iteration won't match the generated ray direction in further iterations. In order to provide flexibility, I set first bounce cache usage as a toggleable feature rather than the default, so that anti-aliasing could be enabled if the first bounce cache is not used. The two examples below show how anti-aliasing improves the render quality. The image on the left benefits from anti-aliasing while the one on the right doesn't use it.
+It is important to note that anti-aliasing and first bounce cache do not work together, since the pixel samples will differ per iteration and cached first bounces from the first iteration won't match the generated ray direction in further iterations. In order to provide flexibility, I set first bounce cache usage as a toggleable feature rather than the default, so that anti-aliasing could be enabled if the first bounce cache is not used.
 
-<img src="img/result_alias.png" alt="anti-aliasing enabled" width=300> <img src="img/result_msort_noalias.png" alt="anti-aliasing enabled" width=300>
+Anti-aliasing enabled | Anti-aliasing disabled
+:---: | :---: |
+<img src="img/result_alias.png" alt="anti-aliasing enabled" width=300> | <img src="img/result_msort_noalias.png" alt="anti-aliasing enabled" width=300>
 
 Another interesting observation I have is that using material sort results in more stable render results compared to naive approach. The two images below, both rendered with 4950 iterations, are renders from the same camera position. The render on the left is taken by sorting rays by material type while the one on the right is rendered by the naive approach.
 
-<img src="img/readme.png" alt="anti-aliasing enabled" width=300> <img src="img/readme_nosort.png" alt="anti-aliasing enabled" width=300>
+Material sort enabled | Material sort disabled
+:---: | :---: |
+<img src="img/readme.png" alt="anti-aliasing enabled" width=300> | <img src="img/readme_nosort.png" alt="anti-aliasing enabled" width=300>
 
 ## Performance Analysis ##
 
