@@ -96,9 +96,8 @@ int main(int argc, char** argv) {
 
     // compute phi (horizontal) and theta (vertical) relative 3D axis
     // so, (0 0 1) is forward, (0 1 0) is up
-    glm::vec3 viewZY = glm::vec3(0.0f, view.y, view.z);
-    phi = glm::atan(view.z, view.x);
-    theta = glm::acos(glm::dot(glm::normalize(viewZY), glm::vec3(0, 1, 0)));
+    phi = glm::atan(view.x, view.z);
+    theta = glm::pi<float>() - glm::acos(view.y);
     ogLookAt = cam.lookAt;
     zoom = glm::length(cam.position - ogLookAt);
 
@@ -193,7 +192,7 @@ void runCuda() {
 
             updateStratifiedSamples(isectVecs, cameraVec);
         }
-        if (iteration % scene->lightPoolMis.size() == 0) {
+        if (!scene->lightPoolMis.empty() && iteration % scene->lightPoolMis.size() == 0) {
             directLightingSamples = scene->lightPoolMis;
             std::shuffle(directLightingSamples.begin(), directLightingSamples.end(), randGen);
         }

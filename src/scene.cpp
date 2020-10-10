@@ -332,6 +332,7 @@ glm::ivec3 readVertex(std::istream &in) {
     in >> res.x;
     if (skipSeparator(in)) {
         in >> res.y;
+        in.clear();
         if (skipSeparator(in)) {
             in >> res.z;
         }
@@ -388,6 +389,9 @@ ObjFile Scene::loadObj(std::istream &in, glm::mat4 trans) {
     }
 
     for (const auto &face : faces) {
+        if (face.id[0].x == -1 || face.id[1].x == -1 || face.id[2].x == -1) {
+            continue;
+        }
         result.triangles.emplace_back();
         GeomTriangle &tri = result.triangles.back();
         for (std::size_t i = 0; i < 3; ++i) {

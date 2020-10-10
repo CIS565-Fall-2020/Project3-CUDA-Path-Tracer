@@ -206,7 +206,7 @@ __host__ __device__ int traverseAABBTree(
     const Ray &ray, const AABBTreeNode *tree, int root, const Geom *geoms,
     int ignore1, int ignore2, float *dist, glm::vec3 *normToken
 ) {
-    constexpr int geomTestInterval = 4;
+    constexpr int geomTestInterval = 8;
 
     int stack[64], top = 1;
     stack[0] = root;

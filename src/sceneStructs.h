@@ -88,7 +88,7 @@ struct Camera {
 	glm::vec3 right;
 	glm::vec2 pixelLength;
 	float fovy;
-	float aperture = 0.3f, focalDistance = 20.0f;
+	float aperture = 0.0f, focalDistance = 20.0f;
 };
 
 struct RenderState {

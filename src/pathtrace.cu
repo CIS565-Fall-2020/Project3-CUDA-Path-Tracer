@@ -109,6 +109,9 @@ static int aabbTreeRoot;
 
 // static variables for device memory, any extra info you need, etc
 
+static int *dev_materialSortBuffer = nullptr;
+static int *dev_materialSortBuffer2 = nullptr;
+
 static bool firstBounceCached = false;
 static ShadeableIntersection *dev_firstBounceIntersections = nullptr;
 
@@ -120,12 +123,12 @@ static CameraSample *dev_camSamplePool = nullptr;
 void pathtraceInit(Scene *scene, int sqrtNumStratifiedSamples) {
 	hst_scene = scene;
 	const Camera &cam = hst_scene->state.camera;
-	const int pixelcount = cam.resolution.x * cam.resolution.y;
+	const int pixelCount = cam.resolution.x * cam.resolution.y;
 
-	cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
-	cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
+	cudaMalloc(&dev_image, pixelCount * sizeof(glm::vec3));
+	cudaMemset(dev_image, 0, pixelCount * sizeof(glm::vec3));
 
-	cudaMalloc(&dev_paths, pixelcount * sizeof(PathSegment));
+	cudaMalloc(&dev_paths, pixelCount * sizeof(PathSegment));
 
 	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
 	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
@@ -133,14 +136,17 @@ void pathtraceInit(Scene *scene, int sqrtNumStratifiedSamples) {
 	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
 	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
 
-	cudaMalloc(&dev_intersections, pixelcount * sizeof(ShadeableIntersection));
-	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
+	cudaMalloc(&dev_intersections, pixelCount * sizeof(ShadeableIntersection));
+	cudaMemset(dev_intersections, 0, pixelCount * sizeof(ShadeableIntersection));
 
 	// initialize any extra device memeory you need
 	if (cacheFirstBounce) {
-		cudaMalloc(&dev_firstBounceIntersections, pixelcount * sizeof(ShadeableIntersection));
+		cudaMalloc(&dev_firstBounceIntersections, pixelCount * sizeof(ShadeableIntersection));
 	}
 	firstBounceCached = false;
+
+	cudaMalloc(&dev_materialSortBuffer, pixelCount * sizeof(int));
+	cudaMalloc(&dev_materialSortBuffer2, pixelCount * sizeof(int));
 
 	cudaMalloc(&dev_aabbTree, scene->aabbTree.size() * sizeof(AABBTreeNode));
 	cudaMemcpy(dev_aabbTree, scene->aabbTree.data(), scene->aabbTree.size() * sizeof(AABBTreeNode), cudaMemcpyHostToDevice);
@@ -163,9 +169,13 @@ void pathtraceFree() {
 	cudaFree(dev_intersections);
 
 	// clean up any extra device memory you created
+	cudaFree(dev_materialSortBuffer);
+	cudaFree(dev_materialSortBuffer2);
+
 	if (cacheFirstBounce) {
 		cudaFree(dev_firstBounceIntersections);
 	}
+
 	cudaFree(dev_aabbTree);
 	cudaFree(dev_samplePool);
 	cudaFree(dev_camSamplePool);
@@ -237,13 +247,13 @@ __global__ void generateRayFromCamera(
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
 __global__ void computeIntersections(
-	int depth, int num_paths, PathSegment *pathSegments,
+	int depth, int numPaths, PathSegment *pathSegments,
 	const Geom *geoms, int geoms_size, const AABBTreeNode *aabbTree, int aabbTreeRoot,
-	ShadeableIntersection *intersections
+	ShadeableIntersection *intersections, int *materialKeys
 ) {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (path_index >= num_paths) {
+	if (path_index >= numPaths) {
 		return;
 	}
 
@@ -259,28 +269,31 @@ __global__ void computeIntersections(
 	);
 	pathSegment.lastGeom = hitGeomIndex;
 
+	int materialId;
 	if (hitGeomIndex == -1) {
-		intersections[path_index].t = -1.0f;
-		intersections[path_index].materialId = -1;
+		t_min = -1.0f;
+		materialId = -1;
 	} else {
 		// The ray hits something
 		glm::vec3 geomNorm, shadeNorm;
 		computeNormals(geoms[hitGeomIndex], normToken, &geomNorm, &shadeNorm);
-
-		intersections[path_index].t = t_min;
-		intersections[path_index].materialId = geoms[hitGeomIndex].materialid;
 		intersections[path_index].geometricNormal = geomNorm;
 		intersections[path_index].shadingNormal = shadeNorm;
+
+		materialId = geoms[hitGeomIndex].materialid;
 	}
+	intersections[path_index].t = t_min;
+	intersections[path_index].materialId = materialId;
+	materialKeys[path_index] = materialId;
 }
 
 __global__ void shade(
-	int iter, int depth, int num_paths, ShadeableIntersection *intersections, PathSegment *paths,
+	int iter, int depth, int numPaths, ShadeableIntersection *intersections, PathSegment *paths,
 	IntersectionSample *samplePool, float stratRange, int stratCount, int lightMis, int numLights,
 	const Geom *geoms, const Material *materials, const AABBTreeNode *tree, int treeRoot
 ) {
 	int iSelf = blockIdx.x * blockDim.x + threadIdx.x;
-	if (iSelf >= num_paths) {
+	if (iSelf >= numPaths) {
 		return;
 	}
 
@@ -397,16 +410,16 @@ void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, int numLights) {
 	checkCUDAError("generate camera ray");
 
 	PathSegment* dev_path_end = dev_paths + pixelcount;
-	int num_paths = dev_path_end - dev_paths;
+	int numPaths = dev_path_end - dev_paths;
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
-	for (int depth = 0; num_paths > 0; ++depth) {
+	for (int depth = 0; numPaths > 0; ++depth) {
 		// clean shading chunks
 		cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
 
 		// tracing
-		int numblocksPathSegmentTracing = (num_paths + blockSize1d - 1) / blockSize1d;
+		int numblocksPathSegmentTracing = (numPaths + blockSize1d - 1) / blockSize1d;
 		if (depth == 0 && firstBounceCached) {
 			cudaMemcpy(
 				dev_intersections, dev_firstBounceIntersections,
@@ -414,11 +427,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, int numLights) {
 			);
 		} else {
 			computeIntersections<<<numblocksPathSegmentTracing, blockSize1d>>>(
-				depth, num_paths, dev_paths,
+				depth, numPaths, dev_paths,
 				dev_geoms, hst_scene->geoms.size(), dev_aabbTree, aabbTreeRoot,
-				dev_intersections
+				dev_intersections, dev_materialSortBuffer
 			);
-			checkCUDAError("trace one bounce");
 
 			if (cacheFirstBounce && depth == 0) {
 				cudaMemcpy(
@@ -438,19 +450,27 @@ void pathtrace(uchar4 *pbo, int frame, int iter, int lightMis, int numLights) {
 		// path segments that have been reshuffled to be contiguous in memory.
 
 		if (sortByMaterial) {
-			thrust::sort_by_key(
-				thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, MaterialCompare()
+			cudaMemcpy(
+				dev_materialSortBuffer2, dev_materialSortBuffer, sizeof(int) * numPaths, cudaMemcpyDeviceToDevice
 			);
+			thrust::sort_by_key(thrust::device, dev_materialSortBuffer, dev_materialSortBuffer + numPaths, dev_intersections);
+			thrust::sort_by_key(thrust::device, dev_materialSortBuffer2, dev_materialSortBuffer2 + numPaths, dev_paths);
+
+			/*
+			thrust::sort_by_key(
+				thrust::device, dev_intersections, dev_intersections + numPaths, dev_paths, MaterialCompare()
+			);
+			*/
 		}
 
 		shade<<<numblocksPathSegmentTracing, blockSize1d>>>(
-			iter, depth, num_paths, dev_intersections, dev_paths,
+			iter, depth, numPaths, dev_intersections, dev_paths,
 			dev_samplePool + depth * numStratifiedSamples, stratifiedSamplingRange, numStratifiedSamples,
 			lightMis, numLights,
 			dev_geoms, dev_materials, dev_aabbTree, aabbTreeRoot
 		);
 
-		num_paths = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, IsRayTravelling()) - dev_paths;
+		numPaths = thrust::partition(thrust::device, dev_paths, dev_paths + numPaths, IsRayTravelling()) - dev_paths;
 	}
 
 	// Assemble this iteration and apply it to the image

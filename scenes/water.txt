@@ -1,0 +1,92 @@
+// Camera
+CAMERA
+RES         800 800
+FOVY        30
+ITERATIONS  1024
+DEPTH       20
+FILE        water
+EYE         -50 40 25
+LOOKAT      25 25 25
+UP          0 1 0
+
+
+MATERIAL lightSG
+emissive
+RGB 1 1 1
+END
+
+MATERIAL waterSG
+specularTransmission
+RGB 1 1 1
+IOR 1.33
+END
+
+MATERIAL aiStandardSurface1SG
+specularTransmission
+RGB 1 1 1
+IOR 1.33
+END
+
+MATERIAL mirrorSG
+disney
+RGB 1 1 1
+METALLIC 1.0
+ROUGHNESS 0.3
+END
+
+MATERIAL barSG
+disney
+RGB 1 1 1
+METALLIC 1.0
+ROUGHNESS 0.3
+END
+
+MATERIAL wallGreenSG
+disney
+RGB 0 1 0
+SPECULAR 1.0
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+ROUGHNESS 0.2
+END
+
+MATERIAL wallRedSG
+disney
+RGB 1 0 0
+SPECULAR 1.0
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+ROUGHNESS 0.2
+END
+
+MATERIAL platformSG
+disney
+RGB 0.6 1.0 0.2
+ROUGHNESS 0.7
+SPECULAR 1.0
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+END
+
+MATERIAL groundSG
+disney
+RGB 0.2 0.2 0.2
+ROUGHNESS 1.0
+SPECULAR 1.0
+END
+
+MATERIAL initialShadingGroup
+disney
+RGB 0.8 0.8 0.2
+METALLIC 1.0
+ROUGHNESS 0.2
+END
+
+
+OBJECT 1
+mesh
+scenes/models/water.obj
+MATERIAL initialShadingGroup
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       1 1 1

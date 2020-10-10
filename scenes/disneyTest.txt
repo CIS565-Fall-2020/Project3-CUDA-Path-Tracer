@@ -5,7 +5,7 @@ FOVY        30
 ITERATIONS  4096
 DEPTH       8
 FILE        disney
-EYE         15 -5 22
+EYE         15 9 22
 LOOKAT      0 1 7.5
 UP          0 1 0
 
