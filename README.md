@@ -23,7 +23,7 @@ Contents
 ## Introduction
 In this project, I implemented a CUDA-based path tracer capable of rendering globally-illuminated images very quickly.
 
-![](img/basicscene1.png)
+![](img/mario83.png)
 
 ## Core Features
 ### Generate Rays from Camera
@@ -109,7 +109,7 @@ Since it will iterate many times, I randomly add an offset at each iteration for
 
 NO ANTIALISAING            |  ANTIALISAING
 :-------------------------:|:-------------------------:
-![](img/non-antilias.png) | ![](img/antialis.png)
+![](img/non-antilias.png) | ![](img/tree.png)
 
 ### Better hemisphere sampling methods
 I used 2D Jittered Sampling to generate two random numbers between 0 to 1. Then I mapped them to the hemisphere with a cosine weighting.
@@ -122,6 +122,10 @@ I used 2D Jittered Sampling to generate two random numbers between 0 to 1. Then 
 My project can load arbitary models in obj format. I used [tinyobj](https://github.com/tinyobjloader/tinyobjloader) to load obj models into some attribute vectors. Then I implemented triangle-ray intersection test. 
 
 I used a bounding box to do reduce the number of rays that have to be checked against the entire mesh by first checking rays against a volume that completely bounds the mesh. The [performace](#Bounding-volume-intersection-culling) analysis can be found here.
+
+Mario Scene (Only 80 iterations)           |  Tree Scene
+:-------------------------:|:-------------------------:
+![](img/mario.png) | ![](img/tree.png)
 
 ### Object Motion and motion blur
 Instead of moving objects, I move camera at each iteration to create motion blur effets. 
