@@ -96,11 +96,11 @@ After each bounce of the rays, the array holding the rays will be partitioned so
 
 ## Materials Contigious in Memory
 
-There is an option to sort materials the intersections and path segments by material so that threads all following similar divergences in code will be next to each other in memory. This would increase performace. 
+There is an option to sort materials the intersections and path segments by material so that threads all following similar divergences in code will be next to each other in memory. This would increase performace because if diverging threads in the same block cannot run in parallel, so the threads would have to wait for each other. If the threads are together in memory then there will be less threads waiting and more threads doing work. A basic scene without memory loading took an average of 76 ms per iteration whereas a scene with memory loading took 212 ms per iteration. I beleive this optimization did not benifit my scenes because they do not have many material. If the scenes were larger with more materials it would help the performance. 
 
 ## Cache First Intersection
 
-There is an option to save the intersections from the first bounce of the first iteration and use them with every subsequent first bounce. Since the rays are always shooting the same out of the camera, these intersections are alays the same so we do not neeed to recalculate them. 
+There is an option to save the intersections from the first bounce of the first iteration and use them with every subsequent first bounce. Since the rays are always shooting the same out of the camera, these intersections are always the same so we do not neeed to recalculate them. This allows for one less bouonce per iteration, which would increase performance. The graph in the performance analysis section shows that caching the first intersection did slightly speed up performance.
 
 ## Mesh Bounding Box
 
@@ -118,7 +118,7 @@ This chart shows the difference between render times of an open scene and a clos
 
 ![](img/cacheGraph.png)
 
-This graph shows that caching the first intersections takes less time to render consistantly across the tested depths. This matched my hypothesis because less work is being done at the beginning of each iteration. 
+This graph shows that caching the first intersections takes less time to render consistantly across the tested depths. This matched my hypothesis because at the beginning of each iteration the past intersections can be used instead of doing one bounce of the loop. 
 
 # Bloopers
 
