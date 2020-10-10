@@ -112,7 +112,7 @@ When a mesh is loaded, the minimum and maximum x, y, and z values are saved to f
 
 ![](img/streamCompactionGraph.png)
 
-This chart shows the difference between render times of an open scene and a closed scene using stream compaction. As I predicted, closed scenes took a lot longer to render per iteration because rays are not terminating as quickly compared to an open scene. 
+This chart shows the difference between render times of an open scene and a closed scene using stream compaction. As I predicted, closed scenes took a lot longer to render per iteration because rays are not terminating as quickly compared to an open scene. In an open scene, rays can more easily shoot towards an open area where there will be no intersection, so they will terminate. With a closed scene, however, there is no where for the rays to escape so they will continue to bounce until they have reached the maximum depth. 
 
 ## Chaching First Intersection with Varying Depths
 
