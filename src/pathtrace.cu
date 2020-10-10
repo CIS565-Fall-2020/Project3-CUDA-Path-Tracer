@@ -154,7 +154,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 #endif // ANTIALIASING
   // Motion blur
     thrust::normal_distribution<float> n01(0, 1);
-    float t = abs(n01(rng))
+    float t = abs(n01(rng));
     glm::vec3 view = cam.view * (1 - t) + (cam.view + cam.motion) * t;
 
     segment.ray.direction = glm::normalize(view
@@ -231,8 +231,8 @@ __global__ void computeIntersections(
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			} else if (geom.type == MESH) {
-                t = meshIntersectionTest(geom, meshes, pathSegment.ray, tmp_intersect, tmp_normal, outside); 
-            }
+        t = meshIntersectionTest(geom, meshes, pathSegment.ray, tmp_intersect, tmp_normal, outside); 
+      }
 
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
