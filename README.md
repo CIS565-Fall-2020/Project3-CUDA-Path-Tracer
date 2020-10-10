@@ -62,21 +62,21 @@ I implemented stochastic sampled antialiasing by randomly offseting the values u
 ## Obj Mesh Loading
 ![](img/renders/star2500Samples.png)
 
-I implemented OBJ mesh loading using [tiny obj](https://github.com/syoyo/tinyobjloader). The mesh is loaded into the path tracer as individual triangles. The mesh shown above has 2576 polygons and took an average of 664.454 ms per iteration.
+I implemented OBJ mesh loading using [tiny obj](https://github.com/syoyo/tinyobjloader). The mesh is loaded into the path tracer as individual triangles. The mesh shown above has 2576 polygons and took an average of 664 ms per iteration.
 
 ## Procedural Shapes
 | Box Border Signed Distance Function | Sphere with Displacement Signed Distance Function |
 | ------------- | ----------- |
 | ![](img/renders/sdf1.png)  | ![](img/renders/sdf2.png) |
 
-I created two procedural shapes using signed distance functions and used ray marching to find the intersection of each ray with the shape. 
+I created two procedural shapes using signed distance functions and used ray marching to find the intersection of each ray with the shape. The average iteration time for the box sdf was 86 ms and the average iteration time for the displaced sphere sdf was 84 ms.
 
 ## Procedural Textures
 | Based on Intersect Position | Based on Normal |
 | ------------- | ----------- |
 | ![](img/renders/proceduralTexture2.png)  | ![](img/renders/proceduralTexture1.png) |
 
-I created two procedural textures that can be applied to any shape in the scene. One texture uses the intersection position to manipulate the color and another uses the normal of the intersection to manipulate the color.
+I created two procedural textures that can be applied to any shape in the scene. One texture uses the intersection position to manipulate the color and another uses the normal of the intersection to manipulate the color. The average iteration time for the box sdf with a procedural texture was 87 ms (diffuse was 86 ms) and the average iteration time for the displaced sphere sdf was 85 ms (diffuse was 84 ms).
 
 ## Better Hemisphere Sampling
 
