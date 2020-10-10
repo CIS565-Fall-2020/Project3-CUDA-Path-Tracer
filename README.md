@@ -31,6 +31,8 @@ This is a CUDA-based path tracer capable of rendering globally-illuminated image
 * Anti-aliasing rays with sub-pixel samples
 * Arbitrary GLTF mesh loading with toggleable bounding volume intersection culling
 * Camera depth of field
+* SDF-based Tanglecube and Bounding Box
+* Procedural texture
 * Hierarchical Spatial Structure - Octree (In progress)
 * Stratified sampling (In progress)
 
@@ -73,11 +75,27 @@ The scene camera can be set to enable focal distance and lens radius to get a de
 
 **Anti-aliasing**
 
-It is important to note that anti-aliasing and first bounce cache do not work together, since the pixel samples will differ per iteration and cached first bounces from the first iteration won't match the generated ray direction in further iterations. In order to provide flexibility, I set first bounce cache usage as a toggleable feature rather than the default, so that anti-aliasing could be enabled if the first bounce cache is not used.
-
 Anti-aliasing enabled | Anti-aliasing disabled
 :---: | :---: |
 <img src="img/renders/ico_alias_1500_dielec.png" alt="anti-aliasing enabled" width=500> | <img src="img/renders/ico_no_alias_1500_dielec.png" alt="anti-aliasing disabled" width=500>
+
+It is important to note that anti-aliasing and first bounce cache do not work together, since the pixel samples will differ per iteration and cached first bounces from the first iteration won't match the generated ray direction in further iterations. In order to provide flexibility, I set first bounce cache usage as a toggleable feature rather than the default, so that anti-aliasing could be enabled if the first bounce cache is not used.
+
+**SDF-Based Implicit Surfaces**
+
+Tanglecube | Bounding Box
+:---: | :---:
+<img src="img/renders/tanglecube_500.png" alt="tanglecube" width=500> | <img src="img/renders/bound_box_500.png" alt="bounding box" width=500>
+
+Ray-geometry intersection for implicit surfaces is computed by special signed distance functions and ray marching. The sign of the SDF return value determines whether the ray is outside, on or inside the implicit geometry. Ray marching is used for following the ray direction in small increments, passing the current position on the ray to the SDF function and deciding whether an intersection occured or the marching should be terminated if the maximum marching distance is reached.
+
+**Procedural Textures**
+
+[FBM](https://thebookofshaders.com/13/) | [Noise](https://thebookofshaders.com/edit.php#11/wood.frag)
+:---: | :---:
+<img src="img/renders/fb_tex.png" alt="fbm" width=500> | <img src="img/renders/noise_tex.png" alt="noise" width=500>
+
+I closely followed the procedural texture implementations from the link provided on top of the render images. I find the *Book of Shaders* noise texture implementations to be pretty useful. The two available procedural textures include Fractal Brownian Motion texture which benefits from a loop of adding noise to create a fractal looking noise pattern, and Wood Noise with swirly effect.
 
 ## Insights ##
 
