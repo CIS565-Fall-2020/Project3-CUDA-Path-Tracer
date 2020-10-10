@@ -12,13 +12,11 @@ glm::vec2 calculateStratifiedSample(
     thrust::uniform_real_distribution<float> u01(0, 1);
     // Split the pixel into totalIters grids (if possible)
     int grid = (int)(glm::sqrt((float)totalIters) + 0.5f);
-    float invGrids = 1.f / grid;
+    float invGrid = 1.f / grid;
 
     // Find the grid where current iteration is at
-    float x = (iter - 1) % grid;
-    float y = (iter - 1) / grid;
-
-    return glm::vec2(invGrids * u01(rng) + x, invGrids * u01(rng) + y);
+    glm::vec2 topLeft((iter - 1) % grid * invGrid, (iter - 1) / grid * invGrid);
+    return glm::vec2(topLeft.x + invGrid * u01(rng), topLeft.y + invGrid * u01(rng));
 }
 
 // CHECKITOUT
@@ -30,8 +28,8 @@ __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng, int iter, int totalIters, glm::vec2 pixelLength) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    glm::vec2 sample(u01(rng), u01(rng)); //calculateStratifiedSample(iter, totalIters, rng, pixelLength);
-
+    //glm::vec2 sample(calculateStratifiedSample(iter, totalIters, rng, pixelLength));
+    glm::vec2 sample(u01(rng), u01(rng));
     float sx = sample.x;
     float sy = sample.y;
 

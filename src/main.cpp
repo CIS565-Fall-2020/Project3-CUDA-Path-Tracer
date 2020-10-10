@@ -24,8 +24,10 @@ static double lastY;
 static bool camchanged = true;
 static bool cacheChanged = true;
 static bool sortMaterialChanged = true;
+static bool useBoundChanged = true;
 static bool cacheFirstBounce = false;
 static bool sortByMaterial = true;
+static bool useMeshBounds = false;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
 static bool useOctree = false;
@@ -145,6 +147,11 @@ void runCuda() {
         sortMaterialChanged = false;
     }
 
+    if (useBoundChanged) {
+        iteration = 0;
+        useBoundChanged = false;
+    }
+
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
@@ -161,7 +168,7 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration, cacheFirstBounce, sortByMaterial);
+        pathtrace(pbo_dptr, frame, iteration, cacheFirstBounce, sortByMaterial, useMeshBounds);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
@@ -200,6 +207,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
           sortByMaterial = !sortByMaterial;
           std::cout << "Sort By Material: " << std::boolalpha << sortByMaterial << std::endl;
           sortMaterialChanged = true;
+          break;
+      case GLFW_KEY_B:
+          // use mesh bounds
+          useMeshBounds = !useMeshBounds;
+          std::cout << "Use Mesh Bounds: " << std::boolalpha << useMeshBounds << std::endl;
+          useBoundChanged = true;
           break;
       case GLFW_KEY_SPACE:
         camchanged = true;

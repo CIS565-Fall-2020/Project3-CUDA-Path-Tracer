@@ -7,11 +7,8 @@
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
 
-static int num_triangles = 0;
-static int num_meshes = 0;
 
-
-Scene::Scene(string filename) {
+Scene::Scene(string filename) : num_triangles(0), num_meshes(0) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -39,8 +36,17 @@ Scene::Scene(string filename) {
     }
 }
 
+void updateMeshBound(glm::vec3& maxBound, glm::vec3& minBound, Geom& geom) {
+    if (geom.max_point.x > maxBound.x) maxBound.x = geom.max_point.x;
+    if (geom.max_point.y > maxBound.y) maxBound.y = geom.max_point.y;
+    if (geom.max_point.z > maxBound.z) maxBound.z = geom.max_point.z;
+    if (geom.min_point.x < minBound.x) minBound.x = geom.min_point.x;
+    if (geom.min_point.y < minBound.y) minBound.y = geom.min_point.y;
+    if (geom.min_point.z < minBound.z) minBound.z = geom.min_point.z;
+}
+
 int Scene::loadGeom(string objectid) {
-    int id = atoi(objectid.c_str()) + num_triangles - num_meshes;
+    int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
         cout << "Id: " << id << endl;
         cout << "Geoms: " << geoms.size() << endl;
@@ -52,6 +58,7 @@ int Scene::loadGeom(string objectid) {
         Geom newGeom;
         string line;
         std::vector<Geom> triangles; // for arbitrary mesh only
+        newGeom.geomId = id;
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -64,7 +71,7 @@ int Scene::loadGeom(string objectid) {
                 newGeom.type = CUBE;
             } else if (strcmp(line.c_str(), "mesh") == 0) {
                 cout << "Creating new mesh..." << endl;
-                newGeom.type = TRIANGLE;
+                newGeom.type = MESH;
                 // read GLTF file
                 string filename;
                 utilityCore::safeGetline(fp_in, line);
@@ -186,9 +193,11 @@ int Scene::loadGeom(string objectid) {
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
 
-        if (newGeom.type == TRIANGLE) {
+        if (newGeom.type == MESH) {
+            glm::vec3 maxCorner(FLT_MIN);
+            glm::vec3 minCorner(FLT_MAX);
             // iterate over all triangles
-            for (Geom triangle : triangles) {
+            for (Geom& triangle : triangles) {
                 triangle.materialid = newGeom.materialid;
                 triangle.translation = newGeom.translation;
                 triangle.rotation = newGeom.rotation;
@@ -205,10 +214,15 @@ int Scene::loadGeom(string objectid) {
                 triangle.min_point = glm::vec3(glm::min(v0t.x, glm::min(v1t.x, v2t.x)),
                                                glm::min(v0t.y, glm::min(v1t.y, v2t.y)),
                                                glm::min(v0t.z, glm::min(v1t.z, v2t.z)));
-                geoms.push_back(triangle);
+                //geoms.push_back(triangle);
                 num_triangles++;
+                updateMeshBound(maxCorner, minCorner, triangle);
             }
             num_meshes++;
+            newGeom.max_point = maxCorner;
+            newGeom.min_point = minCorner;
+            meshes[newGeom.geomId] = triangles;
+            geoms.push_back(newGeom);
         }
         else {
             if (newGeom.type == CUBE || newGeom.type == SPHERE) {

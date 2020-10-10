@@ -93,6 +93,7 @@ static std::vector<int> hst_octnode_geom_indices;
 static OctNode* dev_octnodes = NULL;
 static int* dev_octnode_geoms = NULL;
 static int* dev_octnode_queues = NULL;
+static Geom* dev_triangles = NULL;
 static int octNodeId = 1; // id counter for octNode
 static bool useOctree = false;
 static int octreeDepth = 0;
@@ -383,9 +384,6 @@ void pathtraceInit(Scene *scene, bool octree, int treeDepth, int geomNumber, int
 
     cudaMalloc(&dev_terminated_paths, pixelcount * sizeof(PathSegment));
 
-  	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
-  	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
-
   	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
 
@@ -397,6 +395,19 @@ void pathtraceInit(Scene *scene, bool octree, int treeDepth, int geomNumber, int
 
     cudaMalloc(&dev_first_bounce_paths, pixelcount * sizeof(PathSegment));
     cudaMemset(dev_first_bounce_paths, 0, pixelcount * sizeof(PathSegment));
+
+    cudaMalloc(&dev_triangles, hst_scene->num_triangles * sizeof(Geom));
+    int triangles_added = 0;
+    for (std::map<int, std::vector<Geom>>::iterator iter = hst_scene->meshes.begin(); iter != hst_scene->meshes.end(); ++iter) {
+        int k = iter->first;
+        hst_scene->geoms[k].triangleStart = triangles_added;
+        hst_scene->geoms[k].numTriangles = hst_scene->meshes[k].size();
+        cudaMemcpy(dev_triangles + triangles_added, hst_scene->meshes[k].data(), hst_scene->meshes[k].size() * sizeof(Geom), cudaMemcpyHostToDevice);
+        triangles_added += hst_scene->meshes[k].size();
+    }
+
+    cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
+    cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
 
     // Setup the Octree
     useOctree = octree;
@@ -430,6 +441,7 @@ void pathtraceFree(bool octree) {
   	cudaFree(dev_intersections);
     cudaFree(dev_first_bounce);
     cudaFree(dev_first_bounce_paths);
+    cudaFree(dev_triangles);
     if (octree) {
         cudaFree(dev_octnodes);
         cudaFree(dev_octnode_geoms);
@@ -489,6 +501,42 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	}
 }
 
+__host__ __device__ bool MeshBoundsTest(
+    Geom& mesh,
+    Ray& ray,
+    glm::vec3& invDir
+)
+{
+    glm::vec3 min_pointPad(mesh.min_point.x, mesh.min_point.y, mesh.min_point.z);
+    glm::vec3 max_pointPad(mesh.max_point.x, mesh.max_point.y, mesh.max_point.z);
+    float t0x = (min_pointPad.x - ray.origin.x) * invDir.x;
+    float t1x = (max_pointPad.x - ray.origin.x) * invDir.x;
+    if (t0x > t1x) {
+        float temp = t0x;
+        t0x = t1x;
+        t1x = temp;
+    }
+    float t0y = (min_pointPad.y - ray.origin.y) * invDir.y;
+    float t1y = (max_pointPad.y - ray.origin.y) * invDir.y;
+    if (t0y > t1y) {
+        float temp = t0y;
+        t0y = t1y;
+        t1y = temp;
+    }
+    if ((t0x > t1y) || (t0y > t1x)) return false;
+    if (t0y > t0x) t0x = t0y;
+    if (t1y < t1x) t1x = t1y;
+    float t0z = (min_pointPad.z - ray.origin.z) * invDir.z;
+    float t1z = (max_pointPad.z - ray.origin.z) * invDir.z;
+    if (t0z > t1z) {
+        float temp = t0z;
+        t0z = t1z;
+        t1z = temp;
+    }
+    if ((t0x > t1z) || (t0z > t1x)) return false;
+    return true;
+}
+
 __global__ void computeIntersections(
 	int depth
 	, int num_paths
@@ -496,6 +544,8 @@ __global__ void computeIntersections(
 	, Geom * geoms
 	, int geoms_size
 	, ShadeableIntersection * intersections
+    , Geom* triangles
+    , bool useBound
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -528,20 +578,56 @@ __global__ void computeIntersections(
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
-            else if (geom.type == TRIANGLE) 
+            else if (geom.type == MESH) 
             {
-                t = triangleIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                // check if ray would intersect this mesh
+                float xdir = pathSegment.ray.direction.x;
+                float ydir = pathSegment.ray.direction.y;
+
+                // Find set of geometry to test against from octree
+                float invDir_x = xdir != 0 ? 1.f / xdir : 0.f;
+                float invDir_y = ydir != 0 ? 1.f / ydir : 0.f;
+                float invDir_z = pathSegment.ray.direction.z != 0 ? 1.f / pathSegment.ray.direction.z : 0.f;
+                glm::vec3 invDir(invDir_x, invDir_y, invDir_z);
+                if (useBound) {
+                    if (MeshBoundsTest(geom, pathSegment.ray, invDir)) {
+                        // check for intersection against each triangle
+                        for (int j = geom.triangleStart; j < geom.numTriangles; ++j) {
+                            t = triangleIntersectionTest(triangles[j], pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                            if (t > 0.0f && t_min > t)
+                            {
+                                t_min = t;
+                                hit_geom_index = i;
+                                intersect_point = tmp_intersect;
+                                normal = tmp_normal;
+                            }
+                        }
+                    }
+                }
+                else {
+                    // check for intersection against each triangle
+                    for (int j = geom.triangleStart; j < geom.numTriangles; ++j) {
+                        t = triangleIntersectionTest(triangles[j], pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                        if (t > 0.0f && t_min > t)
+                        {
+                            t_min = t;
+                            hit_geom_index = i;
+                            intersect_point = tmp_intersect;
+                            normal = tmp_normal;
+                        }
+                    }
+                }
             }
 
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
-			if (t > 0.0f && t_min > t)
-			{
-				t_min = t;
-				hit_geom_index = i;
-				intersect_point = tmp_intersect;
-				normal = tmp_normal;
-			}
+            if (t > 0.0f && t_min > t)
+            {
+                t_min = t;
+                hit_geom_index = i;
+                intersect_point = tmp_intersect;
+                normal = tmp_normal;
+            }
 		}
 
 		if (hit_geom_index == -1)
@@ -848,7 +934,7 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
-void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sortByMaterial) {
+void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sortByMaterial, bool useMeshBounds) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -941,6 +1027,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
                     , dev_geoms
                     , hst_scene->geoms.size()
                     , dev_intersections
+                    , dev_triangles
+                    , useMeshBounds
                     );
                 checkCUDAError("trace one bounce");
                 cudaDeviceSynchronize();
@@ -972,6 +1060,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
                 , dev_geoms
                 , hst_scene->geoms.size()
                 , dev_intersections
+                , dev_triangles
+                , useMeshBounds
                 );
             checkCUDAError("trace one bounce");
             cudaDeviceSynchronize();
