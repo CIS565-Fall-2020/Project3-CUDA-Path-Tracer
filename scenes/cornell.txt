@@ -116,7 +116,7 @@ TRANS       -1 4 -1
 ROTAT       0 0 0
 SCALE       3 3 3
 
-// Arrow
+// Heart
 OBJECT 7
 mesh
 ../models/12190_Heart_v1_L3.obj
