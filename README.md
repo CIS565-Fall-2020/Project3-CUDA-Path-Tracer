@@ -134,14 +134,15 @@ camera view = (1 - t) * old camera view + t * new camera view
 where t is a random number at each iteration
 ```
 
+back and front            |  left and right
+:-------------------------:|:-------------------------:
+![](img/motion-z.png) | ![](img/motion-x.png)
+
 ### Basic procedural texture
 I use barycentric interpolation to get uv of each intersection. Then I set the color (r, g, b) to (u, v, 0).
 
 ![](img/texture.PNG)
 
-back and forth            |  left and right
-:-------------------------:|:-------------------------:
-![](img/motion-z.png) | ![](img/motion-x.png)
 
 ## Improvement and Performance Analysis
 There are four techniques to improve performance: stream compaction, sorting by materials, cache the first bounce and bounding volume intersection culling.
