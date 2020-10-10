@@ -27,7 +27,7 @@
 #define ANTI_ALIASING
 //#define DEPTH_OF_FIELD
 #define DIRECT_LIGHTING 
-#define MOTION_BLUR 
+//#define MOTION_BLUR 
 //#define MOTION_BLUR_2 //Ghost mode lol 
 //#define BOKEH
 
@@ -240,7 +240,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		{
 			//Refer to 561 Path Tracer 
 			glm::vec2 sample = glm::vec2(u01(rng), u01(rng));
-			glm::vec2 point_on_lens(0.f); 
+			glm::vec2 point_on_lens(0.f);
 
 #ifdef BOKEH
 			point_on_lens = glm::vec2(cam.lensRadius * glm::vec3(glm::rotate(sample, 45.f), 0.f));
@@ -271,7 +271,7 @@ __global__ void computeIntersections(
 	, ShadeableIntersection* intersections
 	, Triangle* triangles
 	, int num_triangles
-	,int iter
+	, int iter
 )
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -315,14 +315,14 @@ __global__ void computeIntersections(
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 			else if (geom.type == MESH)
 			{
-				//for (int i = 0; i < num_triangles; i++)
-				//{
-				//	Triangle triangle = triangles[i]; 
-				//	glm::vec3 vert = triangle.vert1; 
-				//	printf("HI"); 
-				//}
-					//t = meshIntersectionTest(mesh, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+#ifdef BOUNDING_VOLUME
+
+#else
+				//t = meshIntersectionTest(mesh, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 				t = trianglesIntersectionTest(geom, triangles, num_triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+
+#endif //BOUNDING_VOLUME
+
 			}
 
 			// Compute the minimum t from the intersection tests to determine what
@@ -719,7 +719,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			checkCUDAError("Error in trace one bounce");
 			cudaDeviceSynchronize();
 			depth++;
-		}
+	}
 #else
 		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
 			depth
@@ -808,7 +808,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		}
 		depth++;
 #endif // STREAM_COMPACT_RAYS
-	}
+}
 
 #ifdef USE_SHADE_MATERIAL
 	num_paths = dev_path_end - dev_paths;
@@ -828,4 +828,4 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 
 	checkCUDAError("pathtrace");
-}
+	}

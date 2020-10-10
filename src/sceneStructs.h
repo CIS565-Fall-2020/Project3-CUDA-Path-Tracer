@@ -94,6 +94,8 @@ struct Mesh {
     std::vector<Triangle> triangles; 
     int num_triangles = 0;
     std::string filename; 
+    int start_triangle, end_triangle; 
+    glm::vec3 minCorner, maxCorner; 
 };
 
 //struct OctTreeNode
