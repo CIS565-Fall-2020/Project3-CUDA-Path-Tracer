@@ -38,6 +38,12 @@ This is a CUDA-based path tracer capable of rendering globally-illuminated image
 
 Material shading is split into different BSDF evaluation functions based on material type. Supported materials include diffuse, mirror, glass, fresnel dielectric and glossy materials. Diffuse material scattering is computed by using cosine-weighted samples within a hemisphere. Fresnel dielectric materials are defined in the scene file with an index of refraction, which is used by BSDF evaluation to compute the probability of refracting versus reflecting the scatter ray. Mirror material scattering function reflects the ray along the surface normal while glossy reflection happens within a lobe computed by the specular exponent of the material.
 
+**Speculars**
+
+Fresnel dielectric | Perfect refractive | Perfect specular
+:---: | :---: | :---: 
+<img src="img/renders/ico_alias_1500_dielec.png" alt="sneak peek" width=300> | <img src="img/renders/ico_glass_1500.png" alt="sneak peek" width=300> | <img src="img/renders/ico_mirror_1500.png" alt="sneak peek" width=300>
+
 **Imperfect Specular Reflection**
 
 Exponent = 2.1 | Exponent = 4.5 | Exponent = 8.5
@@ -65,19 +71,21 @@ Focal Distance = 30, Lens Radius = 2.5 | Focal Distance = 20, Lens Radius = 2.5
 
 The scene camera can be set to enable focal distance and lens radius to get a depth of field effect. Geometries located at the focal distance within the lens radius will stay in focus while other geometry around the scene will be distorted.
 
-## Insights ##
+**Anti-aliasing**
 
 It is important to note that anti-aliasing and first bounce cache do not work together, since the pixel samples will differ per iteration and cached first bounces from the first iteration won't match the generated ray direction in further iterations. In order to provide flexibility, I set first bounce cache usage as a toggleable feature rather than the default, so that anti-aliasing could be enabled if the first bounce cache is not used.
 
 Anti-aliasing enabled | Anti-aliasing disabled
 :---: | :---: |
-<img src="img/result_alias.png" alt="anti-aliasing enabled" width=300> | <img src="img/result_msort_noalias.png" alt="anti-aliasing enabled" width=300>
+<img src="img/renders/ico_alias_1500_dielec.png" alt="anti-aliasing enabled" width=500> | <img src="img/renders/ico_no_alias_1500_dielec.png" alt="anti-aliasing disabled" width=500>
 
-Another interesting observation I have is that using material sort results in more stable render results compared to naive approach. The two images below, both rendered with 4950 iterations, are renders from the same camera position. The render on the left is taken by sorting rays by material type while the one on the right is rendered by the naive approach.
+## Insights ##
+
+One interesting observation I have is that using material sort results in more stable render results compared to naive approach. The two images below, both rendered with 4950 iterations, are renders from the same camera position. The render on the left is taken by sorting rays by material type while the one on the right is rendered by the naive approach.
 
 Material sort enabled | Material sort disabled
 :---: | :---: |
-<img src="img/readme.png" alt="anti-aliasing enabled" width=300> | <img src="img/readme_nosort.png" alt="anti-aliasing enabled" width=300>
+<img src="img/readme.png" alt="anti-aliasing enabled" width=300> | <img src="img/readme_nosort.png" alt="anti-aliasing disabled" width=300>
 
 ## Performance Analysis ##
 
