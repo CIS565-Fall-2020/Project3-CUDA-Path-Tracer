@@ -96,17 +96,10 @@ namespace example {
 
             newGeom.trigStartIdx = scene->currTrigIdx;
 
-            //int count = 0;
-
             // Iterate through all the meshes in the glTF file
             for (const auto& gltfMesh : model.meshes) {
                   std::cout << "Current mesh has " << gltfMesh.primitives.size()
                         << " primitives:\n";
-
-                  //if (count == 0) { // temp. for testing
-                  //      count++;
-                  //      continue;
-                  //}
 
 
                   // Create a mesh object
@@ -334,22 +327,14 @@ namespace example {
                                                             loadedMesh.facevarying_normals.push_back(n0.y);
                                                             loadedMesh.facevarying_normals.push_back(n0.z);
 
-                                                            /*std::cout << "normals[" << 3 * i << "]: (" << n0.x
-                                                                  << ", " << n0.y << ", " << n0.z << ")\n";*/
-
                                                             loadedMesh.facevarying_normals.push_back(n1.x);
                                                             loadedMesh.facevarying_normals.push_back(n1.y);
                                                             loadedMesh.facevarying_normals.push_back(n1.z);
-
-                                                            /*std::cout << "normals[" << 3 * i + 1 << "]: (" << n1.x
-                                                                  << ", " << n1.y << ", " << n1.z << ")\n";*/
 
                                                             loadedMesh.facevarying_normals.push_back(n2.x);
                                                             loadedMesh.facevarying_normals.push_back(n2.y);
                                                             loadedMesh.facevarying_normals.push_back(n2.z);
 
-                                                            /*std::cout << "normals[" << 3 * i + 2 << "]: (" << n2.x
-                                                                  << ", " << n2.y << ", " << n2.z << ")\n";*/
                                                       }
                                                 } break;
                                                 case TINYGLTF_COMPONENT_TYPE_DOUBLE: {
@@ -494,15 +479,7 @@ namespace example {
                         std::cout << "pMin [" << "]: (" << pMin.x
                               << ", " << pMin.y << ", " << pMin.z << ")\n";
                         std::cout << "bCenter [" << "]: (" << bCenter.x
-                              << ", " << bCenter.y << ", " << bCenter.z << ")\n";
-
-                        /*for (size_t v = 0; v < loadedMesh.vertices.size() / 3; v++) {
-                              loadedMesh.vertices[3 * v + 0] -= bCenter.x;
-                              loadedMesh.vertices[3 * v + 1] -= bCenter.y;
-                              loadedMesh.vertices[3 * v + 2] -= bCenter.z;
-                        }*/
-
-                        
+                              << ", " << bCenter.y << ", " << bCenter.z << ")\n";                     
 
                         loadedMesh.pivot_xform[0][0] = 1.0f;
                         loadedMesh.pivot_xform[0][1] = 0.0f;
@@ -523,13 +500,7 @@ namespace example {
                         loadedMesh.pivot_xform[3][1] = bCenter.y;
                         loadedMesh.pivot_xform[3][2] = bCenter.z;
                         loadedMesh.pivot_xform[3][3] = 1.0f;
-                        
-                        
-
-                        // TODO handle materials -- no materials to handle i think
-                        /*for (size_t i{ 0 }; i < loadedMesh.faces.size(); ++i)
-                              loadedMesh.material_ids.push_back(scene->gltfMaterials->at(0).id);
-                        scene->gltfMeshes->push_back(loadedMesh);*/
+                                             
                         ret = true;      
                   }
                   
@@ -555,9 +526,6 @@ namespace example {
                               }
                               i++;
                         }
-
-                        /*std::cout << "faceVaryingNormals size = " << loadedMesh.facevarying_normals.size() << std::endl;
-                        std::cout << "faces size = " << loadedMesh.faces.size() << ", vertices.size = " << loadedMesh.vertices.size() << std::endl;*/
                         
                         scene->triangles.push_back(t);
                         scene->currTrigIdx++;

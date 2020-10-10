@@ -180,9 +180,9 @@ SCALE       2.5 2.5 2.5
 OBJECT 8
 sphere
 material 6
-TRANS       2 6.5 3
+TRANS       2 6.3 2.5
 ROTAT       0 0 0
-SCALE       3.3 3.3 3.3
+SCALE       3.5 3.5 3.5
 
 // purple glass lion
 OBJECT 9

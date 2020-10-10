@@ -82,8 +82,6 @@ static PathSegment* dev_paths = NULL;
 static ShadeableIntersection* dev_intersections = NULL;
 static ShadeableIntersection* dev_intersections_first = NULL;
 static Triangle* dev_triangles = NULL;
-// TODO: static variables for device memory, any extra info you need, etc
-// ...
 
 void pathtraceInit(Scene* scene) {
 	  hst_scene = scene;
@@ -107,7 +105,6 @@ void pathtraceInit(Scene* scene) {
 	  cudaMalloc(&dev_intersections_first, pixelcount * sizeof(ShadeableIntersection));
 	  cudaMemset(dev_intersections_first, 0, pixelcount * sizeof(ShadeableIntersection));
 
-	  // TODO: initialize any extra device memeory you need
 	  cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
 	  cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
 
@@ -121,7 +118,6 @@ void pathtraceFree() {
 	  cudaFree(dev_materials);
 	  cudaFree(dev_intersections);
 	  cudaFree(dev_intersections_first);
-	  // TODO: clean up any extra device memory you created
 	  cudaFree(dev_triangles);
 
 	  checkCUDAError("pathtraceFree");
@@ -186,7 +182,6 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 	  }
 }
 
-// TODO:
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
@@ -233,8 +228,6 @@ __global__ void computeIntersections(
 						t = meshIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, triangles);
 				  }
 
-				  // TODO: add more intersection tests here... triangle? metaball? CSG?
-
 				  // Compute the minimum t from the intersection tests to determine what
 				  // scene geometry object was hit first.
 				  if (t > 0.0f && t_min > t)
@@ -260,16 +253,8 @@ __global__ void computeIntersections(
 	  }
 }
 
-// LOOK: "fake" shader demonstrating what you might do with the info in
-// a ShadeableIntersection, as well as how to use thrust's random number
-// generator. Observe that since the thrust random number generator basically
-// adds "noise" to the iteration, the image should start off noisy and get
-// cleaner as more iterations are computed.
-//
-// Note that this shader does NOT do a BSDF evaluation!
-// Your shaders should handle that - this can allow techniques such as
-// bump mapping.
-__global__ void shadeFakeMaterial(
+
+__global__ void shadeMaterial(
 	  int iter
 	  , int num_paths
 	  , ShadeableIntersection* shadeableIntersections
@@ -283,8 +268,6 @@ __global__ void shadeFakeMaterial(
 			ShadeableIntersection intersection = shadeableIntersections[idx];
 			if (intersection.t > 0.0f && pathSegments[idx].remainingBounces > 0) { // if the intersection exists...
 			  // Set up the RNG
-			  // LOOK: this is how you use thrust's RNG! Please look at
-			  // makeSeededRandomEngine as well.
 				  thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
 				  thrust::uniform_real_distribution<float> u01(0, 1);
 
@@ -404,8 +387,6 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	  // * Finally, add this iteration's results to the image. This has been done
 	  //   for you.
 
-	  // TODO: perform one iteration of path tracing
-
 	  generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
 	  checkCUDAError("generate camera ray");
 
@@ -474,17 +455,16 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			thrust::sort_by_key(thrust::device, dev_intersections, dev_intersections + num_paths, dev_paths, compareMatId());
 #endif
 
-
-			// TODO:
 			// --- Shading Stage ---
 			// Shade path segments based on intersections and generate new rays by
 		  // evaluating the BSDF.
 		  // Start off with just a big kernel that handles all the different
 		  // materials you have in the scenefile.
+
 		  // TODO: compare between directly shading the path segments and shading
 		  // path segments that have been reshuffled to be contiguous in memory.
 
-			shadeFakeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (
+			shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (
 				  iter,
 				  num_paths,
 				  dev_intersections,

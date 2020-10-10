@@ -21,7 +21,6 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
     
-    //int loadMesh(string location, Geom& newGeom);
 public:
     Scene(string filename);
     ~Scene();

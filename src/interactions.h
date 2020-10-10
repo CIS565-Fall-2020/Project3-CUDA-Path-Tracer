@@ -3,7 +3,6 @@
 #include "intersections.h"
 #define SCHLICK 0
 
-// CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
  * Used for diffuse lighting.
@@ -50,19 +49,20 @@ float reflectance(float cosine, float ref_idx) {
       return r0 + (1.f - r0) * pow(glm::abs(1.f - cosine), 5.f);
 }
 
+// Algorithm from PBRT book
 __host__ __device__
 glm::vec2 ConcentricSampleDisk(const glm::vec2& u) {
       float PiOver2 = 1.57079632679489661923;
       float PiOver4 = 0.78539816339744830961;
 
-      /*<< Map uniform random numbers to (-1, 1)>>*/
+      // Map uniform random numbers to (-1, 1)
       glm::vec2 uOffset = 2.f * u - glm::vec2(1, 1);
 
-      //<< Handle degeneracy at the origin >>
+      // Handle degeneracy at the origin
       if (uOffset.x == 0 && uOffset.y == 0)
             return glm::vec2(0, 0);
 
-      //<< Apply concentric mapping to point >>
+      // Apply concentric mapping to point
       float theta, r;
       if (glm::abs(uOffset.x) > glm::abs(uOffset.y)) {
             r = uOffset.x;
@@ -97,7 +97,6 @@ glm::vec2 ConcentricSampleDisk(const glm::vec2& u) {
  * This method applies its changes to the Ray parameter `ray` in place.
  * It also modifies the color `color` of the ray in place.
  *
- * You may need to change the parameter list for your purposes!
  */
 __host__ __device__
 void scatterRay(
@@ -106,7 +105,6 @@ void scatterRay(
         glm::vec3 normal,
         const Material &m,
         thrust::default_random_engine &rng) {
-    // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
       thrust::uniform_real_distribution<float> u01(0, 1);
@@ -144,14 +142,14 @@ void scatterRay(
       else if (prob < (m.hasRefractive + m.hasReflective)) {
              // specular reflection
              pathSegment.ray.origin = intersect + 0.001f * normal;
-             pathSegment.color *= m.specular.color; // not sure for 0.5
+             pathSegment.color *= m.specular.color;
              pathSegment.ray.direction = glm::normalize(glm::reflect(rayDir, normal)); // need to change to sampling based later
             
       } 
       else {
             // ideal diffuse
             pathSegment.ray.origin = intersect + 0.001f * normal;
-            pathSegment.color *= m.color; // not sure for 0.5
+            pathSegment.color *= m.color;
             pathSegment.ray.direction = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
       }
       
