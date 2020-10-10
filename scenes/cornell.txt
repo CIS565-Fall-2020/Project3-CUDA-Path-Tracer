@@ -45,6 +45,16 @@ SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        1
 REFR        0
+REFRIOR     1.5
+EMITTANCE   0
+
+// Refractive specular white
+MATERIAL 5
+RGB         .98 .98 .98
+SPECEX      0
+SPECRGB     .98 .98 .98
+REFL        1
+REFR        1
 REFRIOR     0
 EMITTANCE   0
 
@@ -58,6 +68,8 @@ FILE        cornell
 EYE         0.0 5 10.5
 LOOKAT      0 5 0
 UP          0 1 0
+//FOCAL_DIST  10.5
+//LENS_RADIUS 0.5
 
 
 // Ceiling light
@@ -109,9 +121,26 @@ ROTAT       0 0 0
 SCALE       .01 10 10
 
 // Sphere
+//OBJECT 6
+//sphere
+//material 4
+//TRANS       -1 4 -1
+//ROTAT       0 0 0
+//SCALE       3 3 3
+
+// obj
 OBJECT 6
 sphere
-material 4
-TRANS       -1 4 -1
-ROTAT       0 0 0
+material 1
+TRANS       -1 4 3
+ROTAT       0 90 0
 SCALE       3 3 3
+
+//OBJECT 7
+//sphere
+//material 1
+//TRANS       -4 2 -3
+//ROTAT       0 90 0
+//SCALE       2 2 2
+
+
