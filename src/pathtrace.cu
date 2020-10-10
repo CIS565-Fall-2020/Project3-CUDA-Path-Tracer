@@ -20,7 +20,7 @@
 #define SORTMATERIAL 0
 #define CACHEFIRSTBOUNCE 0
 #define DEPTH_OF_FIELD 0
-#define OCTREE 0
+#define OCTREE 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)

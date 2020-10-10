@@ -126,6 +126,10 @@ struct OctreeNode_cuda {
 		blf(blf), blb(blb),
 		brf(brf), brb(brb) {
 	}
+
+	OctreeNode_cuda() {
+
+	}
 };
 
 void constructOctree(OctreeNode *&root,
