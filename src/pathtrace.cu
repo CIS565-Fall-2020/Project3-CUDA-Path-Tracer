@@ -336,7 +336,7 @@ __global__ void shadeMaterial(
           pathSegments[idx].color = glm::vec3(0.f);
         }
         else {
-          scatterRay(pathSegments[idx], isectLoc, intersection.surfaceNormal, material, rng, samples, sample1D);
+          scatterRay(pathSegments[idx], isectLoc, intersection.surfaceNormal, material, rng);
         }
       }
     }

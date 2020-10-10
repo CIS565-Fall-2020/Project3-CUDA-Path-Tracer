@@ -66,7 +66,7 @@ cube
 material 0
 TRANS       0 10 0
 ROTAT       0 0 0
-SCALE       3 .3 3
+SCALE       5 .3 5
 
 // Floor
 OBJECT 1
@@ -115,3 +115,19 @@ material 1
 TRANS       -1 4 -1
 ROTAT       0 0 0
 SCALE       3 3 3
+
+// Sphere
+OBJECT 7
+sphere
+material 4
+TRANS       2 2 -4
+ROTAT       0 0 0
+SCALE       4 4 4
+
+// Sphere
+OBJECT 8
+sphere
+material 2
+TRANS       4 5 1
+ROTAT       0 0 0
+SCALE       2 2 2
