@@ -7,6 +7,8 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/sydney-miller-upenn/)
 * Tested on: GTX 222 222MB (CETS Virtual Lab)
 
+![](img/renders/finalRender.png)
+
 Table of contents
 =================
    * [Overview of Path Tracing](#Overview)
