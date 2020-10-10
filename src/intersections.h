@@ -259,8 +259,10 @@ __host__ __device__ float implicitSurfaceIntersectionTest(Geom surface, Ray r,
         switch (surface.implicit.type) {
         case TANGLECUBE:
             dist = scale * tanglecubeFunction(localPoint / scale);
+            break;
         case TWIST:
             dist = scale * twistFunction(localPoint / scale);
+            break;
         }
 
         if (dist < I_EPSILON) {

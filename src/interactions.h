@@ -162,6 +162,7 @@ __host__ __device__ void calculateReflect(PathSegment& pathSegment,
     r.direction = reflectedDir;
 
     if (!handleProceduralTextures(pathSegment, intersect, normal, m)) {
+        // artificially color the material
         if (m.specular.exponent > 0) {
             glm::vec3 specularColor = m.specular.color;
             r.direction = reflectedDir;
@@ -196,7 +197,12 @@ __host__ __device__ void calculateRefract(PathSegment& pathSegment,
         r.direction = refractedDir;
     }
 
-    handleProceduralTextures(pathSegment, intersect, normal, m);
+    if (!handleProceduralTextures(pathSegment, intersect, normal, m)) {
+        if (m.specular.exponent > 0) {
+            glm::vec3 specularColor = m.specular.color;
+            pathSegment.color *= specularColor;
+        }
+    }
 }
 __host__ __device__ void calculateGlass(PathSegment& pathSegment,
     glm::vec3 intersect,
@@ -236,7 +242,12 @@ __host__ __device__ void calculateGlass(PathSegment& pathSegment,
         r.direction = refractedDir;
     }
 
-    handleProceduralTextures(pathSegment, intersect, normal, m);
+    if (!handleProceduralTextures(pathSegment, intersect, normal, m)) {
+        if (m.specular.exponent > 0) {
+            glm::vec3 specularColor = m.specular.color;
+            pathSegment.color *= specularColor;
+        }
+    }
 }
 
 /**

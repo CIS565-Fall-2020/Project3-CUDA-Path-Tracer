@@ -118,6 +118,18 @@ REFRIOR     0
 EMITTANCE   0
 PROCEDTEXT  0
 
+// Procedural Texture
+MATERIAL 10
+RGB         .98 .38 .58
+SPECEX      0
+SPECRGB     .38 .38 .38
+DIFF	    1
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+PROCEDTEXT  3
+
 // Camera
 CAMERA
 RES         1600 900
@@ -133,7 +145,7 @@ UP          0 1 0
 OBJECT 0
 cube
 material 0
-TRANS       -4 10.5 2
+TRANS       -4 10.5 3
 ROTAT       0 0 0
 SCALE       4 .3 4
 
@@ -141,7 +153,7 @@ SCALE       4 .3 4
 OBJECT 1
 cube
 material 6
-TRANS       4 10.5 2
+TRANS       4 10.5 3
 ROTAT       0 0 0
 SCALE       4 .3 4
 
@@ -185,10 +197,18 @@ TRANS       10 5 0
 ROTAT       0 0 0
 SCALE       .01 12 10
 
-// Sphere
+// Implicit surface
 OBJECT 7
+tanglecube
+material 10
+TRANS       -4 4 0
+ROTAT       0 -20 0
+SCALE       1 1 1
+
+// Implicit surface
+OBJECT 8
 twist
-material 9
-TRANS       0 4 -1
+material 8
+TRANS       4 4 0
 ROTAT       0 -10 0
-SCALE       1.9 1.9 1.9
+SCALE       1.4 1.4 1.4

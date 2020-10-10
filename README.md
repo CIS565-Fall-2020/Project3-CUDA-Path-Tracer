@@ -7,6 +7,10 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/liujanine/), [personal website](https://www.janineliu.com/).
 * Tested on: Windows 10, i7-10750H CPU @ 2.60GHz 16GB, GeForce RTX 2070 8192 MB (personal computer)
 
+![](img/presentable/everything.png)
+
+![](img/presentable/everything_marked.png)
+
 Pathtracing is a rendering technique that traces numerous rays of light through a 3D scene. Rays start from the camera, pass through the space of the screen, and bounce between objects in the world; these bounces are determined by the properties of the materials they intersect.
 
 In addition to building a GPU-based pathtracer, this project involved implementing optimizations and other features, including:
@@ -21,7 +25,6 @@ In addition to building a GPU-based pathtracer, this project involved implementi
 This pathtracer draws upon the [Physically-Based Rendering textbook](http://www.pbr-book.org/) for reference.
 
 # Features
-
 
 ## Materials
 
@@ -59,17 +62,18 @@ We can jitter the initial ray's direction by a small epsilon so it samples aroun
 
 ## OBJ Loading
 
-To allow arbitrary meshes to be rendered by the pathtracer, I used the [TinyObj loader](https://github.com/tinyobjloader/tinyobjloader) to parse OBJ files as geometry in the scene. These are broken down into triangles of the same material that are tested against for intersections with every ray.
+To allow arbitrary meshes to be rendered by the pathtracer, I used the [TinyObjLoader](https://github.com/tinyobjloader/tinyobjloader) library to parse OBJ files as geometry in the scene. These are broken down into triangles of the same material that are tested against for intersections with every ray.
+
+| ![](img/presentable/dogs.png) | 
+|:--:| 
+| Dog model from [here](https://www.cgtrader.com/free-3d-print-models/house/decor/doberman-dog-6140e3ce-7726-4c90-8133-e924d1f8ba49); 254 triangles each.|
 
 Of course, the more complex the mesh, the more triangles it has, and the longer it takes to render the scene. In the future, I would like to implement a hierarchal data structure to speed up the rendering process.
 
 | ![](img/presentable/hearts.png) | 
 |:--:| 
-| Heart model from [here](https://www.turbosquid.com/3d-models/iconic-heart-3ds-free/389728); 1792 triangles.|
+| Heart model from [here](https://www.turbosquid.com/3d-models/iconic-heart-3ds-free/389728); 1792 triangles each.|
 
-| ![](img/presentable/dogs.png) | 
-|:--:| 
-| Dog model from [here](https://www.cgtrader.com/free-3d-print-models/house/decor/doberman-dog-6140e3ce-7726-4c90-8133-e924d1f8ba49); 254 triangles.|
 
 ## Procedural Shapes
 
@@ -90,18 +94,27 @@ For an implicit surface with holes like this, a small enough step is required to
 | Image taken from [GPU Gems 2: Chapter 8](https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-8-pixel-displacement-mapping-distance-functions).|
 
 
-A signed distance function also defines a surface depending on which points make its value equal zero, but its other values have utility: they inform us **how far a point is from the surface at any point in space**. This defines how large of a step we can take when we march along the ray, clearing a distance within a sphere just like the diagram. Surfaces rendered using spheremarching can be visualized much more efficiently than surfaces rendered with regular raymarching (depending on SDF calculation complexity, of course).
+A signed distance function also defines a surface depending on which points make its value equal zero, but its other values have utility: they inform us **how far a point is from the surface at any point in space**. This defines how large of a step we can take when we march along the ray, clearing a distance within a sphere just like the diagram. Surfaces rendered using spheremarching can be visualized much more efficiently than surfaces rendered with regular raymarching (though performance can depend on SDF calculation complexity, of course).
+
+![](img/presentable/twist.png)
+
+The "twist" surface above is a signed distance function that takes an average of **114.568 ms** per iteration. The tanglecube takes an average of **147.546 ms** per iteratio.
 
 ## Procedural Textures
 
 In addition to procedural shapes, I implemented three procedural textures that can be used for any object. These textures are coded using **noise functions** from another [procedural graphics project](https://j9liu.github.io/terraingen/). My textures depend on the intersection point and normal to determine how to color their objects.
 
+![](img/presentable/allprocedtextures.png)
 
+These can also be applied to the specular and refractive materials, though due to the different behavior of the light rays, the refractive materials will look different from the intended appearance.
 
-These can also be applied to the specular and refractive materials, though due to the different behavior of the light rays, they may not always look aesthetically pleasing.
+![](img/presentable/procedtexture1.png)
+![](img/presentable/procedtexture2.png)
+![](img/presentable/procedtexture3.png)
 
+Of course, these can be combined with the procedural shapes to achieve a wholly procedural visual object.
 
-
+![](img/presentable/shapesandtextures.png)
 
 # Performance Analysis
 
@@ -116,7 +129,7 @@ The measurements for these performance changes are taken from the pathtracing pr
 
 ![](img/presentable/diffuse.png)
 
-## Methods
+## Data-Gathering Methods
 Using the Performance Timer class provided in the [previous assignment](https://github.com/j9liu/Project2-Stream-Compaction/), I surrounded my `pathtrace` call with calls to start and stop the CPU timer. I then took the average of all these iterations to determine what the average iteration time would be. To save time, I limited the number of these recorded iterations to 20% of the total number of samples.
 
 For the Stream Compaction section, I simply collected data for the first iteration of the pathtracing process.
@@ -160,6 +173,12 @@ The performance of all the optimizations combined is shown below.
 # Bugs and Bloopers
 ## Initial Implementation Bloopers
 
+During the first coding steps of the pathtracer (actually getting the basics to work), my bloopers contained very bright images that made it appear like there was too much light in the scene:
+
+![](img/bloopers/initial1.png)
+![](img/bloopers/initial2.png)
+![](img/bloopers/initial3.png)
+
 ## Stream Compaction-less Issues
 
 My pathtracer cannot render images properly without using stream compaction. Here are two bloopers from when I was trying to debug this issue:
@@ -188,3 +207,17 @@ While implementing depth of field, I got some wonky renders that made it appear 
 I call this one, "Who knew OBJS were made of trapezoids?"
 
 ![](img/bloopers/obj.png)
+
+![](img/bloopers/obj2.png)
+
+## Procedural Shapes Bloopers
+
+Rendering the tanglecube takes so much effort that my computer sometimes cannot handle it. In one of those cases, I got a very blocky, low resolution render that was  strangely curved around the tanglecube.
+
+![](img/bloopers/badtanglecube.png)
+
+## Sampling Bloopers
+
+I attempted to implement stratified sampling (as opposed to the purely random sampling) for the hemispheres in diffuse shading, but kept getting an interesting result similar to this.
+
+![](img/bloopers/sampling.png)
