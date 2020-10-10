@@ -142,3 +142,71 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+
+// interpolation to find normal of triangle
+// from my own rasterizer code frm CIS460
+__host__ __device__ glm::vec3 baryNorm(glm::vec3 baryPos,
+      glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, 
+      glm::vec3 p1Norm, glm::vec3 p2Norm, glm::vec3 p3Norm) {
+      float s = glm::abs(0.5f * glm::length(glm::cross(p1 - p3, p1 - p2)));
+      float s1 = glm::abs(0.5f * glm::length(glm::cross(baryPos - p2, baryPos - p3)));
+      float s2 = glm::abs(0.5f * glm::length(glm::cross(baryPos - p1, baryPos - p3)));
+      float s3 = glm::abs(0.5f * glm::length(glm::cross(baryPos - p1, baryPos - p2)));
+      glm::vec3 normOut = (p1Norm * s1 + p2Norm * s2 + p3Norm * s3) / s;
+      return normOut;
+}
+
+/**
+ * Test intersection between a ray and a transformed mesh. Untransformed,
+ * the mesh is centered at the origin.
+ *
+ * @param intersectionPoint  Output parameter for point of intersection.
+ * @param normal             Output parameter for surface normal.
+ * @param outside            Output param for whether the ray came from outside.
+ * @return                   Ray parameter `t` value. -1 if no intersection.
+ */
+__host__ __device__ float meshIntersectionTest(Geom mesh, Ray r,
+      glm::vec3& intersectionPoint, glm::vec3& normal, Triangle* triangles) {
+
+      glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+      glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+      Ray rt;
+      rt.origin = ro;
+      rt.direction = rd;
+
+
+      bool intersect = false;
+      float t;
+      float tMin = FLT_MAX;
+      Triangle intersectTrig;
+      
+      for (int i = mesh.trigStartIdx; i < mesh.trigEndIdx; i++) {
+            Triangle& trig = triangles[i];
+            glm::vec3 baryPos;
+            if (glm::intersectRayTriangle(rt.origin, rt.direction, trig.vertices[0], 
+                  trig.vertices[1], trig.vertices[2], baryPos)) {
+                  t = baryPos.z;
+                  if (t > 0.f && t < tMin) {
+                        intersect = true;
+                        tMin = t;
+                        intersectTrig = trig;
+                  }
+            }
+      }
+
+      if (!intersect) {
+            return -1;
+      }
+
+      glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
+
+      intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+      glm::vec3 tempNorm = baryNorm(objspaceIntersection,
+            intersectTrig.vertices[0], intersectTrig.vertices[1], intersectTrig.vertices[2],
+            intersectTrig.normal[0], intersectTrig.normal[1], intersectTrig.normal[2]);
+      normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(tempNorm, 0.f)));
+
+      return glm::length(r.origin - intersectionPoint);
+}
