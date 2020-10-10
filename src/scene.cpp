@@ -196,22 +196,24 @@ int Scene::loadGeomFromGLTF(string objectid) {
             utilityCore::safeGetline(fp_in, line);
         }
 
-        Octree* mesh_tree = new Octree(newGeom.bboxMin.x, newGeom.bboxMin.y, newGeom.bboxMin.z,
+        /*
+        Octree mesh_tree (newGeom.bboxMin.x, newGeom.bboxMin.y, newGeom.bboxMin.z,
             newGeom.bboxMax.x, newGeom.bboxMax.y, newGeom.bboxMax.z);
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < triangles.size(); i++) {
             Triangle& tri = triangles[i];
             tri.idx = i;
-            mesh_tree->insert(i, tri.vert[0], tri.vert[1], tri.vert[2]);
-
+            for (int j = 0; j < 3; j++) {
+                mesh_tree.insert(tri.vert[j].x, tri.vert[j].y, tri.vert[j].z);
+            }
         }
-
+        */
         // BFS to put all octree nodes into the vector
 
         //int index;
         //mesh_tree->find(glm::vec3(0.0f, 2.0f, 2.0f), index);
-        flatten(mesh_tree);
+        //flatten(mesh_tree);
         //glm::vec3 ss = mesh_tree.children[0]->bottomRightBack;
-        printOctreeFlatten();
+        //printOctreeFlatten();
         newGeom.endTriangleIndex = triangles.size() - 1;
 
         newGeom.transform = utilityCore::buildTransformationMatrix(
@@ -379,6 +381,7 @@ int Scene::loadMaterial(string materialid) {
     }
 }
 
+/*
 // Use BFS to flatten octree
 void Scene::flatten(Octree * &o)
 {
@@ -430,3 +433,4 @@ void Scene::printOctreeFlatten()
     }
 }
 
+*/

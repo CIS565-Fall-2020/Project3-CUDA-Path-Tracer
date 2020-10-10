@@ -60,7 +60,7 @@ EMITTANCE   0
 
 // Diffuse
 MATERIAL 6
-RGB         .98 0.01 .98
+RGB         .98 0.98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
@@ -139,12 +139,36 @@ ROTAT       0 0 0
 SCALE       .01 10 10
 
 // Sphere
-OBJECTOBJ 6
-../models/cube.obj
-material 6
-TRANS       0 2 0
+OBJECTTXT 6
+cube
+material 4
+TRANS       0 4 -1
+ROTAT       30 30 30
+SCALE       4 4 4
+
+// Sphere
+OBJECTTXT 7
+sphere
+material 5
+TRANS       2 3 2
 ROTAT       0 0 0
-SCALE       1 1 1
+SCALE       3 3 3
+
+// Sphere
+OBJECTTXT 8
+sphere
+material 6
+TRANS       -2 7 -1
+ROTAT       0 0 0
+SCALE       2 2 2
+
+// Sphere
+OBJECTTXT 9
+sphere
+material 7
+TRANS       2 7 -1
+ROTAT       0 0 0
+SCALE       2 2 2
 
 
 

@@ -16,11 +16,17 @@
 #include "intersections.h"
 #include "interactions.h"
 
+#include <chrono>
+
 #define ERRORCHECK 1
+#define STREAMCOMPACTION 0
 #define SORTBYMATERIAL 0
 #define CACHE 1
 #define DOF 0
-#define OCTREE 1
+#define OCTREE 0
+#define ANTIALISING 0
+#define BLUR 0
+#define CULLING 0
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -143,25 +149,42 @@ void pathtraceFree() {
 * motion blur - jitter rays "in time"
 * lens effect - jitter ray origin positions based on a lens
 */
-__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments, float lensRaduis, float focalDistance)
+__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments, float lensRaduis, float focalDistance, glm::vec3 speed)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
 
+
     if (x < cam.resolution.x && y < cam.resolution.y) {
 		int index = x + (y * cam.resolution.x);
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
 
 		PathSegment & segment = pathSegments[index];
+        glm::vec3 new_camera_view = cam.view;
 
-		segment.ray.origin = cam.position;
-    segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.ray.origin = cam.position;
+        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+
+#if BLUR
+        thrust::normal_distribution<float> n01(0, 1);
+        float t = abs(n01(rng));
+        new_camera_view = cam.view * (1 - t) + (speed + cam.view) * t;
+#endif // BLUR
 
 		// TODO: implement antialiasing by jittering the ray
-		segment.ray.direction = glm::normalize(cam.view
+#if ANTIALISING
+    segment.ray.direction = glm::normalize(new_camera_view
+        - cam.right * cam.pixelLength.x * ((float)x + u01(rng)  - (float)cam.resolution.x * 0.5f)
+        - cam.up * cam.pixelLength.y * ((float)y + u01(rng) - (float)cam.resolution.y * 0.5f)
+    );
+#else
+		segment.ray.direction = glm::normalize(new_camera_view
 			- cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
 			- cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
 			);
+#endif
 #if DOF
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
         thrust::uniform_real_distribution<float> u01(0, 1);
@@ -174,10 +197,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         segment.ray.origin = cam.position + glm::vec3(lensPoint.x, lensPoint.y, 0);
 
         segment.ray.direction = glm::normalize(pFocus - segment.ray.origin);
-#endif // DOF
-
-
-        
+#endif // DOF       
 		segment.pixelIndex = index;
 		segment.remainingBounces = traceDepth;
 	}
@@ -231,13 +251,14 @@ __global__ void computeIntersections(
 			}
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
             else if (geom.type == MESH) {
-
+#if CULLING
                 // Check bbox
                 t = meshBboxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 
                 if (t != -1) {
                     // for (int i = geom.startTriangleIndex; i <= geom.endTriangleIndex; ++i) {
                         // Triangle &tri = triangles[2];
+#endif
 #if OCTREE
 
                     t = octreeIntersectionTest(geom, triangles, octrees, pathSegment.ray, tmp_intersect, tmp_normal, outside, numOctreeNodes);
@@ -246,7 +267,11 @@ __global__ void computeIntersections(
 #endif
 
                     //}
+#if CULLING
                 }
+#endif // CULLING
+
+
                 
             }
 			// Compute the minimum t from the intersection tests to determine what
@@ -395,6 +420,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     int num_octreeNodes = hst_scene->octrees.size();
     float lensRadius = 0.01;
     float focalDistance = 8;
+    glm::vec3 speed(0.1f, 0.0f, -0.0f);
+
     printf("\n\niter: %d   \n", iter);
 
 	// 2D block for generating ray from camera
@@ -438,7 +465,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     // TODO: perform one iteration of path tracing
 
 
-    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths, lensRadius, focalDistance);
+    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths, lensRadius, focalDistance, speed);
     checkCUDAError("generate camera ray");
 
 	int depth = 1;
@@ -450,6 +477,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
     printf("depth: %d  nums_path:  %d\n", depth - 1, num_paths);
 
   bool iterationComplete = false;
+  auto start = std::chrono::steady_clock::now();
 	while (!iterationComplete) {
 
 	// clean shading chunks
@@ -501,6 +529,9 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         , dev_geoms
         , hst_scene->geoms.size()
         , dev_intersections
+        , dev_triangles
+        , dev_octrees
+        , num_octreeNodes
         );
     checkCUDAError("trace one bounce");
     cudaDeviceSynchronize();
@@ -536,9 +567,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         depth,
         traceDepth
         );
-
+#if STREAMCOMPACTION
     PathSegment *new_end =  thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, is_terminate());
     num_paths = new_end - dev_paths;
+#endif
     printf("depth: %d  nums_path:  %d\n", depth, num_paths);
     if (num_paths <= 0) {
         depth = traceDepth;
@@ -551,6 +583,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
       iterationComplete = true; // TODO: should be based off stream compaction results.
   }
 	}
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::cout << "Iter:" << iter << ",   elapsed time: " << elapsed_seconds.count() << "s\n";
     //printf("%d :  %d\n", iter, num_paths);
     num_paths = dev_path_end - dev_paths;
   // Assemble this iteration and apply it to the image
