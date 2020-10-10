@@ -18,6 +18,13 @@ CUDA Path Tracer
 - Perfect Specular Reflection
 - Stream Compaction
 - Cache first bounce  
+- Refraction with Frensel effects using [Schlick's approximation](https://en.wikipedia.org/wiki/Schlick's_approximation).
+- Physically-based depth-of-field
+- Stochastic Sampled Antialiasing
+- Arbitrary mesh loading and rendering glTF files with toggleable bounding volume intersection culling
+- Better hemisphere sampling methods
+- Direct lighting
+- Motion blur by averaging samples at different times in the animation (Extra Credit)
 
 ### Rendered Images
 

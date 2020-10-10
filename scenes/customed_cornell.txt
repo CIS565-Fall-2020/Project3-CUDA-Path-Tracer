@@ -113,8 +113,8 @@ SCALE       .01 10 10
 // gltf Mesh
 OBJECT 6
 mesh
-../scenes/uboat/scene.gltf
+../scenes/mjolnir/scene.gltf
 MATERIAL 1
-TRANS       0 3 -1
-ROTAT       -90 0 90
-SCALE       0.15 0.15 0.15
+TRANS       0 3 0
+ROTAT       0 0 0
+SCALE       0.5 0.5 0.5

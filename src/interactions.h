@@ -5,7 +5,7 @@
 
 #define STRATIFIEDSAMPLING true
 #define EPSILON 0.000618f
-#define SAMPLESPERPIXEL 36
+#define SAMPLESPERPIXEL 64
 
 // CHECKITOUT
 /**
@@ -23,11 +23,11 @@ glm::vec3 calculateRandomDirectionInHemisphere(glm::vec3 normal, thrust::default
     int sqrtVal = sqrt(float(samplesPerPixel));
     // A number useful for scaling a square of size sqrtVal x sqrtVal to 1 x 1
     float invSqrtVal = 1.f / sqrtVal;
-    int i = u01(rng) * SAMPLESPERPIXEL;
+    int i = u01(rng) * samplesPerPixel;
     int y = i / sqrtVal;
     int x = i % sqrtVal;
     glm::vec2 sample = glm::vec2((x + r1) * invSqrtVal,
-        (y + r2) * invSqrtVal);
+                                 (y + r2) * invSqrtVal);
     r1 = sample.x;
     r2 = sample.y;
 #endif // STRATIFIEDSAMPLING
@@ -92,61 +92,6 @@ void sampleLi(const ShadeableIntersection& ref, const Geom& lightGeom, const glm
     *pdf *= len2 / cosTheta;
 }
 
-
-/**
- * Scatter a ray with some probabilities according to the material properties.
- * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
- * A perfect specular surface scatters in the reflected ray direction.
- * In order to apply multiple effects to one surface, probabilistically choose
- * between them.
- *
- */
-__host__ __device__
-void scatterIndirectRay(PathSegment& pathSegment,
-    const ShadeableIntersection& intersection,
-    const Material& m,
-    thrust::default_random_engine& rng)
-{
-    glm::vec3 intersectionPoint = getPointOnRay(pathSegment.ray, intersection.t);
-    glm::vec3 normal = intersection.surfaceNormal;
-    glm::vec3 wo = pathSegment.ray.direction;
-
-    if (m.hasRefractive > 0.f)
-    {
-        thrust::uniform_real_distribution<float> u01(0, 1);
-        pathSegment.ray.direction = FresnelDielectric::evaluate(wo, normal, m.hasRefractive, u01(rng));
-        pathSegment.color *= m.specular.color;
-        pathSegment.ray.origin = intersectionPoint + EPSILON * pathSegment.ray.direction;
-    }
-    else if (m.hasReflective > 0.f)  // specular
-    {
-        pathSegment.ray.direction = glm::reflect(wo, normal);
-        pathSegment.color *= m.specular.color;
-        pathSegment.ray.origin = intersectionPoint;
-    }
-    else  // diffuse
-    {
-        glm::vec3 wi = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
-        // Pure diffuse use Lambertian BRDF
-        float cosTheta = glm::dot(normal, wi);
-        float pdf = cosTheta * INV_PI;
-        glm::vec3 f = m.color * INV_PI;
-
-        if (pdf == 0.f)
-        {
-            pathSegment.color = glm::vec3(0.f);
-            pathSegment.remainingBounces = 0;
-            return;
-        }
-
-        pathSegment.ray.direction = wi;
-        pathSegment.color = f * pathSegment.color * std::abs(cosTheta) / pdf;
-        pathSegment.ray.origin = intersectionPoint;
-    }
-
-    pathSegment.remainingBounces--;
-}
-
 __host__ __device__
 void scatterDirectRay(PathSegment& pathSegment,
     const ShadeableIntersection& intersection,
@@ -180,11 +125,11 @@ void scatterDirectRay(PathSegment& pathSegment,
         int sqrtVal = sqrt(float(samplesPerPixel));
         float invSqrtVal = 1.f / sqrtVal;
 
-        int i = u01(rng) * SAMPLESPERPIXEL;
+        int i = u01(rng) * samplesPerPixel;
         int y = i / sqrtVal;
         int x = i % sqrtVal;
         glm::vec2 sample = glm::vec2((x + r1) * invSqrtVal,
-            (y + r2) * invSqrtVal);
+                                     (y + r2) * invSqrtVal);
         r1 = sample.x;
         r2 = sample.y;
 #endif // STRATIFIEDSAMPLING
@@ -205,4 +150,57 @@ void scatterDirectRay(PathSegment& pathSegment,
             pathSegment.color = float(num_lights) * f * abs(cosTheta) / lightPdf;
         }
     }
+}
+
+/**
+ * Scatter a ray with some probabilities according to the material properties.
+ * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
+ * A perfect specular surface scatters in the reflected ray direction.
+ * In order to apply multiple effects to one surface, probabilistically choose
+ * between them.
+ *
+ */
+__host__ __device__
+void scatterIndirectRay(PathSegment& pathSegment,
+    const ShadeableIntersection& intersection,
+    const Material& m,
+    thrust::default_random_engine& rng)
+{
+    glm::vec3 intersectionPoint = getPointOnRay(pathSegment.ray, intersection.t);
+    glm::vec3 normal = intersection.surfaceNormal;
+    glm::vec3 wo = pathSegment.ray.direction;
+
+    if (m.hasRefractive > 0.f)
+    {
+        thrust::uniform_real_distribution<float> u01(0, 1);
+        pathSegment.ray.direction = FresnelDielectric::evaluate(wo, normal, m.hasRefractive, u01(rng));
+        pathSegment.color *= m.specular.color;
+        pathSegment.ray.origin = intersectionPoint + EPSILON * pathSegment.ray.direction;
+    }
+    else if (m.hasReflective > 0.f)  // specular
+    {
+        pathSegment.ray.direction = glm::reflect(wo, normal);
+        pathSegment.ray.origin = intersectionPoint;
+    }
+    else  // diffuse
+    {
+        glm::vec3 wi = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
+        // Pure diffuse use Lambertian BRDF
+        float cosTheta = glm::dot(normal, wi);
+        float pdf = cosTheta * INV_PI;
+        glm::vec3 f = m.color * INV_PI;
+
+        if (pdf == 0.f)
+        {
+            pathSegment.color = glm::vec3(0.f);
+            pathSegment.remainingBounces = 0;
+            return;
+        }
+
+        pathSegment.ray.direction = wi;
+        pathSegment.color = f * pathSegment.color * std::abs(cosTheta) / pdf;
+        pathSegment.ray.origin = intersectionPoint;
+    }
+
+    pathSegment.remainingBounces--;
 }

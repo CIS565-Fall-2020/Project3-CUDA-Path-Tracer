@@ -1,5 +1,4 @@
 #pragma once
-
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>
 #include "sceneStructs.h"
@@ -8,6 +7,9 @@
 #include "glm/gtc/matrix_inverse.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "warpfunctions.h"
+
+#define MOTIONBLUR true
+#define MOTIONBLUR_VELOCITY glm::vec3(0.618, 0, 0)
 
 __host__ __device__
 glm::mat4 getTansformation(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale) 
@@ -132,6 +134,8 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere,
 {
 	float radius = 0.5f;
 
+
+
 	glm::vec3 ro = multiplyMV(sphere.inverseTransform, glm::vec4(r.origin, 1.0f));
 	glm::vec3 rd = glm::normalize(multiplyMV(sphere.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
@@ -198,7 +202,8 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 											   unsigned int* verts_offset,
 											   float* bbox_verts)
 {
-	float t = 0;
+	float t = FLT_MAX;
+	bool intersected = false;
 
 	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
 	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
@@ -237,20 +242,26 @@ __host__ __device__ float meshIntersectionTest(Geom mesh,
 		glm::vec3 p2(v2[0], v2[1], v2[2]);
 
 		glm::vec3 res;
-		bool intersected = glm::intersectRayTriangle(ro, rd, p0, p1, p2, res);
-		if (intersected)
+		bool intersected_this_time = glm::intersectRayTriangle(ro, rd, p0, p1, p2, res);
+		if (intersected_this_time)
 		{
-			t = res.z;
+			intersected = true;
 			outside = false;
+			if (res.z >= t)
+				continue;
 
+			t = res.z;
 			glm::vec3 objspaceIntersection = getPointOnRay(rt, t);
+			glm::vec3 objspaceNormal = glm::cross(p1 - p0, p2 - p0);
 			intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
-			normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(objspaceIntersection, 0.f)));
-
-			return glm::length(r.origin - intersectionPoint);
+			normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(objspaceNormal, 0.f)));
 		}
 	}
 
+	if (intersected)
+	{
+		return glm::length(r.origin - intersectionPoint);
+	}
 	return -1;
 }
 
@@ -271,17 +282,34 @@ __host__ __device__ ShadeableIntersection getSampleOnSphere(const glm::vec2& xi,
 __host__ __device__ ShadeableIntersection getSampleOnSquare(const glm::vec2& xi, float* pdf, const Geom& geom)
 {
 	ShadeableIntersection it;
-	glm::vec4 localPoint = glm::vec4(xi.x - 0.5f, -1.0f, xi.y - 0.5f, 1);
-	glm::vec3 worldPoint = multiplyMV(geom.transform, localPoint);
 	glm::vec4 localNormal(0);
+	glm::vec4 localPoint(0);
+	localPoint.w = 1.f;
+
 	float minScale = min(geom.scale.x, min(geom.scale.y, geom.scale.z));
 	if (minScale == geom.scale.x)
-		localNormal.x = -1;
+	{
+		localNormal.x = -1.f;
+		localPoint.x = -0.5f;
+		localPoint.y = xi.x - 0.5f;
+		localPoint.z = xi.y - 0.5f;
+	}
 	else if (minScale == geom.scale.y)
-		localNormal.y = -1;
+	{
+		localNormal.y = -1.f;
+		localPoint.y = -0.5f;
+		localPoint.x = xi.x - 0.5f;
+		localPoint.z = xi.y - 0.5f;
+	}
 	else
-		localNormal.z = -1;
+	{
+		localNormal.z = -1.f;
+		localPoint.z = -0.5f;
+		localPoint.x = xi.x - 0.5f;
+		localPoint.y = xi.y - 0.5f;
+	}
 
+	glm::vec3 worldPoint = multiplyMV(geom.transform, localPoint);
 	glm::vec3 worldNormal = glm::normalize(multiplyMV(geom.invTranspose, localNormal));
 
 	it.point = worldPoint;

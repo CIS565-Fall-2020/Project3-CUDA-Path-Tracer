@@ -17,16 +17,22 @@
 #include "interactions.h"
 #include "warpfunctions.h"
 
-#define ERRORCHECK 1
-#define RECORDEDITERATION 100
+
 #define BOUNDINGBOXINTERSECTIONTEST true
 #define DEPTHOFFIELD false
 #define ANTIALIASING true
 #define CACHEFIRSTBOUNCE !ANTIALIASING
 #define DIRECTLIGHTING true
+#define MOTIONBLUR false
+
+#define ERRORCHECK 1
+#define RECORDEDITERATION 100
+#define MOTIONBLUR_VELOCITY glm::vec3(0, 0.96f, 0)
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
+
+
 void checkCUDAErrorFn(const char* msg, const char* file, int line)
 {
 #if ERRORCHECK
@@ -219,7 +225,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 // computeIntersections handles generating ray intersections ONLY.
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
-__global__ void computeIntersections(int depth, 
+__global__ void computeIntersections(int iter,
+									 int depth, 
 									 int num_paths, 
 									 PathSegment* pathSegments, 
 									 Geom* geoms, 
@@ -259,7 +266,13 @@ __global__ void computeIntersections(int depth,
 			}
 			else if (geom.type == GeomType::SPHERE)
 			{
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				Ray tempRay = pathSegment.ray;
+#if MOTIONBLUR
+				thrust::default_random_engine rng = makeSeededRandomEngine(iter, path_index, pathSegment.remainingBounces);
+				thrust::uniform_real_distribution<float> u01(0, 1);
+				tempRay.origin -= cos((2 * u01(rng) - 1) * PI) * MOTIONBLUR_VELOCITY;
+#endif // MOTIONBLUR
+				t = sphereIntersectionTest(geom, tempRay, tmp_intersect, tmp_normal, outside);
 			}
 			else if (geom.type == GeomType::MESH)
 			{
@@ -468,6 +481,7 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 		else
 		{
 			computeIntersections <<<numblocksPathSegmentTracing, blockSize1d >> > (
+				iter,
 				depth,
 				cur_num_paths,
 				dev_paths,
@@ -490,6 +504,7 @@ void pathtrace(uchar4* pbo, int frame, int iter)
 		}
 #else
 		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
+			iter,
 			depth,
 			cur_num_paths,
 			dev_paths,
