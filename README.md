@@ -22,3 +22,10 @@ Test on iterations of 5000 and depth of 8 with first bounce cache. The rendering
 ### First Bounce Cache
 ![cache_first_bounce](img/cache_first_bounce.PNG)  
 The diagram demonstrates the time to complete 5000 iterations of path tracing with different max depths. With the max depth increases, the time consumption of first-bounce-cache method is less than the case without the cache. It is predictable since the cache saves the time to calculate the first bounce of each iteration. 
+
+## Part 2 - Advance Features
+Implement refraction and depth-of-field
+![refraction and depth-of-field](img/part2.PNG)  
+
+## Part 3 - Octree 
+Tried to implement Octree, but there are some bugs haven't been fix.
