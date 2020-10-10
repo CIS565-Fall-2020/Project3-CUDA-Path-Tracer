@@ -19,14 +19,14 @@
 #include <chrono>
 
 #define ERRORCHECK 1
-#define STREAMCOMPACTION 0
+#define STREAMCOMPACTION 1
 #define SORTBYMATERIAL 0
 #define CACHE 1
 #define DOF 0
 #define OCTREE 0
 #define ANTIALISING 0
 #define BLUR 0
-#define CULLING 0
+#define CULLING 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
