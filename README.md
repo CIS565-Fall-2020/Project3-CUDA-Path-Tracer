@@ -6,7 +6,7 @@
   * [LinkedIn](https://www.linkedin.com/in/qiaosen-chen-725699141/), etc.
 * Tested on: Windows 10, i5-9400 @ 2.90GHz 16GB, GeForce RTX 2060 6GB (personal computer).
 
-## Mid-project Summary
+## Summary
 
 ![pathtracing first demo gif](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/pathtracing_first_demo.gif)
 
@@ -55,7 +55,7 @@
 
   | Random sampling                                              | Stratified sampling                                          |
   | ------------------------------------------------------------ | ------------------------------------------------------------ |
-  | ![](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/Anti.png) | ![](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/NoAnti.png) |
+  | ![](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/rendered_images/cornell.2020-10-09_07-59-43z.25samp.png) | ![](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/rendered_images/cornell.2020-10-09_08-00-45z.25samp.png) |
 
   It's hard to find out some obvious differences between the naive random sampling and the stratified sampling.
 
@@ -67,7 +67,7 @@
 
 - **Motion Blur**
 
-  | With Motion Blur                                             | Without Motion Blur                                          |
+  | Without Motion Blur                                          | With Motion Blur                                             |
   | ------------------------------------------------------------ | ------------------------------------------------------------ |
   | ![](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/rendered_images/cornell.2020-10-10_03-37-27z.4147samp.png) | ![](https://github.com/giaosame/Project3-CUDA-Path-Tracer/blob/master/img/rendered_images/cornell.2020-10-10_03-31-35z.4226samp.png) |
 
