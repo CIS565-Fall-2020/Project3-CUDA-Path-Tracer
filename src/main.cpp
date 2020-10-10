@@ -34,7 +34,7 @@ int width;
 int height;
 
 // Jacky added
-std::string inputfile = "../scenes/pigHead.obj";
+std::string inputfile = "../scenes/bunny.obj";
 tinyobj::attrib_t attrib;
 std::vector<tinyobj::shape_t> shapes;
 std::vector<tinyobj::material_t> materials;
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 
     Geom newGeom;
     newGeom.type = MESH;
-    newGeom.materialid = 5;
+    newGeom.materialid = 6;
     scene->geoms.push_back(newGeom);
 
     glm::vec3 minCorner(FLT_MAX);
@@ -129,16 +129,6 @@ int main(int argc, char** argv) {
     meshBB.transform = utilityCore::buildTransformationMatrix(meshBB.translation, meshBB.rotation, meshBB.scale);
     meshBB.inverseTransform = glm::inverse(meshBB.transform);
     meshBB.invTranspose = glm::inverseTranspose(meshBB.transform);
-
-    std::cout << numVertices << std::endl;
-    std::cout << "meshBB.translation: (" << meshBB.translation.x << ", " << meshBB.translation.y << ", " << meshBB.translation.z << ")" << std::endl;
-    std::cout << "meshBB.scale: (" << meshBB.scale.x << ", " << meshBB.scale.y << ", " << meshBB.scale.z << ")" << std::endl;
-    for (int i = 0; i < numVertices; i++) {
-        glm::vec3 v = vertices[i];
-        glm::vec3 n = normals[i];
-        // std::cout << "Position: (" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
-        // std::cout << "Normal: (" << n.x << ", " << n.y << ", " << n.z << ")" << std::endl;
-    }
 
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
@@ -237,7 +227,7 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        pathtrace(pbo_dptr, frame, iteration, renderState->iterations);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);

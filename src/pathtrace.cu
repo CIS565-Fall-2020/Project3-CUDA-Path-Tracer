@@ -31,7 +31,7 @@
 #define MATERIAL_SORTING false
 #define ANTIALIASING true
 
-static float focalDistance = 11.5f;
+static float focalDistance = 8.5f;
 static float lensRadius = 0.0f; // 1.5f
 
 void checkCUDAErrorFn(const char* msg, const char* file, int line) {
@@ -167,7 +167,19 @@ glm::vec3 squareToDiskUniform(thrust::default_random_engine& rng) {
     return glm::vec3(r * glm::cos(theta), r * glm::sin(theta), 0.f);
 }
 
-__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments, float focalDistance, float lensRadius)
+__host__ __device__
+glm::vec2 genStratifiedSamples(int samplesPerPixel, int iter, thrust::default_random_engine& rng) {
+    int sqrtVal = (int) (glm::sqrt((float) samplesPerPixel) + 0.5);
+    float invSqrtVal = 1.f / sqrtVal;
+
+    int y = iter / sqrtVal;
+    int x = iter % sqrtVal;
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    return glm::vec2((x + u01(rng)) * invSqrtVal, (y + u01(rng)) * invSqrtVal);
+}
+
+__global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, PathSegment* pathSegments, float focalDistance, float lensRadius, int samplesPerPixel)
 {
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -182,16 +194,20 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, segment.remainingBounces);
 #if ANTIALIASING
         // Antialiasing by jittering the ray 
-        thrust::uniform_real_distribution<float> u01(0, 1);
+        glm::vec2 sampleStratified = genStratifiedSamples(samplesPerPixel, iter, rng);
 
-        x += u01(rng);
-        y += u01(rng);
-#endif
+        segment.ray.direction = glm::normalize(cam.view
+            - cam.right * cam.pixelLength.x * (((float)x + sampleStratified.x) - (float)cam.resolution.x * 0.5f)
+            - cam.up * cam.pixelLength.y * (((float)y + sampleStratified.y) - (float)cam.resolution.y * 0.5f)
+        );
 
+#else
         segment.ray.direction = glm::normalize(cam.view
             - cam.right * cam.pixelLength.x * ((float)x - (float)cam.resolution.x * 0.5f)
             - cam.up * cam.pixelLength.y * ((float)y - (float)cam.resolution.y * 0.5f)
         );
+
+#endif
 
         // Modify ray to produce depth-of-field effects
         if (lensRadius > 0.f) {
@@ -423,7 +439,7 @@ struct is_zeroRemainingBounce
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
-void pathtrace(uchar4* pbo, int frame, int iter) {
+void pathtrace(uchar4* pbo, int frame, int iter, int samplesPerPixel) {
     const int traceDepth = hst_scene->state.traceDepth;
     const Camera& cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -467,7 +483,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
     //   for you.
 
     // TODO: perform one iteration of path tracing
-    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths, focalDistance, lensRadius);
+    generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths, focalDistance, lensRadius, samplesPerPixel);
     checkCUDAError("generate camera ray");
 
     int depth = 0;

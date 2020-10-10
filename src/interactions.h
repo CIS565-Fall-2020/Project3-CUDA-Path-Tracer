@@ -187,7 +187,7 @@ void scatterRay(
     }
     else if (m.hasRefractive > 0.f) {
         // Update "color" parameter in place
-        pathSegment.color *= glm::vec3(1.f);
+        pathSegment.color *= m.color;
         // scatterDielectric() modifies/updates "ray" parameters in place
         scatterDielectric(m.indexOfRefraction, pathSegment.ray, intersect, normal, rng);
     }
