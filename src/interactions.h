@@ -15,7 +15,7 @@ __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
     glm::vec3 normal, thrust::default_random_engine& rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    
+
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
@@ -47,6 +47,46 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__host__ __device__
+glm::vec3 calculateStratifiedDirectionInHemisphere(
+    glm::vec3 normal, thrust::default_random_engine& rng, int iter, int max_iter) {
+
+    int samples = max_iter;
+    int sqrtVal = (int)(sqrt((float)samples) + 0.5f);
+    float invSqrtVal = 1.f / (float)sqrtVal;
+
+    int x = iter % sqrtVal;
+    int y = (float)(iter) / (float)sqrtVal;
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float x_point = glm::clamp((x + u01(rng)) * invSqrtVal, 0.f, 1.f);
+    float y_point = glm::clamp((y + u01(rng)) * invSqrtVal, 0.f, 1.f);
+
+    float up = sqrt(y_point); // cos(theta)
+    float over = sqrt(1.f - (up * up)); // sin(theta)
+    float around = x_point * TWO_PI;
+
+    glm::vec3 directionNotNormal;
+    if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(1, 0, 0);
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(0, 1, 0);
+    }
+    else {
+        directionNotNormal = glm::vec3(0, 0, 1);
+    }
+
+    // Use not-normal direction to generate two perpendicular directions
+    glm::vec3 perpendicularDirection1 =
+        glm::normalize(glm::cross(normal, directionNotNormal));
+    glm::vec3 perpendicularDirection2 =
+        glm::normalize(glm::cross(normal, perpendicularDirection1));
+
+    return up * normal
+        + cos(around) * over * perpendicularDirection1
+        + sin(around) * over * perpendicularDirection2;
+}
 
 /**
  * Scatter a ray with some probabilities according to the material properties.
@@ -79,7 +119,8 @@ void scatterRay(
     glm::vec3 intersect,
     glm::vec3 normal,
     const Material& m,
-    thrust::default_random_engine& rng) {
+    thrust::default_random_engine& rng,
+    int iter, int depth) {
 
     //procedural colors
     if (PROCEDURAL_TEXTURE && m.indexOfRefraction < 0) {
@@ -152,7 +193,14 @@ void scatterRay(
     }
     //diffuse
     else {
-        glm::vec3 rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+        glm::vec3 rand_dir;
+        if (depth == 1) {
+            rand_dir = calculateStratifiedDirectionInHemisphere(normal, rng, iter, 5000);
+        }
+        else
+        {
+            rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+        }
         pathSegment.color *= m.color;
         pathSegment.ray.direction = rand_dir;
         pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);

@@ -21,7 +21,7 @@
 #define DEPTH_OF_FIELD 0
 #define BOUNDING_BOX 1
 #define ANTIALIASING 1
-#define SORT_MATERIAL 1
+#define SORT_MATERIAL 0
 #define CACHE_FIRST_ISECT 0
 
 PerformanceTimer& timer()
@@ -324,7 +324,7 @@ __global__ void shadeMaterial(
     , int num_paths
     , ShadeableIntersection* shadeableIntersections
     , PathSegment* pathSegments
-    , Material* materials
+    , Material* materials, int depth
 )
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -349,7 +349,7 @@ __global__ void shadeMaterial(
             }
             else {
                 scatterRay(pathSegments[idx], pathSegments[idx].ray.origin + pathSegments[idx].ray.direction * intersection.t,
-                    intersection.surfaceNormal, material, rng);
+                    intersection.surfaceNormal, material, rng, iter, depth);
                 pathSegments[idx].remainingBounces -= 1;
             }
         }
@@ -458,7 +458,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
         }
         depth++;
 
-        shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (iter, num_paths, dev_intersections, dev_paths, dev_materials);
+        shadeMaterial << <numblocksPathSegmentTracing, blockSize1d >> > (iter, num_paths, dev_intersections, dev_paths, dev_materials, depth);
 
         PathSegment* dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_paths + num_paths, should_terminate());
         num_paths = dev_path_end - dev_paths;
