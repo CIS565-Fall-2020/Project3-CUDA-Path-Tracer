@@ -134,6 +134,11 @@ camera view = (1 - t) * old camera view + t * new camera view
 where t is a random number at each iteration
 ```
 
+### Basic procedural texture
+I use barycentric interpolation to get uv of each intersection. Then I set the color (r, g, b) to (u, v, 0).
+
+![](img/texture.PNG)
+
 back and forth            |  left and right
 :-------------------------:|:-------------------------:
 ![](img/motion-z.png) | ![](img/motion-x.png)
@@ -174,7 +179,7 @@ In the following figures, Horizontal axis are:
 
    ALL = SC + FBC + SM + VC
 
-   Obviouly, optimazation techniques are pretty important for ray tracing. In the basic scene, the naive rendering still performs well. In the Mario scene, optimization skills save 50% time. Stream compaction is the most important one among all four techniques. Volume culling also save much time. However, in my test, sorting by materials doesn't perform well.
+   Obviously, optimazation techniques are pretty important for ray tracing. In the basic scene, the naive rendering still performs well. In the Mario scene, optimization skills save 50% time. Stream compaction is the most important one among all four techniques. Volume culling also save much time. However, in my test, sorting by materials doesn't perform well.
 
 Basic Scene           |  Mario Scene
 :-------------------------:|:-------------------------:
