@@ -9,7 +9,7 @@ CUDA Path Tracer
 
 ## Sneak Peek ##
 
-<img src="img/8000iter_legend.png" alt="sneak peek" width=1000>
+<img src="img/8000iter_mat.png" alt="sneak peek" width=1000>
 
 *Scene: Specular Box; Iterations: 8000; Material sort: disabled; Ray depth: 8; Anti-aliasing: enabled*
 
@@ -45,6 +45,14 @@ Exponent = 2.1 | Exponent = 4.5 | Exponent = 8.5
 <img src="img/renders/dode_glossy_2.1exp_10000samples.png" alt="sneak peek" width=300> | <img src="img/renders/dode_glossy_4.5exp_10000samples.png" alt="sneak peek" width=300> | <img src="img/renders/dode_glossy_8.5exp_10000samples.png" alt="sneak peek" width=300>
 
 Lower specular exponent values give results that are closer to diffuse scattering while larger specular exponent values result in larger highlights.
+
+## Depth of Field ##
+
+Focal Distance = 30, Lens Radius = 2.5 | Focal Distance = 20, Lens Radius = 2.5
+:---: | :---:
+<img src="img/renders/DOF_focal30.png" alt="sneak peek" width=600> | <img src="img/renders/DOF_focal20.png" alt="sneak peek" width=600>
+
+The scene camera can be set to enable focal distance and lens radius to get a depth of field effect. Geometries located at the focal distance within the lens radius will stay in focus while other geometry around the scene will be distorted.
 
 ## Insights ##
 
