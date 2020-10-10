@@ -21,10 +21,22 @@ glm::vec3 calculateRandomDirectionInHemisphere(
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
 
+<<<<<<< HEAD
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
     // least one component is less than sqrt(1/3). Learned this trick from
     // Peter Kutz.
+=======
+#ifdef STRATIFIEDSAMPLING
+  float numGridStratifiedSampling = 100.f;
+  float gridSize = 1.f / (float)numGridStratifiedSampling;
+  thrust::uniform_real_distribution<float>u0GridSize(0, gridSize);
+  thrust::uniform_int_distribution<int> ui0GridCount(0, numGridStratifiedSampling);
+ 
+  // Choose grid
+  float gridX = ui0GridCount(rng) / numGridStratifiedSampling;
+  float gridY = ui0GridCount(rng) / numGridStratifiedSampling;
+>>>>>>> parent of 6768274... failed sampling, moving to texture mapping
 
     glm::vec3 directionNotNormal;
     if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
