@@ -5,6 +5,7 @@
 #include "glm/gtx/norm.hpp"
 
 #define PROCEDURAL_TEXTURE 0
+#define STRATIFIED 0
 
 // CHECKITOUT
 /**
@@ -194,6 +195,7 @@ void scatterRay(
     //diffuse
     else {
         glm::vec3 rand_dir;
+#if STRATIFIED
         if (depth == 1) {
             rand_dir = calculateStratifiedDirectionInHemisphere(normal, rng, iter, 5000);
         }
@@ -201,6 +203,9 @@ void scatterRay(
         {
             rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
         }
+#else
+        rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+#endif
         pathSegment.color *= m.color;
         pathSegment.ray.direction = rand_dir;
         pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
