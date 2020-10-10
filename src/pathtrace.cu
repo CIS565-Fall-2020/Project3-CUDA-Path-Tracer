@@ -21,6 +21,7 @@
 #define CACHEFIRSTBOUNCE 0
 #define DEPTH_OF_FIELD 0
 #define OCTREE 0
+
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 void checkCUDAErrorFn(const char *msg, const char *file, int line) {
@@ -240,7 +241,7 @@ __global__ void computeIntersections(
 			else if (geom.type == MESH)
 			{
 #if OCTREE
-				t = meshIntersectionTest(geom, triangles, sortTringles, octreeVector, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				t = meshIntersectionTest_octree(geom, triangles, sortTriangles, octreeVector, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 #else
 				t = meshIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 #endif

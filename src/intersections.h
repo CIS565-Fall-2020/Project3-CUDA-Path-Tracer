@@ -192,6 +192,7 @@ __host__ __device__ float meshIntersectionTest(Geom mesh, Triangle *triangles, R
 
 }
 
+// Octree
 __host__ __device__ void octreeIntersection(Geom mesh, Triangle *triangles,
 	int *sortTringles, OctreeNode_cuda *octreeVector, int nodeIdx,
 	Ray &r, glm::vec3 &intersectionPoint, glm::vec3 &normal,
@@ -290,4 +291,17 @@ __host__ __device__ void octreeIntersection(Geom mesh, Triangle *triangles,
 		}
 	}
 	return;
+}
+
+__host__ __device__ float meshIntersectionTest_octree(
+	Geom mesh, Triangle *triangles, int *sortTringles,
+	OctreeNode_cuda *octreeVector, Ray r,
+	glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
+
+	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	float t = -1;
+	octreeIntersection(mesh, triangles, sortTringles, octreeVector, 0, r, intersectionPoint, normal, outside, ro, rd, t);
+	return t;
 }
