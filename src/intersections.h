@@ -190,7 +190,7 @@ __host__ __device__ float meshBboxIntersectionTest(Geom MeshBbox, Ray r,
 
 // Find intersection of each triangle and the ray
 __host__ __device__ float triangleIntersectionTest(Geom geom, Triangle *triangles, Ray r,
-    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside, glm::vec2 &uv) {
     
     Ray q;
     q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
@@ -198,6 +198,7 @@ __host__ __device__ float triangleIntersectionTest(Geom geom, Triangle *triangle
 
     float tMin = FLT_MAX;
     int iMin = -1;
+    glm::vec3 bary;
 
     for (int i = geom.startTriangleIndex; i <= geom.endTriangleIndex; i++) {
         Triangle& tri = triangles[i];
@@ -210,11 +211,13 @@ __host__ __device__ float triangleIntersectionTest(Geom geom, Triangle *triangle
         if (t > 0 && t < tMin) {
             iMin = i;
             tMin = t;
+            bary = baryPosition;
         }
     }
 
     intersectionPoint = multiplyMV(geom.transform, glm::vec4(getPointOnRay(q, tMin), 1.0f));
     normal = glm::normalize(multiplyMV(geom.transform, glm::vec4(triangles[iMin].nor, 0.0f)));
+    uv = triangles[iMin].uv[0] * (1 - bary.x - bary.y) + triangles[iMin].uv[1] * bary.x + triangles[iMin].uv[2] * bary.y;
     if (glm::dot(normal, r.direction) < 0) {
         outside = true;
     }

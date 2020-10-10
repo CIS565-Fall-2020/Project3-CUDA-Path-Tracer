@@ -22,6 +22,7 @@ struct Triangle {
     int idx;
     glm::vec3 vert[3];
     glm::vec3 nor;
+    glm::vec2 uv[3];
 public:
     Triangle() : idx(-1) {}
     Triangle(int index) : idx(index) {}
@@ -103,5 +104,5 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
-  glm::vec3 uv;
+  glm::vec2 uv;
 };

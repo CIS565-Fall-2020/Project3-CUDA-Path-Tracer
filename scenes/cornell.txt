@@ -139,36 +139,12 @@ ROTAT       0 0 0
 SCALE       .01 10 10
 
 // Sphere
-OBJECTTXT 6
-cube
-material 4
-TRANS       0 4 -1
+OBJECTOBJ 6
+../scenesobj/cube.obj
+material -1
+TRANS       0 3 1
 ROTAT       30 30 30
-SCALE       4 4 4
-
-// Sphere
-OBJECTTXT 7
-sphere
-material 5
-TRANS       2 3 2
-ROTAT       0 0 0
-SCALE       3 3 3
-
-// Sphere
-OBJECTTXT 8
-sphere
-material 6
-TRANS       -2 7 -1
-ROTAT       0 0 0
-SCALE       2 2 2
-
-// Sphere
-OBJECTTXT 9
-sphere
-material 7
-TRANS       2 7 -1
-ROTAT       0 0 0
-SCALE       2 2 2
+SCALE       1 1 1
 
 
 

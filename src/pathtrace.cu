@@ -19,14 +19,14 @@
 #include <chrono>
 
 #define ERRORCHECK 1
-#define STREAMCOMPACTION 0
+#define STREAMCOMPACTION 1
 #define SORTBYMATERIAL 0
 #define CACHE 1
 #define DOF 0
 #define OCTREE 0
 #define ANTIALISING 0
 #define BLUR 0
-#define CULLING 0
+#define CULLING 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -228,12 +228,14 @@ __global__ void computeIntersections(
 		float t;
 		glm::vec3 intersect_point;
 		glm::vec3 normal;
+        glm::vec2 uv;
 		float t_min = FLT_MAX;
 		int hit_geom_index = -1;
 		bool outside = true;
 
 		glm::vec3 tmp_intersect;
 		glm::vec3 tmp_normal;
+        glm::vec2 tmp_uv;
 
 		// naive parse through global geoms
 
@@ -263,7 +265,7 @@ __global__ void computeIntersections(
 
                     t = octreeIntersectionTest(geom, triangles, octrees, pathSegment.ray, tmp_intersect, tmp_normal, outside, numOctreeNodes);
 #else
-                    t = triangleIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+                    t = triangleIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside, tmp_uv);
 #endif
 
                     //}
@@ -282,6 +284,7 @@ __global__ void computeIntersections(
 				hit_geom_index = i;
 				intersect_point = tmp_intersect;
 				normal = tmp_normal;
+                uv = tmp_uv;
 			}
 		}
 
@@ -295,6 +298,7 @@ __global__ void computeIntersections(
 			intersections[path_index].t = t_min;
             intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
+            intersections[path_index].uv = uv;
 		}
 	}
 }
@@ -352,7 +356,7 @@ __global__ void shadeFakeMaterial (
           else {
               glm::vec3 intesect = getPointOnRay(pathSegments[idx].ray, intersection.t);
               glm::vec3 normal = intersection.surfaceNormal;
-              scatterRay(pathSegments[idx], intesect, normal, material, rng);
+              scatterRay(pathSegments[idx], intesect, normal, material, rng, intersection.uv, intersection.materialId);
               pathSegments[idx].remainingBounces--;
           }
 

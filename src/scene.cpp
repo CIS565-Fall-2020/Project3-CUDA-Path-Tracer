@@ -152,13 +152,14 @@ int Scene::loadGeomFromGLTF(string objectid) {
                     //tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
                     //tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
                     //tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
-                    //tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                    //tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                    tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                    tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
                     // Optional: vertex colors
                     // tinyobj::real_t red = attrib.colors[3*idx.vertex_index+0];
                     // tinyobj::real_t green = attrib.colors[3*idx.vertex_index+1];
                     // tinyobj::real_t blue = attrib.colors[3*idx.vertex_index+2];
                     tri.vert[v] = glm::vec3(vx, vy, vz);
+                    tri.uv[v] = glm::vec2(tx, ty);
                 }
                 index_offset += fv;
                 tri.nor = glm::cross(tri.vert[1] - tri.vert[0], tri.vert[2] - tri.vert[1]);

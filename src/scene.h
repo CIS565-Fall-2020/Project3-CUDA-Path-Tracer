@@ -20,9 +20,9 @@ private:
     int loadGeom(string objectid);
     int loadCamera();
     int loadGeomFromGLTF(string filename);
-    void Scene::flatten(Octree* &o);
 
-    void printOctreeFlatten();
+    bool loadImage(string filename);
+
 public:
     Scene(string filename);
     ~Scene();
@@ -31,5 +31,6 @@ public:
     std::vector<Material> materials;
     std::vector<Triangle> triangles; // store all the triangles in ths scene
     std::vector<OctreeNode> octrees; // Use octree to store mesh
+    std::vector<unsigned char> image;
     RenderState state;
 };
