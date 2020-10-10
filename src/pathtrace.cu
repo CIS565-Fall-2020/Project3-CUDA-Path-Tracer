@@ -20,7 +20,7 @@
 #define SORTMATERIAL 0
 #define CACHEFIRSTBOUNCE 0
 #define DEPTH_OF_FIELD 0
-
+#define OCTREE 0
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 void checkCUDAErrorFn(const char *msg, const char *file, int line) {
@@ -83,11 +83,25 @@ static ShadeableIntersection * dev_cache_intersections = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 static Triangle *dev_triangles = NULL;
+static int *dev_sortTriangles = NULL;
+static OctreeNode_cuda *dev_octreeVector = NULL;
 
 void pathtraceInit(Scene *scene) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
+
+	// Construct a Octree
+	OctreeNode *root = NULL;
+	int octreeDepth = 4;
+	constructOctree(root, octreeDepth, -6, 6, -1, 11, -6, 1); // TODO£ºset according to scene file
+	// traverse the Octree
+	for (int i = 0; i < scene->triangles.size(); i++) {
+		traverseOctree(root, scene->triangles[i], i);
+	}
+	std::vector<int> sortTriangles; // sort Triangles accoring to the OctreeNodes
+	std::vector<OctreeNode_cuda> octreeVector; // store octree in an array
+	traverseOctreeToArray(root, sortTriangles, octreeVector);
 
     cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
@@ -108,7 +122,12 @@ void pathtraceInit(Scene *scene) {
     // TODO: initialize any extra device memeory you need
 	cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
 	cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
-cout << "triangles.size(): " << scene->triangles.size() << endl;
+	cout << "triangles.size(): " << scene->triangles.size() << endl;
+	cudaMalloc(&dev_sortTriangles, sortTriangles.size() * sizeof(int));
+	cudaMemcpy(dev_sortTriangles, sortTriangles.data(), sortTriangles.size() * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMalloc(&dev_octreeVector, octreeVector.size() * sizeof(OctreeNode_cuda));
+	cudaMemcpy(dev_octreeVector, octreeVector.data(), octreeVector.size() * sizeof(OctreeNode_cuda), cudaMemcpyHostToDevice);
+
     checkCUDAError("pathtraceInit");
 }
 
@@ -121,6 +140,8 @@ void pathtraceFree() {
 	cudaFree(dev_cache_intersections);
     // TODO: clean up any extra device memory you created
 	cudaFree(dev_triangles);
+	cudaFree(dev_sortTriangles);
+	cudaFree(dev_octreeVector);
 
     checkCUDAError("pathtraceFree");
 }
@@ -181,6 +202,8 @@ __global__ void computeIntersections(
 	, int geoms_size
 	, ShadeableIntersection * intersections
 	, Triangle * triangles
+	, int * sortTriangles
+	, OctreeNode_cuda * octreeVector
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -213,12 +236,15 @@ __global__ void computeIntersections(
 			{
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 			}
+			// TODO: add more intersection tests here... triangle? metaball? CSG?
 			else if (geom.type == MESH)
 			{
+#if OCTREE
+				t = meshIntersectionTest(geom, triangles, sortTringles, octreeVector, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+#else
 				t = meshIntersectionTest(geom, triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+#endif
 			}
-			// TODO: add more intersection tests here... triangle? metaball? CSG?
-
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
 			if (t > 0.0f && t_min > t)
@@ -408,6 +434,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, hst_scene->geoms.size()
 			, dev_cache_intersections
 			, dev_triangles
+			, dev_sortTriangles
+			, dev_octreeVector
 			);
 		checkCUDAError("cache first bounce");
 	}
@@ -423,6 +451,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 			, hst_scene->geoms.size()
 			, dev_intersections
 			, dev_triangles
+			, dev_sortTriangles
+			, dev_octreeVector
 			);
 		checkCUDAError("trace one bounce");
 	}
@@ -437,6 +467,8 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 		, hst_scene->geoms.size()
 		, dev_intersections
 		, dev_triangles
+		, dev_sortTriangles
+		, dev_octreeVector
 		);
 	checkCUDAError("trace one bounce");
 	cudaDeviceSynchronize();
@@ -489,4 +521,139 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 
     checkCUDAError("pathtrace");
+}
+
+// Octree
+void constructOctree(OctreeNode *&root,
+	int maxdepth,
+	float xmin, float xmax,
+	float ymin, float ymax,
+	float zmin, float zmax)
+{
+
+	maxdepth--;
+	if (maxdepth > 0)
+	{
+		root = new OctreeNode(xmin, xmax, ymin, ymax, zmin, zmax);
+		root->xmin = xmin;
+		root->xmax = xmax;
+		root->ymin = ymin;
+		root->ymax = ymax;
+		root->zmin = zmin;
+		root->zmax = zmax;
+		float xm = (xmax - xmin) / 2;
+		float ym = (ymax - ymin) / 2;
+		float zm = (zmax - zmin) / 2;
+		constructOctree(root->tlf, maxdepth, xmin, xmax - xm, ymax - ym, ymax, zmax - zm, zmax);
+		constructOctree(root->tlb, maxdepth, xmin, xmax - xm, ymin, ymax - ym, zmax - zm, zmax);
+		constructOctree(root->trf, maxdepth, xmax - xm, xmax, ymax - ym, ymax, zmax - zm, zmax);
+		constructOctree(root->trb, maxdepth, xmax - xm, xmax, ymin, ymax - ym, zmax - zm, zmax);
+		constructOctree(root->blf, maxdepth, xmin, xmax - xm, ymax - ym, ymax, zmin, zmax - zm);
+		constructOctree(root->blb, maxdepth, xmin, xmax - xm, ymin, ymax - ym, zmin, zmax - zm);
+		constructOctree(root->brf, maxdepth, xmax - xm, xmax, ymax - ym, ymax, zmin, zmax - zm);
+		constructOctree(root->brb, maxdepth, xmax - xm, xmax, ymin, ymax - ym, zmin, zmax - zm);
+	}
+}
+
+void traverseOctree(OctreeNode *&root, Triangle &t, int Idx) {
+	if (root == NULL) {
+		return;
+	}
+	for (int i = 0; i < 3; i++) {
+		glm::vec3 v = t.vertices[i];
+		if (v[0] >= root->xmin && v[0] <= root->xmax
+			&& v[1] >= root->ymin && v[2] <= root->ymax
+			&& v[2] >= root->zmin && v[2] <= root->ymax) {
+			root->hasTriangle = true;
+			if (root->tlf == NULL
+				&& root->tlb == NULL
+				&& root->trf == NULL
+				&& root->trb == NULL
+				&& root->blf == NULL
+				&& root->blb == NULL
+				&& root->brf == NULL
+				&& root->brb == NULL) {
+				root->triangleIdx.push_back(Idx);
+				return;
+			}
+			traverseOctree(root->tlf, t, Idx);
+			traverseOctree(root->tlb, t, Idx);
+			traverseOctree(root->trf, t, Idx);
+			traverseOctree(root->trb, t, Idx);
+			traverseOctree(root->blf, t, Idx);
+			traverseOctree(root->blb, t, Idx);
+			traverseOctree(root->brf, t, Idx);
+			traverseOctree(root->brb, t, Idx);
+			break;
+		}
+	}
+}
+
+int traverseOctreeToArray(OctreeNode *root
+	, std::vector<int> &sortTriangles
+	, std::vector<OctreeNode_cuda> &octreeVector)
+{
+	OctreeNode_cuda node(
+		root->xmin, root->xmax,
+		root->ymin, root->ymax,
+		root->zmin, root->zmax);
+
+	if (root->tlf == NULL || !root->tlf->hasTriangle) {
+		node.tlf = -1;
+	}
+	else {
+		node.tlf = traverseOctreeToArray(root->tlf, sortTriangles, octreeVector);
+	}
+	if (root->tlb == NULL || !root->tlb->hasTriangle) {
+		node.tlb = -1;
+	}
+	else {
+		node.tlb = traverseOctreeToArray(root->tlb, sortTriangles, octreeVector);
+	}
+	if (root->trf == NULL || !root->trf->hasTriangle) {
+		node.trf = -1;
+	}
+	else {
+		node.trf = traverseOctreeToArray(root->trf, sortTriangles, octreeVector);
+	}
+	if (root->trb == NULL || !root->trb->hasTriangle) {
+		node.trb = -1;
+	}
+	else {
+		node.trb = traverseOctreeToArray(root->trb, sortTriangles, octreeVector);
+	}
+	if (root->blf == NULL || !root->blf->hasTriangle) {
+		node.blf = -1;
+	}
+	else {
+		node.blf = traverseOctreeToArray(root->blf, sortTriangles, octreeVector);
+	}
+	if (root->blb == NULL || !root->blb->hasTriangle) {
+		node.blb = -1;
+	}
+	else {
+		node.blb = traverseOctreeToArray(root->blb, sortTriangles, octreeVector);
+	}
+	if (root->brf == NULL || !root->brf->hasTriangle) {
+		node.brf = -1;
+	}
+	else {
+		node.brf = traverseOctreeToArray(root->brf, sortTriangles, octreeVector);
+	}
+	if (root->brb == NULL || !root->brb->hasTriangle) {
+		node.brb = -1;
+	}
+	else {
+		node.brb = traverseOctreeToArray(root->brb, sortTriangles, octreeVector);
+	}
+
+	if (root->triangleIdx.size() > 0) {
+		node.triangleStart = sortTriangles.size();
+		for (int i : root->triangleIdx) {
+			sortTriangles.push_back(i);
+		}
+		node.triangleEnd = sortTriangles.size() - 1;
+	}
+	octreeVector.push_back(node);
+	return octreeVector.size() - 1;
 }
