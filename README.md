@@ -78,7 +78,7 @@ I created two procedural shapes using signed distance functions and used ray mar
 | ------------- | ----------- |
 | ![](img/renders/proceduralTexture2.png)  | ![](img/renders/proceduralTexture1.png) |
 
-I created two procedural textures that can be applied to any shape in the scene. One texture uses the intersection position to manipulate the color and another uses the normal of the intersection to manipulate the color. The average iteration time for the box sdf with a procedural texture was 87 ms (diffuse was 86 ms) and the average iteration time for the displaced sphere sdf was 85 ms (diffuse was 84 ms).
+I created two procedural textures that can be applied to any shape in the scene. One texture uses the intersection position to manipulate the color and another uses the normal of the intersection to manipulate the color. The average iteration time for the box sdf with a procedural texture was 87 ms (diffuse was 86 ms) and the average iteration time for the displaced sphere sdf was 85 ms (diffuse was 84 ms). I referenced [Inigo Quilez](https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm) for sdf examples. 
 
 ## Better Hemisphere Sampling
 
@@ -104,7 +104,7 @@ There is an option to save the intersections from the first bounce of the first 
 
 ## Mesh Bounding Box
 
-When a mesh is loaded, the minimum and maximum x, y, and z values are saved to form an axiss aligned bounding box. When this option is turned on, a ray will first be tested against the bounding box of the mesh to see if there is an intersection. If there is, then all of the triangles in the ray will be tested. This optimization is significant when there are many triangles in a mesh. For the mesh I tested, the average time per iteration without a bounding box was 664 ms and the average time for iteration with a bounding box was 662 ms. 
+When a mesh is loaded, the minimum and maximum x, y, and z values are saved to form an axiss aligned bounding box. When this option is turned on, a ray will first be tested against the bounding box of the mesh to see if there is an intersection. If there is, then all of the triangles in the ray will be tested. This optimization is significant when there are many triangles in a mesh. For the mesh I tested, the average time per iteration without a bounding box was 664 ms and the average time for iteration with a bounding box was 662 ms. I referenced [Scratchapixel](https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection) for an equation to solve a ray box intersection. 
 
 # Performance Analysis
 
