@@ -28,7 +28,7 @@ static bool cacheFirstBounce = false;
 static bool sortByMaterial = true;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
-static bool useOctree = true;
+static bool useOctree = false;
 
 float zoom, theta, phi;
 glm::vec3 cameraPosition;
@@ -150,7 +150,7 @@ void runCuda() {
 
     if (iteration == 0) {
         pathtraceFree(useOctree);
-        pathtraceInit(scene, useOctree, 3, 3);
+        pathtraceInit(scene, useOctree, 2 , 3, renderState->iterations);
         //timer().startGpuTimer();
     }
 

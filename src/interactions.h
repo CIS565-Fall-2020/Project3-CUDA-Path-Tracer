@@ -4,6 +4,23 @@
 
 #define RAY_EPSILON 0.0005f
 
+
+__host__ __device__
+glm::vec2 calculateStratifiedSample(
+    int iter, int totalIters, thrust::default_random_engine& rng, glm::vec2 pixelLength) {
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    // Split the pixel into totalIters grids (if possible)
+    int grid = (int)(glm::sqrt((float)totalIters) + 0.5f);
+    float invGrids = 1.f / grid;
+
+    // Find the grid where current iteration is at
+    float x = (iter - 1) % grid;
+    float y = (iter - 1) / grid;
+
+    return glm::vec2(invGrids * u01(rng) + x, invGrids * u01(rng) + y);
+}
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -11,12 +28,16 @@
  */
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
-        glm::vec3 normal, thrust::default_random_engine &rng) {
+        glm::vec3 normal, thrust::default_random_engine &rng, int iter, int totalIters, glm::vec2 pixelLength) {
     thrust::uniform_real_distribution<float> u01(0, 1);
+    glm::vec2 sample(u01(rng), u01(rng)); //calculateStratifiedSample(iter, totalIters, rng, pixelLength);
 
-    float up = sqrt(u01(rng)); // cos(theta)
+    float sx = sample.x;
+    float sy = sample.y;
+
+    float up = sqrt(sx); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
-    float around = u01(rng) * TWO_PI;
+    float around = sy * TWO_PI;
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
@@ -48,10 +69,11 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 */
 __host__ __device__
 glm::vec3 calculateImperfectSpecularDirection(
-    glm::vec3 normal, float spec_exp, thrust::default_random_engine& rng) {
+    glm::vec3 normal, float spec_exp, thrust::default_random_engine& rng, int iter, int totalIters, glm::vec2 pixelLength) {
     thrust::uniform_real_distribution<float> u01(0, 1);
-    float s1 = u01(rng);
-    float s2 = u01(rng);
+    glm::vec2 sample(u01(rng), u01(rng));//calculateStratifiedSample(iter, totalIters, rng, pixelLength);
+    float s1 = sample.x;
+    float s2 = sample.y;
     float theta = glm::acos(glm::pow(s1, 1.f / (spec_exp + 1.f)));
     float phi = TWO_PI * s2;
     glm::vec3 sample_dir(cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta));
@@ -104,9 +126,12 @@ void diffuseScatter(PathSegment& pathSegment,
     glm::vec3 intersect,
     glm::vec3 normal,
     const Material& m,
-    thrust::default_random_engine& rng) {
+    thrust::default_random_engine& rng,
+    int iter,
+    int totalIters,
+    glm::vec2 pixelLength) {
 
-    glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng);
+    glm::vec3 diffuseDir = calculateRandomDirectionInHemisphere(normal, rng, iter, totalIters, pixelLength);
 
     // uniform diffuse
     pathSegment.ray.direction = diffuseDir;
@@ -140,9 +165,12 @@ void glossyScatter(PathSegment& pathSegment,
     glm::vec3 intersect,
     glm::vec3 normal,
     const Material& m,
-    thrust::default_random_engine& rng) {
+    thrust::default_random_engine& rng,
+    int iter,
+    int totalIters,
+    glm::vec2 pixelLength) {
 
-    glm::vec3 reflectDir = calculateImperfectSpecularDirection(normal, m.specular.exponent, rng);
+    glm::vec3 reflectDir = calculateImperfectSpecularDirection(normal, m.specular.exponent, rng, iter, totalIters, pixelLength);
 
     // imperfect specular
     pathSegment.ray.direction = reflectDir;

@@ -18,7 +18,7 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define MAX_QUEUE_DEPTH 8
+#define MAX_QUEUE_DEPTH 32
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -92,10 +92,12 @@ static std::map<int, std::vector<int>> hst_octnode_geoms;
 static std::vector<int> hst_octnode_geom_indices;
 static OctNode* dev_octnodes = NULL;
 static int* dev_octnode_geoms = NULL;
+static int* dev_octnode_queues = NULL;
 static int octNodeId = 1; // id counter for octNode
 static bool useOctree = false;
 static int octreeDepth = 0;
 static int maxGeom = 0;
+static int totalIterations = 0;
 
 /*
 * Update the OctNode bounding box if necessary
@@ -141,7 +143,7 @@ bool doesGeomOverlap(int geomIdx, glm::vec3 &minCorner, glm::vec3 &maxCorner) {
 
 void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int> &geoms) {
 
-    root.upFarLeft, root.upFarRight, root.upNearLeft, root.upNearRight, root.downFarLeft, root.downFarRight, root.downNearLeft, root.downNearRight = -1;
+    root.upFarLeft, root.upFarRight, root.upNearLeft, root.upNearRight, root.downFarLeft, root.downFarRight, root.downNearLeft, root.downNearRight = -1, -1, -1, -1, -1, -1, -1, -1;
 
     if (depth == 0 || geoms.size() <= maxGeom) {
         // Base case - no need to create children nodes, set this node as leaf
@@ -234,7 +236,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
     }
 
     // Recursive calls - handle potential splitting
-    if (root.upFarLeft != -1) {
+    if (root.upFarLeft > -1) {
         upFarLeft.id = root.upFarLeft;
         upFarLeft.maxCorner = upFarLeftMax;
         upFarLeft.minCorner = upFarLeftMin;
@@ -242,7 +244,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, upFarLeft, upFarLeftGeoms);
         hst_octnodes.push_back(upFarLeft);
     }
-    if (root.upFarRight != -1) {
+    if (root.upFarRight > -1) {
         upFarRight.id = root.upFarRight;
         upFarRight.maxCorner = upFarRightMax;
         upFarRight.minCorner = upFarRightMin;
@@ -250,7 +252,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, upFarRight, upFarRightGeoms);
         hst_octnodes.push_back(upFarRight);
     }
-    if (root.upNearLeft != -1) {
+    if (root.upNearLeft > -1) {
         upNearLeft.id = root.upNearLeft;
         upNearLeft.maxCorner = upNearLeftMax;
         upNearLeft.minCorner = upNearLeftMin;
@@ -258,7 +260,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, upNearLeft, upNearLeftGeoms);
         hst_octnodes.push_back(upNearLeft);
     }
-    if (root.upNearRight != -1) {
+    if (root.upNearRight > -1) {
         upNearRight.id = root.upNearRight;
         upNearRight.maxCorner = upNearRightMax;
         upNearRight.minCorner = upNearRightMin;
@@ -266,7 +268,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, upNearRight, upNearRightGeoms);
         hst_octnodes.push_back(upNearRight);
     }
-    if (root.downFarLeft != -1) {
+    if (root.downFarLeft > -1) {
         downFarLeft.id = root.downFarLeft;
         downFarLeft.maxCorner = downFarLeftMax;
         downFarLeft.minCorner = downFarLeftMin;
@@ -274,7 +276,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, downFarLeft, downFarLeftGeoms);
         hst_octnodes.push_back(downFarLeft);
     }
-    if (root.downFarRight != -1) {
+    if (root.downFarRight > -1) {
         downFarRight.id = root.downFarRight;
         downFarRight.maxCorner = downFarRightMax;
         downFarRight.minCorner = downFarRightMin;
@@ -282,7 +284,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, downFarRight, downFarRightGeoms);
         hst_octnodes.push_back(downFarRight);
     }
-    if (root.downNearLeft != 1) {
+    if (root.downNearLeft > 1) {
         downNearLeft.id = root.downNearLeft;
         downNearLeft.maxCorner = downNearLeftMax;
         downNearLeft.minCorner = downNearLeftMin;
@@ -290,7 +292,7 @@ void setupOctreeRecursive(int depth, int maxGeom, OctNode &root, std::vector<int
         setupOctreeRecursive(depth - 1, maxGeom, downNearLeft, downNearLeftGeoms);
         hst_octnodes.push_back(downNearLeft);
     }
-    if (root.downNearRight != -1) {
+    if (root.downNearRight > -1) {
         downNearRight.id = root.downNearRight;
         downNearRight.maxCorner = downNearRightMax;
         downNearRight.minCorner = downNearRightMin;
@@ -314,8 +316,8 @@ void setupOctree() {
             rootGeomIndices.push_back(i);
         }
         root.id = 0;
-        root.maxCorner = maxPos;
-        root.minCorner = minPos;
+        root.maxCorner = glm::vec3(maxPos.x + 0.005f, maxPos.y + 0.005f, maxPos.z + 0.005f);
+        root.minCorner = glm::vec3(minPos.x - 0.005f, minPos.y - 0.005f, minPos.z - 0.005f);
         setupOctreeRecursive(octreeDepth - 1, maxGeom, root, rootGeomIndices);
         hst_octnodes.push_back(root);
 
@@ -337,6 +339,7 @@ void setupOctree() {
                 hst_octnodes[i].geomStartIdx = -1;
             }
         }
+        // For testing purposes
         /*std::cout << "UpFarLeft: " << root.upFarLeft << std::endl;
         std::cout << "UpFarRight: " << root.upFarRight << std::endl;
         std::cout << "UpNearLeft: " << root.upNearLeft << std::endl;
@@ -347,7 +350,7 @@ void setupOctree() {
         std::cout << "DownNearRight: " << root.downNearRight << std::endl;*/
         for (int i = 0; i < hst_octnodes.size(); ++i) {
             std::cout << "-----------------" << std::endl;
-            std::cout << "Node: " << hst_octnodes[i].id << std::endl;
+            std::cout << "Node: " << hst_octnodes[i].id << ", " << hst_octnodes[i].numGeoms << " geoms" << std::endl;
             std::cout << "Geom starts at: " << hst_octnodes[i].geomStartIdx << std::endl;
             for (int j = 0; j < hst_octnode_geoms[i].size(); ++j) {
                 std::cout << "Geom id: " << hst_octnode_geoms[i][j] << std::endl;
@@ -365,10 +368,11 @@ void setupOctree() {
     }
 }
 
-void pathtraceInit(Scene *scene, bool octree, int treeDepth, int geomNumber) {
+void pathtraceInit(Scene *scene, bool octree, int treeDepth, int geomNumber, int totalIter) {
     hst_scene = scene;
     const Camera &cam = hst_scene->state.camera;
     const int pixelcount = cam.resolution.x * cam.resolution.y;
+    totalIterations = totalIter;
 
     cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
@@ -406,6 +410,10 @@ void pathtraceInit(Scene *scene, bool octree, int treeDepth, int geomNumber) {
 
         cudaMalloc(&dev_octnode_geoms, hst_octnode_geom_indices.size() * sizeof(int));
         cudaMemcpy(dev_octnode_geoms, hst_octnode_geom_indices.data(), hst_octnode_geom_indices.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+        int queue_size = MAX_QUEUE_DEPTH * sizeof(int);
+        cudaMalloc(&dev_octnode_queues, pixelcount * queue_size);
+        cudaMemset(dev_octnode_queues, 0, pixelcount * queue_size);
     }
 
     checkCUDAError("pathtraceInit");
@@ -428,6 +436,7 @@ void pathtraceFree(bool octree) {
         hst_octnodes.clear();
         hst_octnode_geoms.clear();
         hst_octnode_geom_indices.clear();
+        cudaFree(dev_octnode_queues);
     }
     checkCUDAError("pathtraceFree");
 }
@@ -458,7 +467,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
             thrust::default_random_engine rng1 = makeSeededRandomEngine(iter, x, 0);
             thrust::default_random_engine rng2 = makeSeededRandomEngine(iter, y, 0);
             thrust::uniform_real_distribution<float> u01(0, 1);
-            //s = glm::vec2(cam.pixelLength.x * u01(rng1), cam.pixelLength.y * u01(rng2));
+            s = glm::vec2(cam.pixelLength.x * u01(rng1), cam.pixelLength.y * u01(rng2));
         }
 
 		segment.ray.direction = glm::normalize(cam.view
@@ -555,33 +564,32 @@ __host__ __device__ bool octNodeBoundsTest(
     glm::vec3& invDir
 )
 {
-    float t0x = (node.minCorner.x - ray.origin.x) * invDir.x;
-    float t1x = (node.maxCorner.x - ray.origin.x) * invDir.x;
+    glm::vec3 minCornerPad(node.minCorner.x, node.minCorner.y, node.minCorner.z);
+    glm::vec3 maxCornerPad(node.maxCorner.x, node.maxCorner.y, node.maxCorner.z);
+    float t0x = (minCornerPad.x - ray.origin.x) * invDir.x;
+    float t1x = (maxCornerPad.x - ray.origin.x) * invDir.x;
     if (t0x > t1x) {
         float temp = t0x;
         t0x = t1x;
         t1x = temp;
     }
-    t1x *= (1.f + 0.5f);
-    float t0y = (node.minCorner.y - ray.origin.y) * invDir.y;
-    float t1y = (node.maxCorner.y - ray.origin.y) * invDir.y;
+    float t0y = (minCornerPad.y - ray.origin.y) * invDir.y;
+    float t1y = (maxCornerPad.y - ray.origin.y) * invDir.y;
     if (t0y > t1y) {
         float temp = t0y;
         t0y = t1y;
         t1y = temp;
     }
-    t1y *= (1.f + 0.5f);
     if ((t0x > t1y) || (t0y > t1x)) return false;
     if (t0y > t0x) t0x = t0y;
     if (t1y < t1x) t1x = t1y;
-    float t0z = (node.minCorner.z - ray.origin.z) * invDir.z;
-    float t1z = (node.maxCorner.z - ray.origin.z) * invDir.z;
+    float t0z = (minCornerPad.z - ray.origin.z) * invDir.z;
+    float t1z = (maxCornerPad.z - ray.origin.z) * invDir.z;
     if (t0z > t1z) {
         float temp = t0z;
         t0z = t1z;
         t1z = temp;
     }
-    t1z *= (1.f + 0.5f);
     if ((t0x > t1z) || (t0z > t1x)) return false;
     return true;
 }
@@ -594,6 +602,7 @@ __global__ void computeOctreeIntersections(
     , Geom* geoms
     , int* geomIndices
     , int treeDepth
+    , int* node_queue
     )
 {
     int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -622,13 +631,13 @@ __global__ void computeOctreeIntersections(
         glm::vec3 invDir(invDir_x, invDir_y, invDir_z);
 
         int current_node = 0;
-        int* node_queue = new int[MAX_QUEUE_DEPTH];
-       node_queue[0] = 0; // set root as starting node
+        int offset = path_index * MAX_QUEUE_DEPTH;
+        node_queue[offset] = 0; // set root as starting node
         int total_nodes_left = 1;
         int queue_ptr = 1; // add next node id tp this index in queue
         while (total_nodes_left > 0) {
             // get current node
-            OctNode node = octreeNodes[node_queue[current_node]];
+            OctNode node = octreeNodes[node_queue[offset + current_node]];
             total_nodes_left--;
             // Check if you are at leaf node
             if (node.numGeoms > 0 && node.geomStartIdx >= 0) {
@@ -673,63 +682,62 @@ __global__ void computeOctreeIntersections(
             else {
                 if (node.upFarLeft > 0 && octNodeBoundsTest(octreeNodes[node.upFarLeft], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.upFarLeft;
+                    node_queue[offset + queue_ptr] = node.upFarLeft;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                     total_nodes_left++;
                 }
                 if (node.upFarRight > 0 && octNodeBoundsTest(octreeNodes[node.upFarRight], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.upFarRight;
+                    node_queue[offset + queue_ptr] = node.upFarRight;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                     total_nodes_left++;
                 }
                 if (node.upNearLeft > 0 && octNodeBoundsTest(octreeNodes[node.upNearLeft], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.upNearLeft;
+                    node_queue[offset + queue_ptr] = node.upNearLeft;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                     total_nodes_left++;
                 }
                 if (node.upNearRight > 0 && octNodeBoundsTest(octreeNodes[node.upNearRight], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.upNearRight;
+                    node_queue[offset + queue_ptr] = node.upNearRight;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                     total_nodes_left++;
                 }
                 if (node.downFarLeft > 0 && octNodeBoundsTest(octreeNodes[node.downFarLeft], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.downFarLeft;
+                    node_queue[offset + queue_ptr] = node.downFarLeft;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                     total_nodes_left++;
                 }
                 if (node.downFarRight > 0 && octNodeBoundsTest(octreeNodes[node.downFarRight], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.downFarRight;
+                    node_queue[offset + queue_ptr] = node.downFarRight;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                    total_nodes_left++;
                 }
                 if (node.downNearLeft > 0 && octNodeBoundsTest(octreeNodes[node.downNearLeft], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.downNearLeft;
+                    node_queue[offset + queue_ptr] = node.downNearLeft;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                     total_nodes_left++;
                 }
                 if (node.downNearRight > 0 && octNodeBoundsTest(octreeNodes[node.downNearRight], pathSegment.ray, invDir)) {
                     // add this child to queue
-                    node_queue[queue_ptr] = node.downNearRight;
+                    node_queue[offset + queue_ptr] = node.downNearRight;
                     queue_ptr++;
                     if (queue_ptr == MAX_QUEUE_DEPTH) queue_ptr = 0;
                    total_nodes_left++;
                 }
             }
         }
-        delete[] node_queue;
         if (hit_geom_index == -1)
         {
             intersections[path_index].t = -1.0f;
@@ -759,6 +767,9 @@ __global__ void shadeFakeMaterial (
 	, ShadeableIntersection * shadeableIntersections
 	, PathSegment * pathSegments
 	, Material * materials
+    , int totalIters
+    , Camera cam
+    , int depth
 	)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -770,7 +781,7 @@ __global__ void shadeFakeMaterial (
       // Set up the RNG
       // LOOK: this is how you use thrust's RNG! Please look at
       // makeSeededRandomEngine as well.
-      thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
+      thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, depth);
       thrust::uniform_real_distribution<float> u01(0, 1);
 
       Material material = materials[intersection.materialId];
@@ -784,15 +795,16 @@ __global__ void shadeFakeMaterial (
       else {
           float ior1 = 1.f;
           float ior2 = material.indexOfRefraction;
+          //pathSegments[idx].color = material.color;
           switch (material.type) {
             case DIFFUSE:
-                diffuseScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+                diffuseScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng, iter, totalIters, cam.pixelLength);
                 break;
             case MIRROR:
                 mirrorScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
                 break;
             case GLOSSY:
-                glossyScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng);
+                glossyScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, rng, iter, totalIters, cam.pixelLength);
                 break;
             case DIELECTRIC:
                 dielectricScatter(pathSegments[idx], getPointOnRay(pathSegments[idx].ray, intersection.t), intersection.surfaceNormal, material, ior1, ior2, rng);
@@ -906,6 +918,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
         }
         else {
             if (useOctree) {
+                cudaMemset(dev_octnode_queues, 0, num_paths * MAX_QUEUE_DEPTH * sizeof(int));
                 checkCUDAError("trace one bounce from octree before");
                 computeOctreeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
                     num_paths
@@ -915,6 +928,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
                     , dev_geoms
                     , dev_octnode_geoms
                     , octreeDepth
+                    , dev_octnode_queues
                     );
                 checkCUDAError("trace one bounce from octree after");
                 cudaDeviceSynchronize();
@@ -935,6 +949,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
     }
     else {
         if (useOctree) {
+            cudaMemset(dev_octnode_queues, 0, num_paths * MAX_QUEUE_DEPTH * sizeof(int));
             checkCUDAError("trace one bounce from octree before");
             computeOctreeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
                 num_paths
@@ -944,6 +959,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
                 , dev_geoms
                 , dev_octnode_geoms
                 , octreeDepth
+                , dev_octnode_queues
                 );
             checkCUDAError("trace one bounce from octree after");
             cudaDeviceSynchronize();
@@ -987,7 +1003,10 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
     num_paths,
     dev_intersections,
     dev_paths,
-    dev_materials
+    dev_materials,
+    totalIterations,
+    cam,
+    depth
   );
 
   // Perform stream compaction
