@@ -89,6 +89,7 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
 	return -1;
 }
 
+
 // CHECKITOUT
 /**
  * Test intersection between a ray and a transformed sphere. Untransformed,
@@ -145,12 +146,68 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 	return glm::length(r.origin - intersectionPoint);
 }
 
+
+// ----------------------------------------------------------------------------------------------
+// ---------------------------- MESH INTERSECTION -----------------------------------------------
+// ----------------------------------------------------------------------------------------------
+
+// Modified from https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
+__host__ __device__ bool boundingBoxIntersectionTestLocal(
+	glm::vec3 minBoxPos, glm::vec3 maxBoxPos,
+	glm::vec3 rayOrigin, glm::vec3 rayDirection) {
+
+	glm::vec3 tMin = glm::vec3(
+		(minBoxPos.x - rayOrigin.x) / rayDirection.x,
+		(minBoxPos.y - rayOrigin.y) / rayDirection.y, 
+		(minBoxPos.z - rayOrigin.z) / rayDirection.z);
+	glm::vec3 tMax = glm::vec3(
+		(maxBoxPos.x - rayOrigin.x) / rayDirection.x,
+		(maxBoxPos.y - rayOrigin.y) / rayDirection.y,
+		(maxBoxPos.z - rayOrigin.z) / rayDirection.z);
+
+	if (tMin.x > tMax.x) {
+		float temp = tMin.x;
+		tMin.x = tMax.x;
+		tMax.x = temp;
+	}
+
+	if (tMin.y > tMax.y) {
+		float temp = tMin.y;
+		tMin.y = tMax.y;
+		tMax.y = temp;
+	}
+	
+	if (tMin.x > tMax.y || tMin.y > tMax.x) {
+		return false;
+	}
+
+	tMin.x = tMin.y > tMin.x ? tMin.y : tMin.x;
+	tMax.x = tMax.y < tMax.x ? tMax.y : tMax.x;
+
+	if (tMin.z > tMax.z) {
+		float temp = tMin.z;
+		tMin.z = tMax.z;
+		tMax.z = temp;
+	}
+
+	if (tMin.z > tMax.z) {
+		float temp = tMin.z;
+		tMin.z = tMax.z;
+		tMax.z = temp;
+	}
+
+	return !(tMin.x > tMax.z || tMin.z > tMax.x);
+}
+
 __host__ __device__ float meshIntersectionTest(const Triangle* tris, Geom mesh, Ray r,
 	glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
 
 	// Ray parameters when transformed to local space of the object
 	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
 	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	bool hitBoundingBox = boundingBoxIntersectionTestLocal(mesh.minPos, mesh.maxPos, ro, rd);
+	if (!hitBoundingBox) return -1;
 
 	float t_min = INFINITY;
 	for (int i = mesh.triangleIdxStart; i <= mesh.triangleIdxEnd; i++) {

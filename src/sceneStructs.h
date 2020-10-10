@@ -27,8 +27,11 @@ struct Geom {
 	glm::mat4 transform;
 	glm::mat4 inverseTransform;
 	glm::mat4 invTranspose;
+	// Mesh-related
 	int triangleIdxStart = -1;
 	int triangleIdxEnd = -1;
+	glm::vec3 minPos;
+	glm::vec3 maxPos;
 };
 
 struct Triangle {

@@ -66,6 +66,8 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 	}
 
 	geom.triangleIdxStart = triangles.size();
+	glm::vec3 minPos = glm::vec3(INFINITY, INFINITY, INFINITY);
+	glm::vec3 maxPos = glm::vec3(-INFINITY, -INFINITY, -INFINITY);
 
 	// Loop over shapes
 	for (size_t s = 0; s < shapes.size(); s++) {
@@ -87,11 +89,19 @@ bool Scene::loadObj(Geom& geom, string objPath) {
 				tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
 				tri.v[v] = glm::vec3(vx, vy, vz);
 				tri.n[v] = glm::vec3(nx, ny, nz);
+				minPos.x = vx < minPos.x ? vx : minPos.x;
+				minPos.y = vy < minPos.y ? vy : minPos.y;
+				minPos.z = vz < minPos.z ? vz : minPos.z;
+				maxPos.x = vx > maxPos.x ? vx : maxPos.x;
+				maxPos.y = vy > maxPos.y ? vy : maxPos.y;
+				maxPos.z = vz > maxPos.z ? vz : maxPos.z;
 			}
 			triangles.push_back(tri);
 			index_offset += fv;
 		}
 	}
+	geom.minPos = minPos;
+	geom.maxPos = maxPos;
 	geom.triangleIdxEnd = triangles.size() - 1;
 	return true;
 }
