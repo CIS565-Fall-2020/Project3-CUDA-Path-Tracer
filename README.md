@@ -9,7 +9,7 @@ CUDA Path Tracer
 
 ## Sneak Peek ##
 
-<img src="img/renders/8000iter.png" alt="sneak peek" width=1000>
+<img src="img/8000iter_legend.png" alt="sneak peek" width=1000>
 
 *Scene: Specular Box; Iterations: 8000; Material sort: disabled; Ray depth: 8; Anti-aliasing: enabled*
 
