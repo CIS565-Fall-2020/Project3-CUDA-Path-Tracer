@@ -9,24 +9,41 @@ CUDA Path Tracer
 
 ## Sneak Peek ##
 
-<img src="img/readme.png" alt="sneak peek" width=600>
+<img src="img/renders/8000iter.png" alt="sneak peek" width=1000>
 
-*Scene: Cornell Box; Iterations: 5000; Material sort: enabled; Ray depth: 8; Anti-aliasing: enabled*
+*Scene: Specular Box; Iterations: 8000; Material sort: disabled; Ray depth: 8; Anti-aliasing: enabled*
 
 ## Project Description ##
 
-This is a CUDA-based path tracer capable of rendering globally-illuminated images very quickly with the power of parallelization. This README will feature the path-tracer components implemented for the mid-point progress.
+This is a CUDA-based path tracer capable of rendering globally-illuminated images very quickly with the power of parallelization.
 
-**Mid Progress Features**
+**Features**
 
 * Shading Kernel with BSDF Evaluation
   * Uniform diffuse
   * Perfect specular reflective (mirror)
   * Perfect specular refractive (glass)
+  * Fresnel dielectric
+  * Imperfect specular (glossy)
 * Path Continuation/Termination with Stream Compaction
 * Toggleable continuous storage of paths and intersections by material type
 * Toggleable first bounce intersection cache to be used by subsequent iterations
 * Anti-aliasing rays with sub-pixel samples
+* Arbitrary GLTF mesh import
+* Camera depth of field
+* Hierarchical Spatial Structure - Octree (In progress)
+* Stratified sampling (In progress)
+
+## Material Overview ##
+
+Material shading is split into different BSDF evaluation functions based on material type. Supported materials include diffuse, mirror, glass, fresnel dielectric and glossy materials. Diffuse material scattering is computed by using cosine-weighted samples within a hemisphere. Fresnel dielectric materials are defined in the scene file with an index of refraction, which is used by BSDF evaluation to compute the probability of refracting versus reflecting the scatter ray. Mirror material scattering function reflects the ray along the surface normal while glossy reflection happens within a lobe computed by the specular exponent of the material.
+
+**Imperfect Specular Reflection**
+
+<img src="img/renders/dode_glossy_2.1exp_10000samples.png" alt="sneak peek" width=300> <img src="img/renders/dode_glossy_4.5exp_10000samples.png" alt="sneak peek" width=300> <img src="img/renders/dode_glossy_8.5exp_10000samples.png" alt="sneak peek" width=300>
+***Material type:** Glossy  **Geometry:** Dodecahedron (imported mesh)  **Specular exponents:** 2.1 (left), 4.5 (middle), 8.5 (right)*
+
+Lower specular exponent values give results that are closer to diffuse scattering while larger specular exponent values result in larger highlights.
 
 ## Insights ##
 
