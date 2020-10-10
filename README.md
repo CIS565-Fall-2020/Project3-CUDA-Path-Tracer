@@ -29,7 +29,7 @@ This is a CUDA-based path tracer capable of rendering globally-illuminated image
 * Toggleable continuous storage of paths and intersections by material type
 * Toggleable first bounce intersection cache to be used by subsequent iterations
 * Anti-aliasing rays with sub-pixel samples
-* Arbitrary GLTF mesh import
+* Arbitrary GLTF mesh loading with toggleable bounding volume intersection culling
 * Camera depth of field
 * Hierarchical Spatial Structure - Octree (In progress)
 * Stratified sampling (In progress)
@@ -46,7 +46,18 @@ Exponent = 2.1 | Exponent = 4.5 | Exponent = 8.5
 
 Lower specular exponent values give results that are closer to diffuse scattering while larger specular exponent values result in larger highlights.
 
-## Depth of Field ##
+## Features Overview ##
+
+**GLTF Mesh Loading**
+[Icosahedron](https://people.sc.fsu.edu/~jburkardt/data/obj/icosahedron.obj) | [Magnolia](https://people.sc.fsu.edu/~jburkardt/data/obj/magnolia.obj) | [Duck](https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0/Duck)
+:---: | :---: | :---:
+<img src="img/renders/ico_1500.png" alt="sneak peek" width=300> | <img src="img/renders/magnolia_1000.png" alt="sneak peek" width=300> | <img src="img/renders/duck_1200.png" alt="sneak peek" width=300>
+
+Bounding volume intersection culling is applied at the ray-geometry intersection test to reduce the number of rays that have to be checked against the entire mesh by first checking rays against a volume that completely bounds the mesh. This feature is implemented as toggleable for performance analysis purposes.
+
+In order to smoothen the triangles on round GLTF meshes, the intersection normal is computed from the barycentric interpolation of the 3 normals from the triangle vertices.
+
+**Depth of Field**
 
 Focal Distance = 30, Lens Radius = 2.5 | Focal Distance = 20, Lens Radius = 2.5
 :---: | :---:
