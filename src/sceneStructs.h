@@ -53,6 +53,14 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    int tex_index = -1;
+    int tex_height = 0;
+    int tex_width = 0;
+    int tex_bump_index = -1;
+    bool has_bump_map = false;
+    int tex_bump_height;
+    int tex_bump_width;
+    bool is_procedural = false;
 };
 
 struct Camera {
@@ -88,4 +96,5 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+  glm::vec2 uv;
 };

@@ -2,6 +2,56 @@
 
 #include "intersections.h"
 
+#define STRATIFIED 0
+#define NUM_SAMPLES 5000
+
+// based off of https://pdfs.semanticscholar.org/4322/6a3916a85025acbb3a58c17f6dc0756b35ac.pdf
+// I wrote this function in cis 461
+__host__ __device__
+glm::vec3 squareToDiskConcentric(const glm::vec2& sample)
+{
+    if (sample.x == 0.0f && sample.y == 0) {
+        return glm::vec3(0, 0, 0.5);
+    }
+
+    float phi = 0.0f;
+    float a = 2 * sample.x - 1.0f;
+    float b = 2 * sample.y - 1.0f;
+    float r;
+    float Pi = 3.1415926535897932384626f;
+
+    if (a > -b) {
+        if (a > b) {
+            phi = (Pi / 4.0f) * (b / a);
+            r = a;
+        }
+        else {
+            r = b;
+            phi = (Pi / 4.0f) * (2 - (a / b));
+        }
+    }
+    else {
+        if (a < b) {
+            r = -a;
+            phi = (Pi / 4.0f) * (4 + (b / a));
+        }
+        else {
+            r = -b;
+            if (b != 0.0f) {
+                phi = (Pi / 4.0f) * (6 - (a / b));
+            }
+            else {
+                phi = 0.0f;
+            }
+        }
+    }
+
+    float u = r * cos(phi);
+    float v = r * sin(phi);
+    return glm::vec3(u, v, 0.5);
+}
+
+
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -9,7 +59,7 @@
  */
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
-        glm::vec3 normal, thrust::default_random_engine &rng) {
+    glm::vec3 normal, thrust::default_random_engine& rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
     float up = sqrt(u01(rng)); // cos(theta)
@@ -24,9 +74,49 @@ glm::vec3 calculateRandomDirectionInHemisphere(
     glm::vec3 directionNotNormal;
     if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
         directionNotNormal = glm::vec3(1, 0, 0);
-    } else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
         directionNotNormal = glm::vec3(0, 1, 0);
-    } else {
+    }
+    else {
+        directionNotNormal = glm::vec3(0, 0, 1);
+    }
+
+    // Use not-normal direction to generate two perpendicular directions
+    glm::vec3 perpendicularDirection1 =
+        glm::normalize(glm::cross(normal, directionNotNormal));
+    glm::vec3 perpendicularDirection2 =
+        glm::normalize(glm::cross(normal, perpendicularDirection1));
+
+    return up * normal
+        + cos(around) * over * perpendicularDirection1
+        + sin(around) * over * perpendicularDirection2;
+}
+
+// based on the generate stratified samples function I wrote in cis 461
+__host__ __device__
+glm::vec3 calculateStratifiedSampleInHemisphere(
+        glm::vec3 normal, thrust::default_random_engine& rng, int iter, int numsamples) {
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    int num_samples = numsamples;
+    int sqrtVal = (int)(sqrt((float)num_samples) + 0.5f);
+    float invSqrtVal = 1.f / (float)sqrtVal;
+
+    float x_point = glm::clamp(((iter % sqrtVal) + u01(rng)) * invSqrtVal, 0.f, 1.f);
+    float y_point = glm::clamp((((float)(iter) / (float)sqrtVal) + u01(rng)) * invSqrtVal, 0.f, 1.f);
+
+    float up = sqrt(y_point); // cos(theta)
+    float over = sqrt(1.f - (up * up)); // sin(theta)
+    float around = x_point * TWO_PI;
+
+    glm::vec3 directionNotNormal;
+    if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(1, 0, 0);
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(0, 1, 0);
+    }
+    else {
         directionNotNormal = glm::vec3(0, 0, 1);
     }
 
@@ -155,7 +245,9 @@ void scatterRay(
         glm::vec3 intersect,
         glm::vec3 normal,
         const Material &m,
-        thrust::default_random_engine &rng) {
+        thrust::default_random_engine &rng,
+        int iter,
+        int depth) {
 
     // TO DO: Need to figure out specular power later
 
@@ -174,12 +266,20 @@ void scatterRay(
         pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.0001f;
     }
     else if (m.hasRefractive) {
-        // refraction
+        // refraction (no reflectiveness at all)
         calculateRefractionDirection(pathSegment, intersect, normal, m);
     }
     else {
         // default is diffuse
+#if STRATIFIED
+        if (depth == 1) {
+            pathSegment.ray.direction = calculateStratifiedSampleInHemisphere(normal, rng, iter, NUM_SAMPLES);
+        } else {
+            pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+        }
+#else
         pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+#endif
         pathSegment.color *= m.color;
         pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.0001f;
     }

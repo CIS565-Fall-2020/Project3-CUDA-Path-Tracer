@@ -3,9 +3,12 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <stb_image_write.h>
+#include <stb_image.h>
 #include "tiny_obj_loader.h"
+#include <glm/gtx/transform.hpp> 
 
-#define DEBUG 1
+#define DEBUG 0
 
 /*
  * Case Sensitive Implementation of endsWith()
@@ -22,7 +25,7 @@ bool endsWith(const std::string& mainStr, const std::string& toMatch)
 }
 
 // This function is modified from the one we were given in CIS 460
-void Scene::loadOBJ(string filename, int material_id)
+BoundingBox Scene::loadOBJ(string filename, int material_id)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -37,9 +40,9 @@ void Scene::loadOBJ(string filename, int material_id)
     if (error.empty()) {
 
         // initialize bounding box with default values
-        BoundingBox bounding_box;
-        bounding_box.min = glm::vec3(std::numeric_limits<float>::max());
-        bounding_box.max = glm::vec3(std::numeric_limits<float>::min());
+        BoundingBox bb;
+        bb.min = glm::vec3(std::numeric_limits<float>::max());
+        bb.max = glm::vec3(std::numeric_limits<float>::min());
 
         for (size_t s = 0; s < shapes.size(); s++) {
 
@@ -68,6 +71,12 @@ void Scene::loadOBJ(string filename, int material_id)
                     glm::vec3 idx_pos(attrib.vertices[3 * idx.vertex_index + 0], 
                                       attrib.vertices[3 * idx.vertex_index + 1], 
                                       attrib.vertices[3 * idx.vertex_index + 2]);
+                    idx_pos *= 4.0f;
+                    idx_pos.z -= 2;
+                    idx_pos.y += 2;
+                    idx_pos.x -= 2;
+
+
                     // vertex's normal
                     glm::vec3 idx_nor(0, 0, 0);
                     if (attrib.normals.size() > 0) {
@@ -90,11 +99,11 @@ void Scene::loadOBJ(string filename, int material_id)
 
                     // check for bounding box values
                     for (int k = 0; k < 3; k++) {
-                        if (idx_pos[k] < bounding_box.min[k]) {
-                            bounding_box.min[k] = idx_pos[k];
+                        if (idx_pos[k] < bb.min[k]) {
+                            bb.min[k] = idx_pos[k];
                         }
-                        if (idx_pos[k] > bounding_box.max[k]) {
-                            bounding_box.max[k] = idx_pos[k];
+                        if (idx_pos[k] > bb.max[k]) {
+                            bb.max[k] = idx_pos[k];
                         }
                     }
 
@@ -111,33 +120,118 @@ void Scene::loadOBJ(string filename, int material_id)
                 geoms.push_back(new_geom);
             }
         }
-#if DEBUG
+        return bb;
+#if false
         cout << "FINAL BOUNDING BOX" << endl;
-        cout << "= min pos: " << bounding_box.min.x << ", " << bounding_box.min.y << ", " << bounding_box.min.z << endl;
-        cout << "= max pos: " << bounding_box.max.x << ", " << bounding_box.max.y << ", " << bounding_box.max.z << endl;
+        cout << "= min pos: " << bb.min.x << ", " << bb.min.y << ", " << bb.min.z << endl;
+        cout << "= max pos: " << bb.max.x << ", " << bb.max.y << ", " << bb.max.z << endl;
 #endif
     }
+
 }
 
+bool Scene::loadTexture(Material& newMaterial, string path, bool bump) {
+    int w = 0; // width of texture
+    int h = 0; // height of texure
+    int comp = 0; //
+    float* rawPixels = stbi_loadf(path.c_str(), &w, &h, &comp, 3);
+    // we only want to operate on the texture if it is rgb or rgba
+    if (comp == 3 || comp == 4)
+    {
+        // since we are storing all our texture pixel colors in one vector
+        // we have to index them, in case another material has a different
+        // texture that it is linked to
+        if (bump) {
+            newMaterial.tex_bump_index = texture.size();
+            newMaterial.tex_bump_height = h;
+            newMaterial.tex_bump_width = w;
+        }
+        else {
+            newMaterial.tex_index = texture.size();
+            newMaterial.tex_height = h;
+            newMaterial.tex_width = w;
+        }
+        newMaterial.has_bump_map = bump;
+        
+        // loop through and push the color of each pixel into the vector
+        for (int i = 0; i < w * h; i++)
+        {
+            glm::vec3 color (rawPixels[i * comp], 
+                rawPixels[i * comp + 1], 
+                rawPixels[i * comp + 2]);
+#if DEBUG
+            //cout << "color @ index:" << i << ", r: " << color.x << ", g: " << color.y << ", b:" << color.z << endl;
+#endif
+            texture.push_back(color);
+        }
+        std::cout << "Loaded texture! Texture Path:" << path << "\" width: " << w << ", height: " << h << std::endl;
+        stbi_image_free(rawPixels);
+        return true;
+    }
+    std::cout << "Error: Could not load texture" << path << std::endl;
+    stbi_image_free(rawPixels);
+    return false;
+}
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
+    if (endsWith(filename.c_str(), ".obj")) {
+        cout << "Loading Obj File" << endl;
+        this->bounding_box = loadOBJ(filename, 0);
+
+        // make material
+        Material newMaterial;
+        newMaterial.color = glm::vec3(1.f, 1.f, 1.f);
+        newMaterial.specular.exponent = 1.f;
+        newMaterial.specular.color = glm::vec3(1.f, 1.f, 1.f);
+        newMaterial.hasReflective = 0.f;
+        newMaterial.hasRefractive = 0.f;
+        newMaterial.indexOfRefraction = 1.f;
+        newMaterial.emittance = 0.f;
+
+        // load color texture
+        //loadTexture(newMaterial, "../scenes/default.png", false);
+        loadTexture(newMaterial, "../scenes/bump2.png", true);
+        //cout << "bump h and w: " << newMaterial.tex_bump_width << ", " << newMaterial.tex_bump_height << endl;
+        materials.push_back(newMaterial);
+
+        // make camera
+        RenderState& state = this->state;
+        Camera& camera = state.camera;
+        camera.resolution.x = 800;
+        camera.resolution.y = 800;
+        float fovy = 45;
+        state.iterations = 5000;
+        state.traceDepth = 8;
+        state.imageName = "obj";
+        camera.position = glm::vec3(0.0f, 0.f, 10.f);
+        camera.lookAt = glm::vec3(0.f, 1.f, 0.f);
+        camera.up = glm::vec3(0.f, 1.0f, 0.f);
+        float yscaled = tan(fovy * (PI / 180));
+        float xscaled = (yscaled * camera.resolution.x) / camera.resolution.y;
+        float fovx = (atan(xscaled) * 180) / PI;
+        camera.fov = glm::vec2(fovx, fovy);
+        camera.right = glm::normalize(glm::cross(camera.view, camera.up));
+        camera.pixelLength = glm::vec2(2 * xscaled / (float)camera.resolution.x
+            , 2 * yscaled / (float)camera.resolution.y);
+
+        camera.view = glm::normalize(camera.lookAt - camera.position);
+        int arraylen = camera.resolution.x * camera.resolution.y;
+        state.image.resize(arraylen);
+        std::fill(state.image.begin(), state.image.end(), glm::vec3());
+
+        cout << "Loaded camera!" << endl;
+
+        // add additional cornell box
+        filename = "../scenes/environment.txt";
+    }
     char* fname = (char*)filename.c_str();
     fp_in.open(fname);
     if (!fp_in.is_open()) {
         cout << "Error reading from file - aborting!" << endl;
         throw;
     }
-    if (endsWith(filename.c_str(), ".obj")) {
-        cout << "Loading Obj File" << endl;
-        loadOBJ(filename, 0);
-
-        // to do: make material, make camera
-        // figure out errors
-        // then figure out intersection
-    }
-    else {
         while (fp_in.good()) {
             string line;
             utilityCore::safeGetline(fp_in, line);
@@ -156,16 +250,11 @@ Scene::Scene(string filename) {
                     cout << " " << endl;
                 }
             }
-        }
     }
 }
 
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
-    if (id != geoms.size()) {
-        cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
-        return -1;
-    } else {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
@@ -214,7 +303,6 @@ int Scene::loadGeom(string objectid) {
 
         geoms.push_back(newGeom);
         return 1;
-    }
 }
 
 int Scene::loadCamera() {
@@ -308,6 +396,13 @@ int Scene::loadMaterial(string materialid) {
                 newMaterial.indexOfRefraction = atof(tokens[1].c_str());
             } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
                 newMaterial.emittance = atof(tokens[1].c_str());
+            }
+            if (id == 2) {
+                //loadTexture(newMaterial, "../scenes/default.png", false);
+                newMaterial.is_procedural = true;
+            }
+            if (id == 3) {
+                loadTexture(newMaterial, "../scenes/floral.jpg", false);
             }
         }
         materials.push_back(newMaterial);
