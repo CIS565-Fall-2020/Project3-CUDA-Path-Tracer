@@ -59,7 +59,7 @@ Sorting the ray/path segments by material type will increase performance by maki
 
 
 ### Bloopers
-<img src="img/blooper1.png" width="220"> <img src="img/blooper2.png" width="220">  <img src="img/blooper3.png" width="220"> <img src="img/blooper4.png" width="220">
+<img src="img/blooper1.png" width="270"> <img src="img/blooper2.png" width="270"> <img src="img/blooper4.png" width="270">
 
 ### References
 * [PBRT] Physically Based Rendering, Second Edition: From Theory To Implementation. Pharr, Matt and Humphreys, Greg. 2010.
