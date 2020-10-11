@@ -10,6 +10,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH,
 };
 
 struct Ray {
@@ -26,6 +27,16 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+
+    // Mesh
+    int triangle_num;
+    glm::vec3 bound_max;
+    glm::vec3 bound_min;
+};
+
+struct Triangle {
+    glm::vec3 vertex[3];     // Vertices
+    glm::vec3 normal;        // Normal
 };
 
 struct Material {
@@ -49,6 +60,8 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    //Current motion vector that is used for motion blur
+    glm::vec3 motion;
 };
 
 struct RenderState {

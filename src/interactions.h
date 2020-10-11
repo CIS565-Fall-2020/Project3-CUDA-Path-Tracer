@@ -1,7 +1,21 @@
 #pragma once
 
 #include "intersections.h"
+#define HALTON_SAMPLING
 
+__host__ __device__
+float halton(float index, float base) {
+    float f = 1.f;
+    float r = 0.f;
+
+    while (index > 0)
+    {
+        f /= base;
+        r += f * ((int)index % (int)base);
+        index /= base;
+    }
+    return r;
+}
 // CHECKITOUT
 /**
  * Computes a cosine-weighted random direction in a hemisphere.
@@ -12,9 +26,24 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
+#ifdef HALTON_SAMPLING
+    int x_base = 3;
+    int y_base = 5;
+    int x_res = 100;
+    int y_res = 100;
+    float x_raw = u01(rng);
+    float y_raw = u01(rng);
+
+    float x_hal = halton(y_raw * y_res * x_res + x_raw * x_res, x_base);
+    float y_hal = halton(x_raw * x_res * y_res + y_raw * y_res, y_base);
+    float up = sqrt(y_hal); // cos(theta)
+    float over = sqrt(1 - up * up); // sin(theta)
+    float around = x_hal * TWO_PI;
+#else
     float up = sqrt(u01(rng)); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)
     float around = u01(rng) * TWO_PI;
+#endif
 
     // Find a direction that is not the normal based off of whether or not the
     // normal's components are all equal to sqrt(1/3) or whether or not at
@@ -73,10 +102,34 @@ void scatterRay(
         glm::vec3 normal,
         const Material &m,
         thrust::default_random_engine &rng) {
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
-    // calculateRandomDirectionInHemisphere defined above.
-    if (m.hasReflective) 
+     //calculateRandomDirectionInHemisphere defined above.
+    if (m.hasRefractive)
+    {
+        // Refractive material
+
+        float unit_projection = glm::dot(pathSegment.ray.direction, normal);
+        float eta = (unit_projection > 0) ? (m.indexOfRefraction) : (1.f / m.indexOfRefraction);
+
+        // Schlick's approximation
+        float R0 = powf((1.0f - eta) / (1.0f + eta), 2.f);
+        float R = R0 + (1 - R0) * powf(1 - glm::abs(unit_projection), 5.f);
+        if (R < u01(rng)) {
+            // Refracting Light
+            pathSegment.ray.direction = glm::refract(pathSegment.ray.direction, normal, eta);
+            normal = -normal;
+            pathSegment.color *= m.color;
+        }
+        else {
+            // Reflecting Light
+            pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+            pathSegment.color *= m.specular.color;
+        }
+    }
+    else if (m.hasReflective) 
     { 
         // Reflective material
         pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
@@ -90,7 +143,7 @@ void scatterRay(
     }
 
     glm::clamp(pathSegment.color, glm::vec3(0.0f), glm::vec3(1.0f));// Clamp the color
-    glm::vec3 offset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? 0.0005f * pathSegment.ray.direction : -0.0005f * pathSegment.ray.direction;
+    glm::vec3 offset = (glm::dot(pathSegment.ray.direction, normal) > 0) ? 0.0005f * normal : -0.0005f * normal;
     pathSegment.ray.origin = intersect + offset;// Shoot a new ray from the intersection point, add an offset to avoid shadow acne.
     pathSegment.remainingBounces -= 1;// A bounce happened, remaining bounces -1.
 }

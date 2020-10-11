@@ -5,7 +5,6 @@
 
 #include "sceneStructs.h"
 #include "utilities.h"
-
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
  */
@@ -141,4 +140,81 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     }
 
     return glm::length(r.origin - intersectionPoint);
+}
+
+
+/**
+ * Test intersection between a ray and a transformed mesh.
+ * Code Mainly from the gamedev.com solution of quick AABB intersection test.
+ * Reference: https://gamedev.stackexchange.com/questions/18436/most-efficient-aabb-vs-ray-collision-algorithms
+ *
+ * @param intersectionPoint  Output parameter for point of intersection.
+ * @param normal             Output parameter for surface normal.
+ * @param outside            Output param for whether the ray came from outside.
+ * @return                   Ray parameter `t` value. -1 if no intersection.
+ */
+__host__ __device__ float meshIntersectionTest(Geom mesh, Triangle* triangles, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+
+    glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+    glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    Ray rt;
+    rt.origin = ro;
+    rt.direction = rd;
+    // r.dir is unit direction vector of ray
+    glm::vec3 dirfrac;
+    dirfrac.x = 1.0f / rt.direction.x;
+    dirfrac.y = 1.0f / rt.direction.y;
+    dirfrac.z = 1.0f / rt.direction.z;
+    // lb is the corner of AABB with minimal coordinates - left bottom, rt is maximal corner
+    // r.org is origin of ray
+    float t1 = (mesh.bound_min.x - rt.origin.x) * dirfrac.x;
+    float t2 = (mesh.bound_max.x - rt.origin.x) * dirfrac.x;
+    float t3 = (mesh.bound_min.y - rt.origin.y) * dirfrac.y;
+    float t4 = (mesh.bound_max.y - rt.origin.y) * dirfrac.y;
+    float t5 = (mesh.bound_min.z - rt.origin.z) * dirfrac.z;
+    float t6 = (mesh.bound_max.z - rt.origin.z) * dirfrac.z;
+
+    float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
+    float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+
+    // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+    if (tmax < 0 || tmin > tmax) {
+        // No intersection is happening.
+        return -1;
+    }
+    else {                            
+        // intersection possible
+        // iterate all triangles to find the minumum t value.
+        float min_t = FLT_MAX;
+        int min_index = -1;
+        for (int i = 0; i < mesh.triangle_num; ++i) {
+            Triangle current_triangle = triangles[i];
+            float t = -1;
+            glm::vec3 baryPos;
+            if (glm::intersectRayTriangle(rt.origin, rt.direction, current_triangle.vertex[0], current_triangle.vertex[1], current_triangle.vertex[2], baryPos)) {
+                //Compare with Z value for intersection
+                t = baryPos.z;
+                if (t > 0 && t < min_t) {
+                    min_t = t;
+                    min_index = i;
+                }
+            };
+        }
+
+        if (min_index != -1) {
+            //At least 1 triangle detected
+            glm::vec3 objspaceIntersection = getPointOnRay(rt, min_t);
+
+            intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+            normal = glm::normalize(multiplyMV(mesh.transform, glm::vec4(triangles[min_index].normal, 0.f)));
+            outside = (glm::dot(rt.origin, normal) < 0);
+            return min_t;
+        }
+        else {
+            //No intersections
+            return -1;
+        }
+    }
 }

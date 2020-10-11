@@ -16,6 +16,13 @@ static bool sort_by_material_on = false;
 static bool sort_by_material_changed = false;
 static bool cache_first_iteration_on = false;
 static bool cache_first_iteration_changed = false;
+static bool DOF_on = false;
+static bool DOF_changed = false;
+static bool AA_on = false;
+static bool AA_changed = false;
+static bool direct_light_on = false;
+static bool direct_light_changed = false;
+
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
 
@@ -124,6 +131,7 @@ void runCuda() {
       }
 
     if (sort_by_material_changed) {
+        //Change the sort_by_material settings and restart the iteration
         sort_by_material_on = !sort_by_material_on;
         std::cout << "Sort By Material Option: " << std::boolalpha << sort_by_material_on << std::endl;
         iteration = 0;
@@ -131,10 +139,35 @@ void runCuda() {
     }
 
     if (cache_first_iteration_changed) {
+        //Change the cache frist mode settings and restart the iteration
         cache_first_iteration_on = !cache_first_iteration_on;
         std::cout << "Cache First Iteration Option: " << std::boolalpha << cache_first_iteration_on << std::endl;
         iteration = 0;
         cache_first_iteration_changed = false;
+    }
+
+    if (DOF_changed) {
+        //Change the DOF settings and restart the iteration
+        DOF_on = !DOF_on;
+        std::cout << "Depth of Field Option: " << std::boolalpha << DOF_on << std::endl;
+        iteration = 0;
+        DOF_changed = false;
+    }
+
+    if (AA_changed) {
+        //Change the Anti-Aliasiing settings and restart the iteration
+        AA_on = !AA_on;
+        std::cout << "Anti-Aliasing Option: " << std::boolalpha << AA_on << std::endl;
+        iteration = 0;
+        AA_changed = false;
+    }
+
+    if (direct_light_changed) {
+        //Change the direct light settings and restart the iteration
+        direct_light_on = !direct_light_on;
+        std::cout << "direct_light Option: " << std::boolalpha << direct_light_on << std::endl;
+        iteration = 0;
+        direct_light_changed = false;
     }
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
@@ -143,7 +176,13 @@ void runCuda() {
         pathtraceFree();
         pathtraceInit(scene);
     }
-
+    //if (iteration == 100)
+    //{
+    //    saveImage();
+    //    pathtraceFree();
+    //    cudaDeviceReset();
+    //    exit(EXIT_SUCCESS);
+    //}
     if (iteration < renderState->iterations) {
         uchar4 *pbo_dptr = NULL;
         iteration++;
@@ -151,7 +190,7 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration, sort_by_material_on, cache_first_iteration_on);
+        pathtrace(pbo_dptr, frame, iteration, sort_by_material_on, cache_first_iteration_on, DOF_on, AA_on, direct_light_on);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
@@ -174,11 +213,23 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         saveImage();
         break;
       case GLFW_KEY_M:
+        //Change the sort_by_material setting
         sort_by_material_changed = true;
         break;
       case GLFW_KEY_C:
+        //Change the cache first iteration setting
         cache_first_iteration_changed = true;
         break;
+      case GLFW_KEY_D:
+        //Change the depth-of-field setting
+        DOF_changed = true;
+        break;
+      case GLFW_KEY_A:
+        //Change the Anti-Aliasing setting
+        AA_changed = true;
+        break;
+      case GLFW_KEY_F1:
+        direct_light_changed = true;
       case GLFW_KEY_SPACE:
         camchanged = true;
         renderState = &scene->state;
