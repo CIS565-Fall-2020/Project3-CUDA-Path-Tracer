@@ -54,6 +54,19 @@ void checkCUDAErrorFn(const char* msg, const char* file, int line) {
 #endif
 }
 
+PerformanceTimer& timer()
+{
+	static PerformanceTimer timer;
+	return timer;
+}
+
+template<typename T>
+void printElapsedTime(T time, std::string note = "")
+{
+	std::cout << "   elapsed time: " << time << "ms    " << note << std::endl;
+
+}
+
 __host__ __device__
 thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int depth) {
 	int h = utilhash((1 << 31) | (depth << 22) | iter) ^ utilhash(index);
@@ -307,7 +320,7 @@ __global__ void computeIntersections(
 				thrust::default_random_engine rng = makeSeededRandomEngine(iter, path_index, 0);
 				thrust::uniform_real_distribution<float> u01(0, 1);
 				//Jitter the ray randomly about any axes 
-				Ray jittered = pathSegment.ray; 
+				Ray jittered = pathSegment.ray;
 				jittered.origin += u01(rng) * glm::vec3(0.25f, 0.75f, 0.f);
 				t = sphereIntersectionTest(geom, jittered, tmp_intersect, tmp_normal, outside);
 #else
@@ -319,7 +332,7 @@ __global__ void computeIntersections(
 			{
 #ifdef BOUNDING_VOLUME
 				bool success = false;
-				meshBoundingVolumeTest(geom, pathSegment.ray, geom.geomMinCorner, geom.geomMinCorner, tmp_intersect, success); 
+				meshBoundingVolumeTest(geom, pathSegment.ray, geom.geomMinCorner, geom.geomMinCorner, tmp_intersect, success);
 				if (success)
 				{
 					t = trianglesIntersectionTest(geom, triangles, num_triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
@@ -509,7 +522,7 @@ __global__ void shadeMaterialDirectLighting(
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
 		//thrust::uniform_real_distribution<float> u01(0, 1);
 
-		if (currpath.remainingBounces !=  1 && currpath.remainingBounces > 0 && currisect.t > 0.f)
+		if (currpath.remainingBounces != 1 && currpath.remainingBounces > 0 && currisect.t > 0.f)
 		{
 			Material material = materials[currisect.materialId];
 			glm::vec3 materialColor = material.color;
@@ -571,7 +584,7 @@ __global__ void shadeMaterialDirectLighting(
 					currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
 				}
 				--currpath.remainingBounces;
-			}		
+			}
 		}
 		else
 		{
@@ -663,6 +676,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 
 	// TODO: perform one iteration of path tracing
 
+	timer().startGpuTimer();
 
 	generateRayFromCamera << <blocksPerGrid2d, blockSize2d >> > (cam, iter, traceDepth, dev_paths);
 	checkCUDAError("generate camera ray");
@@ -725,7 +739,7 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			checkCUDAError("Error in trace one bounce");
 			cudaDeviceSynchronize();
 			depth++;
-	}
+		}
 #else
 		computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
 			depth
@@ -814,11 +828,17 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		}
 		depth++;
 #endif // STREAM_COMPACT_RAYS
-}
+	}
 
 #ifdef USE_SHADE_MATERIAL
 	num_paths = dev_path_end - dev_paths;
 #endif // USE_SHADE_MATERIAL
+
+	//Ending GPU Timer here 
+	timer().endGpuTimer();
+
+	std::cout << "Time Taken for pathtracing : " << iter << " " << std::endl;
+	printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(CUDA Measured)");
 
 	// Assemble this iteration and apply it to the image
 	dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
@@ -834,4 +854,4 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 
 	checkCUDAError("pathtrace");
-	}
+}

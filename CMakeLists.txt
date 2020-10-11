@@ -74,7 +74,7 @@ set(headers
     src/preview.h
     src/utilities.h
     src/tiny_obj_loader.h
- 
+    src/common.h
     )
 
 set(sources

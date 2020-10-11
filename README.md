@@ -60,7 +60,7 @@ GPU : NVIDIA GeForce RTX 2060
 
 #### 2) Deer 
 
-- Outside the box                                      - Inside the box 
+- Outside the box vs Inside the box 
  
  <p float="left">
  <img src="/img/renders/deer_ext.png" height = "400" width = "400" />
@@ -78,6 +78,7 @@ GPU : NVIDIA GeForce RTX 2060
 
 ### Direct Lighting 
 
+With vs. Without 
  <p float="left">
  <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
  <img src="/img/renders/myboxnodl.png" height = "400" width = "400" />
