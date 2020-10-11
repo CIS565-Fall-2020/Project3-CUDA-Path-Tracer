@@ -1,7 +1,11 @@
 import random
 
-mat_count = 30
-sphere_size = 1
+mat_count = 100
+col_cnt = 10
+row_cnt = mat_count / col_cnt
+width = 8
+height = 8
+sphere_size = 0.3
 
 
 lines = []
@@ -33,15 +37,13 @@ for i in range(6, mat_count + 6):
   obj_lines.append('OBJECT {}'.format(i))
   obj_lines.append('sphere')
   obj_lines.append('material {}'.format(i))
-  row = (i - 6) // 6
-  col = (i - 6) % 6
-  width = 8
-  height = 8
-  pos_x = - width / 2 + col * width / 5
-  pos_y = 5 - height / 2 + row * height / 4
+  row = (i - 6) // col_cnt
+  col = (i - 6) % col_cnt
+  pos_x = - width / 2 + col * width / (col_cnt - 1)
+  pos_y = 5 - height / 2 + row * height / (row_cnt - 1)
   obj_lines.append('TRANS {:.2f} {:.2f} {:.2f}'.format(pos_x, pos_y, 0))
   obj_lines.append('ROTAT 0 0 0')
-  obj_lines.append('SCALE 1 1 1')
+  obj_lines.append('SCALE {:.2f} {:.2f} {:.2f}'.format(sphere_size, sphere_size, sphere_size))
   obj_lines.append('')
   
 
