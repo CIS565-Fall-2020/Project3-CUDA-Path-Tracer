@@ -242,7 +242,52 @@ __host__ __device__ float trianglesIntersectionTest(Geom mesh, Triangle* triangl
     return glm::length(r.origin - intersectionPoint);
 }
 
-__device__ void barycentric_interpolation(glm::vec3 ray_origin , glm::vec3 ray_dir, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, glm::vec3* baryPosition)
+__device__ void barycentric_interpolation(glm::vec3 ray_origin , glm::vec3 ray_dir, 
+    glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, glm::vec3* baryPosition)
 {
+
+}
+
+__host__ __device__ void meshBoundingVolumeTest(Geom box, Ray r, glm::vec3 minCorner, 
+     glm::vec3 maxCorner, glm::vec3& intersectionPoint, bool& success)
+{
+    Ray q;
+    q.origin = multiplyMV(box.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(box.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float tmin = -1e38f;
+    float tmax = 1e38f;
+    glm::vec3 tmin_n;
+    glm::vec3 tmax_n;
+    for (int xyz = 0; xyz < 3; ++xyz) {
+        float qdxyz = q.direction[xyz];
+        /*if (glm::abs(qdxyz) > 0.00001f)*/ {
+            float t1 = (minCorner[xyz] - q.origin[xyz]) / qdxyz;
+            float t2 = (maxCorner[xyz] - q.origin[xyz]) / qdxyz;
+            float ta = glm::min(t1, t2);
+            float tb = glm::max(t1, t2);
+            glm::vec3 n;
+            n[xyz] = t2 < t1 ? +1 : -1;
+            if (ta > 0 && ta > tmin) {
+                tmin = ta;
+                tmin_n = n;
+            }
+            if (tb < tmax) {
+                tmax = tb;
+                tmax_n = n;
+            }
+        }
+    }
+
+    if (tmax >= tmin && tmax > 0) 
+    {
+        success = false;
+    }
+    else
+    {
+        success = true;
+    }
+
+    return;
 
 }

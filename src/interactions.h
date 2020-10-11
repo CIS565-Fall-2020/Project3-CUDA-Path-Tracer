@@ -44,106 +44,6 @@ glm::vec3 calculateRandomDirectionInHemisphere(
 		+ sin(around) * over * perpendicularDirection2;
 }
 
-//Helper for Refraction 
-__host__ __device__ glm::vec3 getRefractedDirection(PathSegment& pathSegment,
-	glm::vec3 intersect,
-	glm::vec3 normal,
-	const Material& m,
-	thrust::default_random_engine&,
-	bool& flipDir)
-{
-	float eta = 1.f / m.indexOfRefraction;
-	float criticalAngle(0.f), theta(0.f);
-	//Set the index of refraction and check for Total Internal Reflection 
-	glm::vec3 rayDirection = pathSegment.ray.direction;
-	glm::vec3 refractedDir(0.f);
-	float cos_theta = glm::dot(rayDirection, normal);
-
-	//Entering the object
-	if (cos_theta <= 0.f)
-	{
-		theta = acos(glm::dot(-rayDirection, normal));
-		criticalAngle = asin(eta);
-		//Total internal reflection? 
-		if (eta < 1.f && theta > criticalAngle)
-		{
-			refractedDir = glm::normalize(glm::reflect(rayDirection, -normal));
-			flipDir = false;
-		}
-		else
-		{
-			refractedDir = glm::normalize(glm::refract(rayDirection, normal, eta));
-			flipDir = true;
-		}
-	}
-	//Exiting the object 
-	else
-	{
-		theta = acos(glm::dot(rayDirection, normal));
-		criticalAngle = asin(m.indexOfRefraction);
-		//Total internal reflection? 
-		if (m.indexOfRefraction < 1.f && theta > criticalAngle)
-		{
-			refractedDir = glm::normalize(glm::reflect(rayDirection, -normal));
-			flipDir = true;
-		}
-		else
-		{
-			refractedDir = glm::normalize(glm::refract(rayDirection, -normal, eta));
-			flipDir = false;
-		}
-	}
-	return refractedDir;
-}
-
-
-__host__ __device__ glm::vec3 refract(PathSegment& pathSegment, glm::vec3 normal, const Material& m, thrust::default_random_engine& rng)
-{
-	thrust::uniform_real_distribution<float> u01(0, 1); 
-	float R = 1.f; 
-	float ior; 
-	glm::vec3 sur_normal; 
-
-	float cosi = glm::dot(pathSegment.ray.direction, normal); 
-	if (cosi > 0.f)
-	{
-		ior = m.indexOfRefraction; 
-		sur_normal = -normal; 
-	}
-	else
-	{
-		ior = 1.f / m.indexOfRefraction; 
-		sur_normal = normal; 
-	}
-
-	//Total Internal Reflection 
-	float sinr = (1.f / m.indexOfRefraction) * sqrtf(1.f - powf(cosi, 2)); 
-	
-
-	//Ray incoming 
-	if (cosi > 0.f && sinr > 1.f)
-	{
-		R = 0.f; 
-		pathSegment.color *= 0.f; 
-	}
-	else
-	{
-		float r0 = powf((1.f - ior) / (1.f + ior), 2.f); 
-		R = r0 + (1 - r0) * powf((1 - fmaxf(0.f, cosi)), 5.f); 
-		pathSegment.color *= m.specular.color; 
-	}
-	float rand = u01(rng); 
-	if (rand < R)
-	{
-		return glm::refract(pathSegment.ray.direction, sur_normal, ior); 
-	}
-	else
-	{
-		return glm::reflect(pathSegment.ray.direction, normal); 
-	}
-}
-
-
 
 /**
  * Scatter a ray with some probabilities according to the material properties.
@@ -194,7 +94,7 @@ void scatterRay(
 	float randDist = u01(rng);
 
 	//Pure diffuse shading 
-	if (m.hasReflective == 0.f && m.hasRefractive == 0.f)
+	if (!m.hasReflective && !m.hasRefractive)
 	{
 		glm::vec3 randDirInHemisphere = calculateRandomDirectionInHemisphere(normal, rng);
 		pathSegment.ray.origin = intersect + (EPSILON * normal);
@@ -202,7 +102,7 @@ void scatterRay(
 		pathSegment.color *= m.color;
 	}
 	//Reflective surface 
-	else if (m.hasReflective >= randDist && m.hasRefractive == 0.f)
+	else if (m.hasReflective && !m.hasRefractive)
 	{
 		glm::vec3 reflectedDir = glm::reflect(pathSegment.ray.direction, normal); //For the incident vector I and surface orientation N, 
 																				  //returns the reflection direction
@@ -211,38 +111,40 @@ void scatterRay(
 		pathSegment.color *= m.specular.color;
 	}
 	//Refractive surface 
-	else if (m.hasReflective + m.hasRefractive >= 1.f)
+	else if (m.hasReflective && m.hasRefractive)
 	{
 		//PBRT REFRACT 
-		glm::vec3 dir = glm::normalize(pathSegment.ray.direction);
-		float cosThetaI = glm::dot(normal, -dir);
-		float eta = 1.00029f;
+		
+		float cosThetaI = glm::dot(-pathSegment.ray.direction, normal);
+		cosThetaI = glm::clamp(cosThetaI, -1.f, 1.f);
+		float eta = 1.f;
 		if (cosThetaI > 0.f)
 		{
-			eta /= m.indexOfRefraction;
+			eta = 1.f / m.indexOfRefraction;
 		}
 		else
 		{
-			normal *= -1;
-			eta = m.indexOfRefraction / eta;
+			normal *= -1.f;
+			eta = m.indexOfRefraction;
 		}
 
 		float sinThetaI = glm::max(float(0.f), float(1.f - cosThetaI * cosThetaI));
 		float sinThetaT = eta * eta * sinThetaI;
 
 		//Handle total internal reflection
-		if (sinThetaT >= 1)
+		if (sinThetaT >= 1.f)
 		{
+			pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
 			pathSegment.color *= m.color;
-			pathSegment.ray.direction = glm::reflect(dir, normal);
 		}
 		else
 		{
-			float cosThetaT = std::sqrt(1 - sinThetaT);
-			pathSegment.ray.direction = eta * pathSegment.ray.direction + (eta * cosThetaI - cosThetaT) * normal;
-			//pathSegment.ray.direction = glm::refract(glm::normalize(pathSegment.ray.direction),normal, eta);
-			pathSegment.color *= m.color;
+			float cosThetaT = std::sqrt(1.f - sinThetaT);
+			//pathSegment.ray.direction = glm::refract(glm::normalize(pathSegment.ray.direction), normal, eta);
+			pathSegment.ray.direction = eta * pathSegment.ray.direction + (eta * cosThetaI - cosThetaT); 
+			pathSegment.color *= m.specular.color;
 		}
+		pathSegment.ray.origin = intersect + (0.001f * pathSegment.ray.direction);
 	}
  }
 

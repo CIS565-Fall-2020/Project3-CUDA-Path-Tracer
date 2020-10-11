@@ -30,6 +30,7 @@
 //#define MOTION_BLUR 
 //#define MOTION_BLUR_2 //Ghost mode lol 
 //#define BOKEH
+#define BOUNDING_VOLUME
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -306,8 +307,9 @@ __global__ void computeIntersections(
 				thrust::default_random_engine rng = makeSeededRandomEngine(iter, path_index, 0);
 				thrust::uniform_real_distribution<float> u01(0, 1);
 				//Jitter the ray randomly about any axes 
-				pathSegment.ray.origin += u01(rng) * glm::vec3(0.5f, 1.25f, 0.f);
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				Ray jittered = pathSegment.ray; 
+				jittered.origin += u01(rng) * glm::vec3(0.25f, 0.75f, 0.f);
+				t = sphereIntersectionTest(geom, jittered, tmp_intersect, tmp_normal, outside);
 #else
 				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 #endif //MOTION_BLUR
@@ -316,7 +318,12 @@ __global__ void computeIntersections(
 			else if (geom.type == MESH)
 			{
 #ifdef BOUNDING_VOLUME
-
+				bool success = false;
+				meshBoundingVolumeTest(geom, pathSegment.ray, geom.geomMinCorner, geom.geomMinCorner, tmp_intersect, success); 
+				if (success)
+				{
+					t = trianglesIntersectionTest(geom, triangles, num_triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				}
 #else
 				//t = meshIntersectionTest(mesh, pathSegment.ray, tmp_intersect, tmp_normal, outside);
 				t = trianglesIntersectionTest(geom, triangles, num_triangles, pathSegment.ray, tmp_intersect, tmp_normal, outside);
@@ -502,9 +509,7 @@ __global__ void shadeMaterialDirectLighting(
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
 		//thrust::uniform_real_distribution<float> u01(0, 1);
 
-		if ((currpath.remainingBounces > 2 || currpath.remainingBounces == 1)
-			&& currpath.remainingBounces > 0
-			&& currisect.t > 0.f)
+		if (currpath.remainingBounces > 1 && currisect.t > 0.f)
 		{
 			Material material = materials[currisect.materialId];
 			glm::vec3 materialColor = material.color;
@@ -538,7 +543,7 @@ __global__ void shadeMaterialDirectLighting(
 			// used for opacity, in which case they can indicate "no opacity".
 			// This can be useful for post-processing and image compositing.
 		}
-		else if (currpath.remainingBounces == 2 && currisect.t > 0.f)
+		else if (currpath.remainingBounces == 1 && currisect.t > 0.f)
 		{
 			Material material = materials[currisect.materialId];
 			glm::vec3 materialColor = material.color;
@@ -561,11 +566,10 @@ __global__ void shadeMaterialDirectLighting(
 					, material
 					, rng);
 				//Ray should hit to the randomly selected light 
-				currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
-				//lambert 
-				currpath.color *= glm::dot(glm::normalize(currisect.surfaceNormal), glm::normalize(currpath.ray.direction));
-			}
-			--currpath.remainingBounces;
+				//if(material.hasRefractive)
+				//currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
+				--currpath.remainingBounces;
+			}		
 		}
 		else
 		{

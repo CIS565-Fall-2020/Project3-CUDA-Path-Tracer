@@ -28,6 +28,7 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    glm::vec3 geomMinCorner, geomMaxCorner;
 };
 
 struct Material {

@@ -5,6 +5,9 @@
 #include <glm/gtx/string_cast.hpp>
 #include "tiny_obj_loader.h"
 
+#define FOCAL_DIST 5.f
+#define LENS_RADIUS 1.5f
+
 Scene::Scene(string filename) {
 	cout << "Reading scene from " << filename << " ..." << endl;
 	cout << " " << endl;
@@ -202,7 +205,9 @@ bool Scene::loadMesh() {
 		return false;
 		//exit(1);
 	}
-
+	mesh.minCorner = glm::vec3(FLT_MAX);
+	//mesh.maxCorner = glm::vec3(0.f);
+	mesh.maxCorner = glm::vec3(-FLT_MAX); 
 	//Loop over shapes
 	for (size_t s = 0; s < shapes.size(); s++) {
 		// Loop over faces(polygon)
@@ -259,6 +264,16 @@ bool Scene::loadMesh() {
 					t.norm3 = norm3;
 				}
 
+				//Find the min corner 
+				mesh.minCorner.x = glm::min(t.vert1.x, glm::min(t.vert2.x, glm::min(t.vert3.x, mesh.minCorner.x))); 
+				mesh.minCorner.y = glm::min(t.vert1.y, glm::min(t.vert2.y, glm::min(t.vert3.y, mesh.minCorner.y)));
+				mesh.minCorner.z = glm::min(t.vert1.z, glm::min(t.vert2.z, glm::min(t.vert3.z, mesh.minCorner.z)));
+
+				//Find the max corner 
+				mesh.maxCorner.x = glm::max(t.vert1.x, glm::max(t.vert2.x, glm::max(t.vert3.x, mesh.maxCorner.x)));
+				mesh.maxCorner.y = glm::max(t.vert1.y, glm::max(t.vert2.y, glm::max(t.vert3.y, mesh.maxCorner.y)));
+				mesh.maxCorner.z = glm::max(t.vert1.z, glm::max(t.vert2.z, glm::max(t.vert3.z, mesh.maxCorner.z)));
+
 				mesh.num_triangles++;
 				mesh.triangles.push_back(t);
 				index_offset += 3;
@@ -297,6 +312,8 @@ int Scene::loadGeom(string objectid) {
 				try
 				{
 					bool success = loadMesh();
+					newGeom.geomMinCorner = mesh.minCorner; 
+					newGeom.geomMaxCorner = mesh.maxCorner; 
 					if (!success)
 					{
 						throw(1);
@@ -358,8 +375,8 @@ int Scene::loadCamera() {
 	RenderState& state = this->state;
 	Camera& camera = state.camera;
 	float fovy;
-	camera.focalDistance = 10.5f;
-	camera.lensRadius = 1.5f; 
+	camera.focalDistance = FOCAL_DIST;
+	camera.lensRadius = LENS_RADIUS; 
 
 	//load static properties
 	for (int i = 0; i < 5; i++) {
