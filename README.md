@@ -34,9 +34,9 @@ GPU : NVIDIA GeForce RTX 2060
 ### Depth Of Field 
 
 <p float="left">
-  <img src="/img/renders/dof_1.png" height = "300" width = "300" />
-  <img src="/img/renders/dof_2.png" height = "300" width = "300" /> 
-  <img src="/img/renders/refr_dof.png" height = "300" width = "300" /> 
+  <img src="/img/renders/dof_1.png" height = "400" width = "400" />
+  <img src="/img/renders/dof_2.png" height = "400" width = "400" /> 
+  <img src="/img/renders/refr_dof.png" height = "400" width = "400" /> 
 </p>
 
 ### Motion Blur 
@@ -87,7 +87,12 @@ GPU : NVIDIA GeForce RTX 2060
 
  <p float="left">
  <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
+ <img src="/img/renders/aaproof.png" height = "400" width = "400" />
+</p>
+
+ <p float="left">
  <img src="/img/renders/myboxnoaa.png" height = "400" width = "400" />
+ <img src="/img/renders/noaaproof.png" height = "400" width = "400" />
 </p>
 
 ## PATH TRACER 
@@ -97,11 +102,11 @@ This results in sampling a variety of different types of lighting, but especiall
 we see things because light emitted by light sources such as the sun bounces off of the surface of objects. When light rays bounce only once from the surface of an object to reach the eye, we speak of direct illumination. But when light rays are emitted by a light source, they can bounce off of the surface of objects multiple times before reaching the eye. 
 This is what we call indirect illumination because light rays follow complex paths before entering the eye.
 
-<img src="/img/renders/dlandindl.png" height = "400" width = "400" />
+<img src="/img/dlandindl.png" height = "400" width = "400" />
 
  <p float="left">
- <img src="/img/renders/pathtracer1.png" height = "400" width = "400" />
- <img src="/img/renders/pathtracer2.png" height = "400" width = "400" />
+ <img src="/img/pathtracer1.png" height = "400" width = "400" />
+ <img src="/img/pathtracer2.png" height = "400" width = "400" />
 </p>
 
 
