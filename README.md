@@ -23,52 +23,51 @@ GPU : NVIDIA GeForce RTX 2060
 
 ### DIFFUSE, REFLECTIVE AND REFRACTIVE OBJECTS 
 
-![Cornell 1](img/renders/cornell1.png)
+![Cornell 1](img/renders/cornell1.png) ![Cornell 2](img/renders/cornell2.png)
 
-![Cornell 2](img/renders/cornell2.png)
 
-![Refr 1](img/renders/refr_1.png)
 
-![Refr 2](img/renders/refr_2.png)
+![Refr 1](img/renders/refr_1.png)  ![Refr 2](img/renders/refr_2.png)
+
+
 
 ### DEPTH OF FIELD
 
-![dof 1](img/renders/dof_1.png)
+![dof 1](img/renders/dof_1.png)  ![dof 2](img/renders/dof_2.png)  ![refr dof](img/renders/refr_dof.png) 
 
-![dof 2](img/renders/dof_2.png) 
 
-![refr dof](img/renders/refr_dof.png) 
+
+
 
 ### MOTION BLUR 
 
-![motionblur 1](img/renders/motionblur_1.png)
+![motionblur 1](img/renders/motion_blur_1.png)  ![motionblur 2](img/renders/motion_blur_2.png) 
 
-![motionblur 2](img/renders/motionblur_2.png) 
+
 
 ### OBJ MESH LOADING 
 
 #### Charizard 
 
-![charizard 1](img/renders/charizard_1.png)
+![charizard 1](img/renders/charizard_1.png)  ![charizard 2](img/renders/charizard_2.png)
 
-![charizard 2](img/renders/charizard_2.png)
+
 
 #### Deer 
 
-- Outside the box 
+- Outside the box                                      - Inside the box 
 
-![deer ext](img/renders/deer_ext.png)
+![deer ext](img/renders/deer_ext.png)      ![deer int](img/renders/deer_int.png)
 
-- Inside the box 
 
-![deer int](img/renders/deer_int.png)
+
+
 
 
 #### Unicorn 
 
-![unicorn 1](img/renders/unicorn_1.png)
+![unicorn 1](img/renders/unicorn_1.png)     ![unicorn 2](img/renders/unicorn_2.png)
 
-![unicorn 2](img/renders/unicorn_2.png)
 
 ### DIRECT LIGHTING 
 
