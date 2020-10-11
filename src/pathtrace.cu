@@ -199,11 +199,20 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
     addedJitter1 = uo(rng);
 #endif
 
-    // TODO: implement antialiasing by jittering the ray
+#ifdef MOTIONBLUR
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float interpolateBlurVal = u01(rng);
+    glm::vec3 blurredView = cam.view - cam.move * interpolateBlurVal;
+    segment.ray.direction = glm::normalize(blurredView
+      - cam.right * cam.pixelLength.x * ((float)x + addedJitter0 - (float)cam.resolution.x * 0.5f)
+      - cam.up * cam.pixelLength.y * ((float)y + addedJitter1 - (float)cam.resolution.y * 0.5f)
+    );
+#else
     segment.ray.direction = glm::normalize(cam.view
       - cam.right * cam.pixelLength.x * ((float)x + addedJitter0 - (float)cam.resolution.x * 0.5f)
       - cam.up * cam.pixelLength.y * ((float)y + addedJitter1 - (float)cam.resolution.y * 0.5f)
     );
+#endif
 
     segment.pixelIndex = index;
     segment.remainingBounces = traceDepth;

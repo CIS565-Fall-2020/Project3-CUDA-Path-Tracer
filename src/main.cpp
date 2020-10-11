@@ -106,7 +106,9 @@ void runCuda() {
         cameraPosition.y = zoom * cos(theta);
         cameraPosition.z = zoom * cos(phi) * sin(theta);
 
+        glm::vec3 lastCamView = cam.view;
         cam.view = -glm::normalize(cameraPosition);
+        cam.move += lastCamView - cam.view;
         glm::vec3 v = cam.view;
         glm::vec3 u = glm::vec3(0, 1, 0);//glm::normalize(cam.up);
         glm::vec3 r = glm::cross(v, u);

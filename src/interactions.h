@@ -50,6 +50,9 @@
 		+ cos(around) * over * perpendicularDirection1
 		+ sin(around) * over * perpendicularDirection2;
 }
+	// ----------------------------------------------------------------------------------------------
+	// ---------------------------- MAIN ------------------------------------------------------------
+	// ----------------------------------------------------------------------------------------------
 
 /**
  * Scatter a ray with some probabilities according to the material properties.
@@ -86,6 +89,54 @@ void scatterRay(
 	// TODO: implement this.
 	// A basic implementation of pure-diffuse shading will just call the
 	// calculateRandomDirectionInHemisphere defined above.
+	
+	if (m.hasRefractive == 1.f) {
+		// figure out which ior is incident or transmitted
+		float cosTheta = glm::dot(normal, pathSegment.ray.direction);
+		bool entering = cosTheta > 0;
+		glm::vec3 correctedNormal = entering ? -normal : normal;
+		float iorI = entering ? m.ior0 : m.ior1;
+		float iorT = entering ? m.ior1 : m.ior0;
+		float iorRatio = iorI / iorT;
+
+		// Compute ray direction for specular transmission
+		glm::vec3 rayDir = entering ?
+			glm::refract(pathSegment.ray.direction, normal, iorRatio) :
+			glm::refract(pathSegment.ray.direction, -normal, iorRatio);
+
+		float threshold = glm::asin(iorRatio);
+		float theta = acos(glm::dot(pathSegment.ray.direction, correctedNormal));
+
+		if (theta < threshold) { // total internal reflection
+			pathSegment.color = glm::vec3(0.f);
+			pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, correctedNormal);
+			pathSegment.ray.origin = intersect + 0.01f * correctedNormal;
+			return;
+		}
+
+		cosTheta = glm::dot(correctedNormal, pathSegment.ray.direction);
+		float r0sqrt = (iorI - iorT) / (iorI + iorT);
+		float r0 = r0sqrt * r0sqrt;
+		float oneMinusCosTheta = 1.f - cosTheta;
+		float pow5 = (oneMinusCosTheta * oneMinusCosTheta) * (oneMinusCosTheta * oneMinusCosTheta) * oneMinusCosTheta;
+		float rTheta = r0 + (1 - r0) * pow5;
+
+		thrust::uniform_real_distribution<float> u01(0, 1);
+		float epsilon = 0.01f;
+		if (m.hasReflective == 1.f && 1.5f * u01(rng) > rTheta) {
+			pathSegment.color *= m.specular.color;
+			pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, correctedNormal);
+			pathSegment.ray.origin = intersect + epsilon * correctedNormal;
+			return;
+		}
+		else {
+			pathSegment.ray.direction =
+				glm::normalize(glm::refract(pathSegment.ray.direction, correctedNormal, iorRatio));
+			pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
+			pathSegment.color *= m.specular.color;
+			return;
+		}
+	}
 	pathSegment.color *= m.color;
 	pathSegment.ray.origin = intersect + 0.0001f * normal;
 	if (m.hasRefractive == 0.f && m.hasReflective == 0.f) {

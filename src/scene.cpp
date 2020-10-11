@@ -181,6 +181,7 @@ int Scene::loadCamera() {
 	RenderState& state = this->state;
 	Camera& camera = state.camera;
 	float fovy;
+	camera.move = glm::vec3(0, 0, 0);
 
 	//load static properties
 	for (int i = 0; i < 5; i++) {
@@ -218,7 +219,9 @@ int Scene::loadCamera() {
 		else if (strcmp(tokens[0].c_str(), "UP") == 0) {
 			camera.up = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
 		}
-
+		else if (strcmp(tokens[0].c_str(), "MOVE") == 0) {
+			camera.move = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+		}
 		utilityCore::safeGetline(fp_in, line);
 	}
 
@@ -280,6 +283,10 @@ int Scene::loadMaterial(string materialid) {
 			}
 			else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
 				newMaterial.emittance = atof(tokens[1].c_str());
+			}
+			else if (strcmp(tokens[0].c_str(), "IOR") == 0) {
+				newMaterial.ior0 = atof(tokens[1].c_str());
+				newMaterial.ior1 = atof(tokens[2].c_str());
 			}
 		}
 		materials.push_back(newMaterial);

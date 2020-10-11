@@ -18,9 +18,9 @@ std::string currentTimeString() {
     return std::string(buf);
 }
 
-//-------------------------------
-//----------SETUP STUFF----------
-//-------------------------------
+  //-------------------------------
+  //----------SETUP STUFF----------
+  //-------------------------------
 
 void initTextures() {
     glGenTextures(1, &displayImage);
