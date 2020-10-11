@@ -160,7 +160,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
         thrust::uniform_real_distribution<float> u01(0, 1);
-        constexpr float lens_radius = 0.1f;
+        constexpr float lens_radius = 0.5f;
         constexpr float focal_distance = 5.5f;
         // TODO: implement antialiasing by jittering the ray
 
