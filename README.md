@@ -105,7 +105,7 @@ Stratified (4 samples) | Random (4 samples)
 
 Stratified (4 samples close up) | Random (4 samples close up)
 :---: | :---:
-<img src="img/renders/stratified_25.png" alt="stratified 25" width=600> | <img src="img/renders/random_25.png" alt="random 25" width=600> 
+<img src="img/renders/STRATIFIED_4_close.png" alt="stratified 25" width=600> | <img src="img/renders/RANDOM_4_close.png" alt="random 25" width=600> 
 
 ## Insights ##
 
