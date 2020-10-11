@@ -1,7 +1,7 @@
 CUDA Path Tracer
 ================
 
-# ![cornell](img/mid_project_cornell.png)
+# ![cornell](img/lionbig1959.png)
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 * Haorong Yang
@@ -19,6 +19,18 @@ CUDA Path Tracer
   * Path termination using stream compaction
   * Sorting pathSegments by material type
   * Acceleration by caching first bounce
+
+### Physically-Based Depth of Field
+No Depth of Field          |   With Depth of Field
+:-------------------------:|:-------------------------:
+![](img/nodepth.PNG)| ![](img/cornell5000.PNG) |
+
+
+### Stochastic Sampled Antialiasing
+No Anti Aliasing           |  With Anti Aliasing
+:-------------------------:|:-------------------------:
+![](img/no_anti_alias.PNG)| ![](img/antialias.PNG) |
+
 
 
 
