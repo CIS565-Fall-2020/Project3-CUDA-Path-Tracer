@@ -86,13 +86,13 @@ GPU : NVIDIA GeForce RTX 2060
 ### Anti Aliasing
 
  <p float="left">
- <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
- <img src="/img/renders/aaproof.png" height = "400" width = "400" />
+ <img src="/img/renders/myboxnodl.png" height = "400" width = "400" />
+ <img src="/img/renders/aaproof.png" height = "200" width = "400" />
 </p>
 
  <p float="left">
  <img src="/img/renders/myboxnoaa.png" height = "400" width = "400" />
- <img src="/img/renders/noaaproof.png" height = "400" width = "400" />
+ <img src="/img/renders/noaaproof.png" height = "200" width = "400" />
 </p>
 
 ## PATH TRACER 

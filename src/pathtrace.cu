@@ -22,9 +22,9 @@
 #define ERRORCHECK 1
 #define USE_SHADE_MATERIAL
 #define SORT_RAYS_BY_MATERIALS 
-#define CACHE_FIRST_BOUNCE 
+//#define CACHE_FIRST_BOUNCE 
 #define STREAM_COMPACT_RAYS 
-//#define ANTI_ALIASING
+#define ANTI_ALIASING
 //#define DEPTH_OF_FIELD
 #define DIRECT_LIGHTING 
 //#define MOTION_BLUR 
@@ -509,7 +509,7 @@ __global__ void shadeMaterialDirectLighting(
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
 		//thrust::uniform_real_distribution<float> u01(0, 1);
 
-		if (currpath.remainingBounces > 1 && currisect.t > 0.f)
+		if (currpath.remainingBounces !=  1 && currpath.remainingBounces > 0 && currisect.t > 0.f)
 		{
 			Material material = materials[currisect.materialId];
 			glm::vec3 materialColor = material.color;
@@ -566,8 +566,10 @@ __global__ void shadeMaterialDirectLighting(
 					, material
 					, rng);
 				//Ray should hit to the randomly selected light 
-				//if(material.hasRefractive)
-				//currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
+				if (!material.hasRefractive)
+				{
+					currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
+				}
 				--currpath.remainingBounces;
 			}		
 		}
