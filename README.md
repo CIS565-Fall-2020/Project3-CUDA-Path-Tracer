@@ -45,16 +45,16 @@ CUDA Path Tracer
 * Refraction (e.g. glass/water) with Frensel effects using Schlick's approximation. (Mid sphere below)
   
 <p align="center">
-   <img src="img/3.png" width="420" height="420"/>
-   <img src="img/4.png" width="420" height="420" />
+   <img src="img/3.png" width="300" height="300"/>
+   <img src="img/4.png" width="300" height="300" />
 </p>    
 
 * Physically-based depth-of-field (with lens radius 0.5f and focal distance 5.5f.
   * To toggle the depth-of-field setting, press D key while the program is running
   
 <p align="center">
-   <img src="img/9.png" width="420" height="420"/>
-   <img src="img/10.png" width="420" height="420" />
+   <img src="img/9.png" width="300" height="300"/>
+   <img src="img/10.png" width="300" height="300" />
 </p>  
 
 * Stochastic Sampled Antialiasing. (1/2 visual effect)
@@ -63,8 +63,8 @@ CUDA Path Tracer
   * To toggle the anti-aliasing setting, press A key while the program is running
   
 <p align="center">
-   <img src="img/9.png" width="420" height="420" />
-   <img src="img/11.png" width="420" height="420" />
+   <img src="img/9.png" width="300" height="300" />
+   <img src="img/11.png" width="300" height="300" />
 </p>  
 
 * Arbitrary mesh loading and rendering:
@@ -79,12 +79,12 @@ CUDA Path Tracer
   * With the same limited iterations, the direct light effect should make the rendering faster than the indirect path tracing, below are comarations in 1, 10 and 100 iterations
   
   <p align="center">
-   <img src="img/NDL_1.png" width="420" height="420" />
-   <img src="img/DL_1.png" width="420" height="420" />
-   <img src="img/NDL_10.png" width="420" height="420" />
-   <img src="img/DL_10.png" width="420" height="420" />
-   <img src="img/NDL_100.png" width="420" height="420" />
-   <img src="img/DL_100.png" width="420" height="420" />
+   <img src="img/NDL_1.png" width="300" height="300" />
+   <img src="img/DL_1.png" width="300" height="300" />
+   <img src="img/NDL_10.png" width="300" height="300" />
+   <img src="img/DL_10.png" width="300" height="300" />
+   <img src="img/NDL_100.png" width="300" height="300" />
+   <img src="img/DL_100.png" width="300" height="300" />
 </p>  
 
 * Motion blur
@@ -92,8 +92,8 @@ CUDA Path Tracer
  * Below are Z (0,0,0.5) and Y (0,0.1,0) motion blur effects
  
  <p align="center">
-   <img src="img/Motion_1.png" width="420" height="420" />
-   <img src="img/Motion_2.png" width="420" height="420" />
+   <img src="img/Motion_1.png" width="300" height="300" />
+   <img src="img/Motion_2.png" width="300" height="300" />
 </p>  
 
 ## Performance Analysis
