@@ -1,7 +1,7 @@
 CUDA Path Tracer
 ================
 
-# ![cornell](img/lionbig1959.png)
+<img src="img/lionbig1959.png" width="800">
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 * Haorong Yang
