@@ -206,7 +206,7 @@ SCALE       60 .01 60
 OBJECT 1
 cube
 material 12
-TRANS       0 30 0
+TRANS       0 10 0
 ROTAT       0 0 90
 SCALE       .01 60 60
 
@@ -222,16 +222,16 @@ SCALE       .01 60 60
 OBJECT 3
 cube
 material 12
-TRANS       -20 10 0
-ROTAT       0 0 0
+TRANS       -7 10 0
+ROTAT       0 25 0
 SCALE       .01 60 60
 
 // Right wall
 OBJECT 4
 cube
 material 12
-TRANS       20 10 0
-ROTAT       0 0 0
+TRANS       7 10 0
+ROTAT       0 -25 0
 SCALE       .01 60 60
 
 
@@ -281,38 +281,3 @@ TRANS       7 0 3
 ROTAT       0 0 0
 SCALE       1 1 1 
 
-OBJECT 11
-sphere
-material 6
-TRANS       -2 0 2
-ROTAT       0 0 0
-SCALE       2 2 2
-
-OBJECT 12
-sphere
-material 6
-TRANS       5 0 2
-ROTAT       0 0 0
-SCALE       1 1 1
-
-OBJECT 13
-sphere
-material 6
-TRANS       -5 0 2
-ROTAT       0 0 0
-SCALE       3 3 3 
-
-OBJECT 14
-sphere
-material 6
-TRANS       3 0 1
-ROTAT       0 0 0
-SCALE       2 2 2
-
-// Sphere light 3
-OBJECT 15
-sphere
-material 17
-TRANS       4 12 4.5
-ROTAT       0 0 0
-SCALE       2 2 2

@@ -21,57 +21,89 @@ GPU : NVIDIA GeForce RTX 2060
 
 ## FEATURES 
 
-### DIFFUSE, REFLECTIVE AND REFRACTIVE OBJECTS 
+### Diffuse Reflective and Refractive Objects 
 
-![Cornell 1](img/renders/cornell1.png) ![Cornell 2](img/renders/cornell2.png)
-
-
-
-![Refr 1](img/renders/refr_1.png)  ![Refr 2](img/renders/refr_2.png)
-
-
-
-### DEPTH OF FIELD
-
-![dof 1](img/renders/dof_1.png)  ![dof 2](img/renders/dof_2.png)  ![refr dof](img/renders/refr_dof.png) 
+<p float="left">
+  <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
+  <img src="/img/renders/cornell1.png" height = "400" width = "400" />
+  <img src="/img/renders/refr_1.png" height = "400" width = "400" /> 
+  <img src="/img/renders/refr_2.png" height = "400" width = "400" /> 
+</p>
 
 
+### Depth Of Field 
 
+<p float="left">
+  <img src="/img/renders/dof_1.png" height = "300" width = "300" />
+  <img src="/img/renders/dof_2.png" height = "300" width = "300" /> 
+  <img src="/img/renders/refr_dof.png" height = "300" width = "300" /> 
+</p>
 
+### Motion Blur 
 
-### MOTION BLUR 
-
-![motionblur 1](img/renders/motion_blur_1.png)  ![motionblur 2](img/renders/motion_blur_2.png) 
-
-
-
-### OBJ MESH LOADING 
-
-#### Charizard 
-
-![charizard 1](img/renders/charizard_1.png)  ![charizard 2](img/renders/charizard_2.png)
+<p float="left">
+  <img src="/img/renders/motion_blur_1.png" height = "400" width = "400" />
+  <img src="/img/renders/motion_blur_2.png" height = "400" width = "400" /> 
+</p>
 
 
 
-#### Deer 
+### OBJ Mesh Loading
+
+#### 1) Charizard 
+
+<p float="left">
+  <img src="/img/renders/charizard_1.png" height = "400" width = "400" />
+  <img src="/img/renders/charizard_2.png" height = "400" width = "400" />
+</p>
+
+
+#### 2) Deer 
 
 - Outside the box                                      - Inside the box 
-
-![deer ext](img/renders/deer_ext.png)      ![deer int](img/renders/deer_int.png)
-
-
-
-
-
-
-#### Unicorn 
-
-![unicorn 1](img/renders/unicorn_1.png)     ![unicorn 2](img/renders/unicorn_2.png)
+ 
+ <p float="left">
+ <img src="/img/renders/deer_ext.png" height = "400" width = "400" />
+ <img src="/img/renders/deer_int.png" height = "400" width = "400" />
+</p>
 
 
-### DIRECT LIGHTING 
+#### 3) Unicorn 
 
-### ANTI ALIASING 
+ <p float="left">
+ <img src="/img/renders/unicorn_1.png" height = "400" width = "400" />
+ <img src="/img/renders/unicorn_2.png" height = "400" width = "400" />
+</p>
+
+
+### Direct Lighting 
+
+ <p float="left">
+ <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
+ <img src="/img/renders/myboxnodl.png" height = "400" width = "400" />
+</p>
+
+### Anti Aliasing
+
+ <p float="left">
+ <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
+ <img src="/img/renders/myboxnoaa.png" height = "400" width = "400" />
+</p>
+
+## PATH TRACER 
+
+Path tracing is a type of ray tracing. The path tracing algorithm then takes a random sampling of all of the rays to create the final image. 
+This results in sampling a variety of different types of lighting, but especially global illumination.
+we see things because light emitted by light sources such as the sun bounces off of the surface of objects. When light rays bounce only once from the surface of an object to reach the eye, we speak of direct illumination. But when light rays are emitted by a light source, they can bounce off of the surface of objects multiple times before reaching the eye. 
+This is what we call indirect illumination because light rays follow complex paths before entering the eye.
+
+<img src="/img/renders/dlandindl.png" height = "400" width = "400" />
+
+ <p float="left">
+ <img src="/img/renders/pathtracer1.png" height = "400" width = "400" />
+ <img src="/img/renders/pathtracer2.png" height = "400" width = "400" />
+</p>
+
 
 ## OPTIMIZATIONS 
 
@@ -80,24 +112,6 @@ GPU : NVIDIA GeForce RTX 2060
 ### Steam Compacting dead rays 
 
 ### Caching first bounce 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ## Bloopers 
