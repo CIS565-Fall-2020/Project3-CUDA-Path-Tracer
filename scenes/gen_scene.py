@@ -11,7 +11,7 @@ for i in range(2, mat_count + 2):
   r = random.random()
   g = random.random()
   b = random.random()
-  lines.append('RGB {} {} {}'.format(r,g,b))
+  lines.append('RGB {:.2f} {:.2f} {:.2f}'.format(r,g,b))
   # 0 for diffuse, 1 for reflect, 2 for refract
   mat_type = random.randint(0, 2)
   is_diffuse = mat_type == 0
@@ -21,7 +21,7 @@ for i in range(2, mat_count + 2):
   specr = 0 if is_diffuse else random.random()
   specg = 0 if is_diffuse else random.random()
   specb = 0 if is_diffuse else random.random()
-  lines.append('SPECRGB     {} {} {}'.format(specr, specg, specb))
+  lines.append('SPECRGB     {:.2f} {:.2f} {:.2f}'.format(specr, specg, specb))
   lines.append('REFL     {}'.format(1 if is_reflect else 0))
   lines.append('REFR     {}'.format(1 if is_refract else 0))
   lines.append('REFRIOR  {}'.format(1.52 if is_refract else 0))
@@ -39,7 +39,7 @@ for i in range(6, mat_count + 6):
   height = 8
   pos_x = - width / 2 + col * width / 5
   pos_y = 5 - height / 2 + row * height / 4
-  obj_lines.append('TRANS {} {} {}'.format(pos_x, pos_y, 0))
+  obj_lines.append('TRANS {:.2f} {:.2f} {:.2f}'.format(pos_x, pos_y, 0))
   obj_lines.append('ROTAT 0 0 0')
   obj_lines.append('SCALE 1 1 1')
   obj_lines.append(' ')
