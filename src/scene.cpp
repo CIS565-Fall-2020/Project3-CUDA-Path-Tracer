@@ -36,7 +36,7 @@ Scene::Scene(string filename) {
       } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
         loadCamera();
         std::cout << " " << endl;
-      } else if (strcmp(tokens[0].c_str, "MESH") == 0) {
+      } else if (strcmp(tokens[0].c_str(), "MESH") == 0) {
         if (loadMesh(tokens[1]) < 0) {
           std::cout << "Load Object " << tokens[1] << " failed" << endl;
           throw;
@@ -70,7 +70,7 @@ int Scene::loadGeom(std::string objectid) {
       } else if (strcmp(tokens[0].c_str(), "mesh") == 0) {
         cout << "Creating new mesh..." << endl;
         int meshIdx = atoi(tokens[1].c_str());
-        if (meshIdx >= meshes.size) {
+        if (meshIdx >= meshes.size()) {
           cout << "Mesh idx " << meshIdx << " out of bounds" << endl;
           return -1;
         }
@@ -185,7 +185,7 @@ int Scene::loadMesh(string meshId) {
   int startIdx = triangles.size();
 
   // Loop over shapes
-  for (const tinyobj::shape_t &shape : shapes) {
+  for (const tinyobj::shape_t &shape : mesh.shapes) {
     // Loop over faces(polygon)
     size_t index_offset = 0;
     for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
@@ -196,9 +196,9 @@ int Scene::loadMesh(string meshId) {
       for (size_t v = 0; v < fv; v++) {
         // access to vertex
         tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-        tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index];
-        tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
-        tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+        tinyobj::real_t vx = mesh.attrib.vertices[3 * idx.vertex_index];
+        tinyobj::real_t vy = mesh.attrib.vertices[3 * idx.vertex_index + 1];
+        tinyobj::real_t vz = mesh.attrib.vertices[3 * idx.vertex_index + 2];
         t.v[v] = glm::vec3(vx, vy, vz);
       }
 

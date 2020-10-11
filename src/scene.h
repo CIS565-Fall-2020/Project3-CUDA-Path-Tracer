@@ -15,7 +15,7 @@ private:
     int loadMaterial(std::string materialid);
     int loadGeom(std::string objectid);
     int loadCamera();
-    int loadMesh(std::string filename);
+    int loadMesh(std::string meshId);
 
 public:
     Scene(std::string filename);
