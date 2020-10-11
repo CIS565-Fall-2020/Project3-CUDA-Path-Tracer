@@ -6,7 +6,7 @@ SPECRGB     0 0 0
 REFL        0
 REFR        0
 REFRIOR     0
-EMITTANCE   10
+EMITTANCE   5
 
 // Diffuse white
 MATERIAL 1
@@ -18,9 +18,9 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
-// Diffuse red
+// Diffuse left wall
 MATERIAL 2
-RGB         .85 .35 .35
+RGB         .37 .30 .54
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -28,9 +28,9 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
-// Diffuse green
+// Diffuse right wall
 MATERIAL 3
-RGB         .35 .85 .35
+RGB         .98 .46 .41
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -48,13 +48,23 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
-// Refrective
+// Refractive white
 MATERIAL 5
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
 REFR        1
+REFRIOR     1.33
+EMITTANCE   0
+
+// Model material
+MATERIAL 6
+RGB         .98 .98 .98
+SPECEX      0
+SPECRGB     .98 .98 .98
+REFL        0
+REFR        0
 REFRIOR     2.4
 EMITTANCE   0
 
@@ -62,13 +72,17 @@ EMITTANCE   0
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  5000
+ITERATIONS  3000
 DEPTH       8
 FILE        cornell
-EYE         0.0 5 10.5
+EYE         0 5 10.5
 LOOKAT      0 5 0
 UP          0 1 0
-MOTION 	    0 0 0.5
+DOF         0
+LENSR       2.0
+FD          7.5
+AA          0
+MOTION	    0 0 0
 
 // Ceiling light
 OBJECT 0
@@ -118,10 +132,11 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Sphere
+// Obj Model
 OBJECT 6
-sphere
-material 1
-TRANS       0 4 0
+mesh
+../scenes/sven.obj
+material 6
+TRANS       0 0 0
 ROTAT       0 0 0
-SCALE       5 5 5
+SCALE       0.03 0.03 0.03
