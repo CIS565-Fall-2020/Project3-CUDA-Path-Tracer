@@ -1,7 +1,9 @@
 CUDA Path Tracer
 ================
 
-<img src="img/lionbig1959.png" width="800">
+<img src="img/lionbig1959.png" width="650">
+
+3D Model Credit: [Rồng by @Husky on Sketchfab](https://sketchfab.com/3d-models/rong-b61cffbfbe66495b97a9a101b1859bbc?cursor=bz0xJnA9MjQ5)
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 * Haorong Yang
@@ -23,13 +25,13 @@ CUDA Path Tracer
 ### Physically-Based Depth of Field
 No Depth of Field          |   With Depth of Field
 :-------------------------:|:-------------------------:
-![](img/nodepth.PNG)| ![](img/cornell5000.PNG) |
+<img src="img/nodepth.png" width="500">| <img src="img/cornell5000samp.png" width="500"> |
 
 
 ### Stochastic Sampled Antialiasing
 No Anti Aliasing           |  With Anti Aliasing
 :-------------------------:|:-------------------------:
-![](img/no_anti_alias.PNG)| ![](img/antialias.PNG) |
+<img src="img/no_anti_alias.PNG" width="500">| <img src="img/antialias.PNG" width="500"> |
 
 
 
