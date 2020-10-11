@@ -1,16 +1,16 @@
 // Emissive material (light)
 MATERIAL 0
-RGB         1 1 1
+RGB         .98 .21 .21
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
 REFR        0
 REFRIOR     0
-EMITTANCE   5
+EMITTANCE   3
 
 // Diffuse white
 MATERIAL 1
-RGB         .98 .98 .98
+RGB         .41 .41 .41
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -20,9 +20,9 @@ EMITTANCE   0
 
 // Diffuse left wall
 MATERIAL 2
-RGB         .37 .30 .54
+RGB         0 0 0.46
 SPECEX      0
-SPECRGB     0 0 0
+SPECRGB     0 0 0.5
 REFL        0
 REFR        0
 REFRIOR     0
@@ -30,9 +30,9 @@ EMITTANCE   0
 
 // Diffuse right wall
 MATERIAL 3
-RGB         .98 .46 .41
+RGB         0 0 0
 SPECEX      0
-SPECRGB     0 0 0
+SPECRGB     0 0.35 0
 REFL        0
 REFR        0
 REFRIOR     0
@@ -60,13 +60,23 @@ EMITTANCE   0
 
 // Model material
 MATERIAL 6
-RGB         .98 .98 .98
+RGB         .21 .21 .66
 SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        0
-REFR        0
+REFR        1
 REFRIOR     2.4
 EMITTANCE   0
+
+// Emissive material (light2)
+MATERIAL 7
+RGB         1 1 1
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   8
 
 // Camera
 CAMERA
@@ -84,13 +94,13 @@ FD          7.5
 AA          0
 MOTION	    0 0 0
 
-// Ceiling light
+// Left light
 OBJECT 0
 cube
 material 0
-TRANS       0 10 0
+TRANS       -5 5 0
 ROTAT       0 0 0
-SCALE       3 .3 3
+SCALE       .3 3 3
 
 // Floor
 OBJECT 1
@@ -119,7 +129,7 @@ SCALE       .01 10 10
 // Left wall
 OBJECT 4
 cube
-material 2
+material 1
 TRANS       -5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
@@ -127,7 +137,7 @@ SCALE       .01 10 10
 // Right wall
 OBJECT 5
 cube
-material 3
+material 1
 TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
@@ -140,3 +150,20 @@ material 6
 TRANS       0 0 0
 ROTAT       0 0 0
 SCALE       0.03 0.03 0.03
+
+
+// Right light
+OBJECT 7
+cube
+material 0
+TRANS       5 5 0
+ROTAT       0 0 0
+SCALE       .3 3 3
+
+// Back light
+OBJECT 8
+cube
+material 7
+TRANS       0 5 -5
+ROTAT       0 0 0
+SCALE       3 3 .3
