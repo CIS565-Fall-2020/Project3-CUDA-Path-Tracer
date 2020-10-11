@@ -174,3 +174,14 @@ Tanglecube | 0.0001
 Bounding Box | 0.001
 
 <img src="img/cache_graph.png" alt="First Bounce Cache graph" width=900>
+
+As shown in the graph, using a first bounce cache improves the performance of each iteration significantly by 1-2 seconds depending on the shape and ray march step. The current ray marching implementation does not use sphere marching, however it could be a performance improvement to consider in the future. Another potential performance improvement could come from defining bounding boxes for implicit surfaces such that the ray will be tested against the surface only if it falls within the bounds. This could be achieved by the octree implementation.
+
+**Procedural Textures**
+
+Current procedural textures supported by the renderer make many calls to noise helper functions that call many glm math functions. In order to analyze the potential impacts of procedural textures on runtime, I created 3 simple test scenes with a sphere where the diffuse material of the sphere uses FBM, Wood noise and no texture separately and compared the total runtimes of 100 and 500 iterations.
+
+<img src="img/texture_graph.png" alt="Texture graph" width=900>
+
+Although the difference is not very significant due to the small number of iterations, using the FBM texture seems to be slightly less efficient than using Wood Noise or no texture at all. Since FBM functions usually call their helpers the octave amount of times, it is possible that these subsequent function calls could slow down the performance.
+
