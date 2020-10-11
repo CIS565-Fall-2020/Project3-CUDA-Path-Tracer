@@ -26,7 +26,7 @@ for i in range(2, mat_count + 2):
   lines.append('REFR     {}'.format(1 if is_refract else 0))
   lines.append('REFRIOR  {}'.format(1.52 if is_refract else 0))
   lines.append('EMITTANCE   0')
-  lines.append(' ')
+  lines.append('')
 
 obj_lines = []
 for i in range(6, mat_count + 6):
@@ -42,7 +42,7 @@ for i in range(6, mat_count + 6):
   obj_lines.append('TRANS {:.2f} {:.2f} {:.2f}'.format(pos_x, pos_y, 0))
   obj_lines.append('ROTAT 0 0 0')
   obj_lines.append('SCALE 1 1 1')
-  obj_lines.append(' ')
+  obj_lines.append('')
   
 
 f = open('materials.txt', 'w')
