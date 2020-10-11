@@ -1,14 +1,15 @@
 CUDA Path Tracer
 ================
-
-<img src="img/lionbig1959.png" width="650">
-
-3D Model Credit: [Rồng by @Husky on Sketchfab](https://sketchfab.com/3d-models/rong-b61cffbfbe66495b97a9a101b1859bbc?cursor=bz0xJnA9MjQ5)
-
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 * Haorong Yang
 * [LinkedIn](https://www.linkedin.com/in/haorong-henry-yang/)
 * Tested on: Windows 10 Home, i7-10750H @ 2.60GHz 16GB, GTX 2070 Super Max-Q (Personal)
+
+<img src="img/lionbig1959.png" width="650">  
+
+3D Model Credit: [Rồng by @Husky on Sketchfab](https://sketchfab.com/3d-models/rong-b61cffbfbe66495b97a9a101b1859bbc?cursor=bz0xJnA9MjQ5)
+
+
 
 ## Features:  
 ### Graphics 
