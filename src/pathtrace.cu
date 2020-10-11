@@ -23,7 +23,7 @@
 #define USE_SHADE_MATERIAL
 #define SORT_RAYS_BY_MATERIALS 
 //#define CACHE_FIRST_BOUNCE 
-#define STREAM_COMPACT_RAYS 
+//#define STREAM_COMPACT_RAYS 
 #define ANTI_ALIASING
 //#define DEPTH_OF_FIELD
 #define DIRECT_LIGHTING 
@@ -827,6 +827,9 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 			//printf("Iteration complete! \n"); 
 		}
 		depth++;
+#else
+		depth++; 
+		iterationComplete = true; 
 #endif // STREAM_COMPACT_RAYS
 	}
 
