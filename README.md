@@ -13,7 +13,7 @@ CUDA Path Tracer
 
 ## Features:  
 ### Graphics 
-  * Bidirectional Scattering Distribution Functions: Ideal Diffuse, Specular Reflection, Refraction
+  * Bidirectional Scattering Distribution Functions (BSDF): Ideal Diffuse, Specular Reflection, Refraction
   * Physically-based depth-of-field (by jittering rays within an aperture)
   * Stochastic Sampled Antialiasing
   * Arbitrary Mesh loading  
@@ -22,6 +22,12 @@ CUDA Path Tracer
   * Path termination using stream compaction
   * Sorting pathSegments by material type
   * Acceleration by caching first bounce
+
+### Bidirectional Scattering Distribution Functions
+Ideal Diffuse           |       Specular Reflection           |     Transmissive (Refraction)
+:-------------------------:|:-------------------------:|:-----------------------
+<img src="img/diffusive.png" width="330">| <img src="img/reflective.png" width="330">| <img src="img/transmissive.png" width="330">
+
 
 ### Physically-Based Depth of Field
 No Depth of Field          |   With Depth of Field
@@ -45,11 +51,15 @@ Avocado           |       Duck           |         Rồng
 
 
 ### Optimization
+Below is a chart that compares the runtime of 5 iterations when toggling one or both of "sorting by material" and "chaching first bounce" off for rendering scene at the top of this readme.  
+
+<img src="img/chart.PNG" width="500">  
+
 Sorting the ray/path segments by material type will increase performance by making memory access contiguous hence more efficient; when there are a lot of materials, but not so much when there are limited materials, for example, in the conrell box test scene.
 
 
 ### Bloopers
-<img src="img/blooper1.png" width="230"> <img src="img/blooper2.png" width="230">  <img src="img/blooper3.png" width="230"> <img src="img/blooper4.png" width="230">
+<img src="img/blooper1.png" width="220"> <img src="img/blooper2.png" width="220">  <img src="img/blooper3.png" width="220"> <img src="img/blooper4.png" width="220">
 
 ### References
 * [PBRT] Physically Based Rendering, Second Edition: From Theory To Implementation. Pharr, Matt and Humphreys, Greg. 2010.
