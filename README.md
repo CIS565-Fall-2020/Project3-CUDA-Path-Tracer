@@ -60,4 +60,4 @@ Specifically, I want to see whether more materials will affect the effect of opt
 <p align="center">
 <img src="./img/mat_sort_perf.png" />
 </p>
-Unfortunately, the sorting 
+Unfortunately, the sorting still decreases the performance. But the overhead is not so serious compared to the simple scene.
