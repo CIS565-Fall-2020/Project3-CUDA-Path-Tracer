@@ -33,8 +33,8 @@ This is a CUDA-based path tracer capable of rendering globally-illuminated image
 * Camera depth of field
 * SDF-based Tanglecube and Bounding Box
 * Procedural texture
+* Stratified sampling
 * Hierarchical Spatial Structure - Octree (In progress)
-* Stratified sampling (In progress)
 
 ## Material Overview ##
 
@@ -48,9 +48,9 @@ Fresnel dielectric | Perfect refractive | Perfect specular
 
 **Imperfect Specular Reflection**
 
-Exponent = 2.1 | Exponent = 4.5 | Exponent = 8.5
-:---: | :---: | :---: 
-<img src="img/renders/dode_glossy_2.1exp_10000samples.png" alt="sneak peek" width=300> | <img src="img/renders/dode_glossy_4.5exp_10000samples.png" alt="sneak peek" width=300> | <img src="img/renders/dode_glossy_8.5exp_10000samples.png" alt="sneak peek" width=300>
+Exponent = 0 | Exponent = 5 | Exponent = 12 | Exponent = 50 | Exponent = 500
+:---: | :---: | :---: |  :---: | :---:
+<img src="img/renders/glossy_0.png" alt="Glossy 0" width=200> | <img src="img/renders/glossy_5.png" alt="Glossy 5" width=200> | <img src="img/renders/glossy_12.png" alt="Glossy 12" width=200> | <img src="img/renders/glossy_50.png" alt="Glossy 50" width=200> | <img src="img/renders/glossy_500.png" alt="Glossy 500" width=200>
 
 Lower specular exponent values give results that are closer to diffuse scattering while larger specular exponent values result in larger highlights.
 
@@ -96,6 +96,16 @@ Ray-geometry intersection for implicit surfaces is computed by special signed di
 <img src="img/renders/fb_tex.png" alt="fbm" width=500> | <img src="img/renders/noise_tex.png" alt="noise" width=500>
 
 I closely followed the procedural texture implementations from the link provided on top of the render images. I find the *Book of Shaders* noise texture implementations to be pretty useful. The two available procedural textures include Fractal Brownian Motion texture which benefits from a loop of adding noise to create a fractal looking noise pattern, and Wood Noise with swirly effect.
+
+**Stratified Sampling**
+
+Stratified (4 samples) | Random (4 samples)
+:---: | :---:
+<img src="img/renders/STRATIFIED_4.png" alt="stratified 4" width=600> | <img src="img/renders/RANDOM_4.png" alt="random 4" width=600>
+
+Stratified (4 samples close up) | Random (4 samples close up)
+:---: | :---:
+<img src="img/renders/stratified_25.png" alt="stratified 25" width=600> | <img src="img/renders/random_25.png" alt="random 25" width=600> 
 
 ## Insights ##
 
