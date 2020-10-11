@@ -992,6 +992,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
 	PathSegment* dev_path_end = dev_paths + pixelcount;
 	int num_paths = dev_path_end - dev_paths;
     int num_paths_initial = num_paths;
+    //std::cout << "initial: " << num_paths_initial << std::endl;
 
 	// --- PathSegment Tracing Stage ---
 	// Shoot ray into scene, bounce between objects, push shading chunks
@@ -1113,6 +1114,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter, bool cacheFirstBounce, bool sor
   num_paths = res.first - dev_current_paths;
   dev_terminated_paths = res.second;
   cudaMemcpy(dev_paths, dev_current_paths, num_paths * sizeof(PathSegment), cudaMemcpyDeviceToDevice);
+  //std::cout << "Depth: " << depth << " , Num paths: " << num_paths << std::endl;
 
   if (num_paths <= 0) {
       iterationComplete = true;

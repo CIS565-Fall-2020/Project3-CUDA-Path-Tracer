@@ -9,20 +9,16 @@
 __host__ __device__
 glm::vec2 calculateStratifiedSample(
     int iter, int totalIters, thrust::default_random_engine& rng, int depth, int totalDepth) {
-    thrust::uniform_real_distribution<float> u01(0, 1);
-    if (depth == 0) {
-        // Split the pixel into totalIters grids (if possible)
-        int grid = (int)(glm::sqrt((float)totalIters) + 0.5f);
-        float invGrid = 1.f / grid;
+    int grid = (int)(glm::sqrt((float)totalIters) + 0.5f);
+    float invGrid = 1.f / grid;
+    thrust::uniform_real_distribution<float> u02(0, grid);
+    int x0 = u02(rng);
+    int y0 = u02(rng);
+    float x = (float)x0 / (float)grid;
+    float y = (float)y0 / (float)grid;
 
-        // Find the grid where current iteration is at
-        glm::vec2 topLeft(((iter - 1) + depth) % grid * invGrid, ((iter - 1) + depth) / grid * invGrid);
-        return glm::vec2(topLeft.x + invGrid * u01(rng), topLeft.y + invGrid * u01(rng));
-    }
-    else {
-       return glm::vec2(u01(rng), u01(rng));
-    }
-
+    thrust::uniform_real_distribution<float> u01(0, invGrid);
+    return glm::vec2(x + u01(rng), y + u01(rng));
 }
 
 __host__ __device__
@@ -44,9 +40,12 @@ glm::vec2 calculateGaussianSampling(
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
         glm::vec3 normal, thrust::default_random_engine &rng, int iter, int totalIters, int depth, int totalDepth) {
-    thrust::uniform_real_distribution<float> u01(0, 1);
-    float sx = u01(rng);
-    float sy = u01(rng);
+    //thrust::uniform_real_distribution<float> u01(0, 1);
+    //float sx = u01(rng);
+    //float sy = u01(rng);
+    glm::vec2 samples = calculateStratifiedSample(iter, totalIters, rng, depth, totalDepth);
+    float sx = samples.x;
+    float sy = samples.y;
 
     float up = sqrt(sx); // cos(theta)
     float over = sqrt(1 - up * up); // sin(theta)

@@ -26,7 +26,7 @@ static bool cacheChanged = true;
 static bool sortMaterialChanged = true;
 static bool useBoundChanged = true;
 static bool cacheFirstBounce = false;
-static bool sortByMaterial = false;
+static bool sortByMaterial = true;
 static bool useMeshBounds = false;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
@@ -173,7 +173,7 @@ void runCuda() {
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
 
-        /*if (iteration == 1000) {
+        /*if (iteration == 1) {
             timer().endGpuTimer();
             std::cout << timer().getGpuElapsedTimeForPreviousOperation() << std::endl;
         }*/
