@@ -7,6 +7,7 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "sceneStructs.h"
+#include "tiny_obj_loader.h"
 
 using namespace std;
 
@@ -16,10 +17,13 @@ private:
     int loadMaterial(string materialid);
     int loadGeom(string objectid);
     int loadCamera();
+    int loadMesh(string filename);
 public:
     Scene(string filename);
     ~Scene();
 
+    std::vector<Geom> lights;
+    std::vector<Triangle> triangles;
     std::vector<Geom> geoms;
     std::vector<Material> materials;
     RenderState state;

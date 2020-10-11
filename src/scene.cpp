@@ -3,6 +3,7 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#define TINYOBJLOADER_IMPLEMENTATION 
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -52,6 +53,13 @@ int Scene::loadGeom(string objectid) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
+            else if (strcmp(line.c_str(), "mesh") == 0) {
+                cout << "Creating new mesh..." << endl;
+                utilityCore::safeGetline(fp_in, line); //Looking for the path
+                loadMesh(line);
+                newGeom.type = MESH;
+                newGeom.triangle_num = (int)triangles.size();
+            }
         }
 
         //link material
@@ -74,6 +82,22 @@ int Scene::loadGeom(string objectid) {
                 newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                if (newGeom.type == MESH) {
+                    // Scale the mesh and compute AABB bounds
+                    newGeom.bound_min = triangles[0].vertex[0];
+                    newGeom.bound_max = triangles[0].vertex[0];
+                    for (Triangle& tri : triangles) {
+                        for (int i = 0; i < 3; i++) {
+                            tri.vertex[i].x *= newGeom.scale[0];
+                            tri.vertex[i].y *= newGeom.scale[1];
+                            tri.vertex[i].z *= newGeom.scale[2];
+                            newGeom.bound_min = glm::min(newGeom.bound_min, tri.vertex[i]);
+                            newGeom.bound_max = glm::max(newGeom.bound_max, tri.vertex[i]);
+                        }
+                    }
+                    // Reset geometry scale to 1.0
+                    newGeom.scale = glm::vec3(1.0f);
+                }
             }
 
             utilityCore::safeGetline(fp_in, line);
@@ -85,6 +109,12 @@ int Scene::loadGeom(string objectid) {
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
 
         geoms.push_back(newGeom);
+
+        //Record the lights individually
+        if (materials[newGeom.materialid].emittance > 0.0f) 
+        {
+            lights.push_back(newGeom);
+        }
         return 1;
     }
 }
@@ -124,6 +154,8 @@ int Scene::loadCamera() {
             camera.lookAt = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
         } else if (strcmp(tokens[0].c_str(), "UP") == 0) {
             camera.up = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        } else if (strcmp(tokens[0].c_str(), "MOTION") == 0) {
+            camera.motion = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
         }
 
         utilityCore::safeGetline(fp_in, line);
@@ -185,4 +217,61 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
+}
+
+// Reference: TinyOBJ Sample code: https://github.com/tinyobjloader/tinyobjloader
+int Scene::loadMesh(string filename) {
+
+    triangles.clear(); //Comment if need to render more than 1 meshs
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn;
+    std::string err;
+
+    // load obj
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str());
+
+    if (!warn.empty()) {
+        std::cout << warn << std::endl;
+    }
+
+    if (!err.empty()) {
+        std::cerr << err << std::endl;
+    }
+
+    if (!ret) {
+        exit(1);
+    }
+
+    // Loop over shapes
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+            int fv = shapes[s].mesh.num_face_vertices[f];
+            // Loop over vertices in the face.
+            Triangle t;
+
+            for (size_t v = 0; v < fv; v++) {
+                // access to vertex
+                // Here only indices and vertices are useful
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+                
+                t.vertex[v] = glm::vec3(vx, vy, vz);
+            }
+
+            index_offset += fv;
+
+            // Compute the initial normal using glm::normalize
+            t.normal = glm::normalize(glm::cross(t.vertex[1] - t.vertex[0], t.vertex[2] - t.vertex[0]));
+            triangles.push_back(t);
+        }
+    }
+    cout << "Loaded mesh with "<< triangles.size() << " triangles from " << filename.c_str() << endl;
+    return 1;
 }
