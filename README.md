@@ -185,3 +185,7 @@ Current procedural textures supported by the renderer make many calls to noise h
 
 Although the difference is not very significant due to the small number of iterations, using the FBM texture seems to be slightly less efficient than using Wood Noise or no texture at all. Since FBM functions usually call their helpers the octave amount of times, it is possible that these subsequent function calls could slow down the performance.
 
+## Bloopers ##
+
+<img src="img/blooper_1.png" alt="b" width=300> <img src="img/blooper_2.png" alt="b" width=300> 
+
