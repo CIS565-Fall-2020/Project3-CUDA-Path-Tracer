@@ -644,7 +644,7 @@ void pathtrace(uchar4* pbo, int frame, int iter, bool sort_by_material, bool cac
         
         // Debug messages
         //cout << "Iterations:" << iter << ", Depth: " << depth << ", Remaining Rays:" << num_paths << endl;
-        //cout << "Iterations:" << iter << ", Time: " << prev_cpu_time << ", Average Time" << avgerageTime << endl;
+        cout << "Iterations:" << iter << ", Time: " << prev_cpu_time << ", Average Time" << avgerageTime << endl;
     }
     // Assemble this iteration and apply it to the image
     dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
