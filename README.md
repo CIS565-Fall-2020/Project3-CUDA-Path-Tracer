@@ -6,6 +6,7 @@ CUDA Path Tracer
 * Hanyu Liu
   - [personal website](http://liuhanyu.net/) 
 * Tested on: Windows 10, Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz 16.0GB, GeForce GTX 1050 (Personal)
+* Modified CMakeLists.txt
 
 ![](img/heart_lower_sample.png)
 
