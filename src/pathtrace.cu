@@ -24,7 +24,7 @@
 #define POST 0
 
 #define DEPTH_OF_FIELD 0
-#define LENS_RADIUS 0.3
+#define LENS_RADIUS 0.2
 #define FOCUS_DISTANCE 7
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -353,7 +353,7 @@ __global__ void shader(
       }
       if (material.is_procedural) {
           // based off of: https://iquilezles.org/www/articles/palettes/palettes.htm
-          material.color = glm::vec3(0.5, 0.5, 0.5) + glm::vec3(0.5, 0.5, 0.5) * cos(0.5f * PI * (glm::vec3(2.f, 1.f, 1.f) * intersection_point.x + glm::vec3(0.50, 0.20, 0.25)));
+          material.color = glm::vec3(0.8, 0.5, 0.4) + glm::vec3(0.2, 0.4, 0.2) * cos(0.4f * PI * (glm::vec3(2.f, 1.f, 1.f) * intersection_point.z + glm::vec3(0.00, 0.25, 0.25)));
       }
       glm::vec3 materialColor = material.color;
       // If the material indicates that the object was a light, "light" the ray

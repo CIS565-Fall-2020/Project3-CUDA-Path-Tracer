@@ -71,10 +71,10 @@ BoundingBox Scene::loadOBJ(string filename, int material_id)
                     glm::vec3 idx_pos(attrib.vertices[3 * idx.vertex_index + 0], 
                                       attrib.vertices[3 * idx.vertex_index + 1], 
                                       attrib.vertices[3 * idx.vertex_index + 2]);
-                    idx_pos *= 4.0f;
-                    idx_pos.z -= 2;
+                    idx_pos *= 5.0f;
+                    /*idx_pos.z -= 2;
                     idx_pos.y += 2;
-                    idx_pos.x -= 2;
+                    idx_pos.x -= 2;*/
 
 
                     // vertex's normal
@@ -120,12 +120,13 @@ BoundingBox Scene::loadOBJ(string filename, int material_id)
                 geoms.push_back(new_geom);
             }
         }
-        return bb;
-#if false
+        
+#if true
         cout << "FINAL BOUNDING BOX" << endl;
         cout << "= min pos: " << bb.min.x << ", " << bb.min.y << ", " << bb.min.z << endl;
         cout << "= max pos: " << bb.max.x << ", " << bb.max.y << ", " << bb.max.z << endl;
 #endif
+        return bb;
     }
 
 }
@@ -185,27 +186,27 @@ Scene::Scene(string filename) {
         newMaterial.color = glm::vec3(1.f, 1.f, 1.f);
         newMaterial.specular.exponent = 1.f;
         newMaterial.specular.color = glm::vec3(1.f, 1.f, 1.f);
-        newMaterial.hasReflective = 0.f;
+        newMaterial.hasReflective = 1.f;
         newMaterial.hasRefractive = 0.f;
         newMaterial.indexOfRefraction = 1.f;
         newMaterial.emittance = 0.f;
 
         // load color texture
         //loadTexture(newMaterial, "../scenes/default.png", false);
-        loadTexture(newMaterial, "../scenes/bump2.png", true);
+        //loadTexture(newMaterial, "../scenes/bump2.png", true);
         //cout << "bump h and w: " << newMaterial.tex_bump_width << ", " << newMaterial.tex_bump_height << endl;
         materials.push_back(newMaterial);
 
         // make camera
         RenderState& state = this->state;
         Camera& camera = state.camera;
-        camera.resolution.x = 800;
-        camera.resolution.y = 800;
+        camera.resolution.x = 1000;
+        camera.resolution.y = 1000;
         float fovy = 45;
         state.iterations = 5000;
         state.traceDepth = 8;
         state.imageName = "obj";
-        camera.position = glm::vec3(0.0f, 0.f, 10.f);
+        camera.position = glm::vec3(9.0f, 0.f, 2.f);
         camera.lookAt = glm::vec3(0.f, 1.f, 0.f);
         camera.up = glm::vec3(0.f, 1.0f, 0.f);
         float yscaled = tan(fovy * (PI / 180));
@@ -397,12 +398,12 @@ int Scene::loadMaterial(string materialid) {
             } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
                 newMaterial.emittance = atof(tokens[1].c_str());
             }
-            if (id == 2) {
+            if (id == 4) {
                 //loadTexture(newMaterial, "../scenes/default.png", false);
                 newMaterial.is_procedural = true;
             }
-            if (id == 3) {
-                loadTexture(newMaterial, "../scenes/floral.jpg", false);
+            if (id == 2) {
+                loadTexture(newMaterial, "../scenes/florals.jpg", false);
             }
         }
         materials.push_back(newMaterial);
