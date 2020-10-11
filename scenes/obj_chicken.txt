@@ -110,8 +110,8 @@ SCALE       .01 10 10
 
 // Object
 OBJECT 6
-obj plane.obj
+obj chicken.obj
 material 1
-TRANS       0 0 0
-ROTAT       0 0 0
+TRANS       0 4 0
+ROTAT       0 90 0
 SCALE       1 1 1

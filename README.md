@@ -18,12 +18,21 @@ CUDA Path Tracer
 The ball centered in the middle of the scene is clear and well-defined, while other objects are blurry.
 
 ## Mesh loading with bounding valume intersection culling
+![](img/chicken.png)
+
+How the mesh is supposed to look like in a 3D program
+![](img/chickenStandard.png)
 
 ## Better hemisphere smapling methods
+
 Better sampling (stratified):
+
 ![](img/better_sampling_19samp.png)
+
 Random sampling:
+
 ![](img/normal_sampling_19samp.png)
+
 The diffused sphere in the center is more converged with few random white specs, white those are visible in the random sampling method. The same thing happens on the back wall as well.
 
 ## Motion blur
