@@ -16,12 +16,14 @@
 #include "interactions.h"
 
 #define ERRORCHECK 1
-#define SORT_BY_MATERIAL 1
-#define CACHE_FIRST_BOUNCE 0
-#define ANTIALIASING 1 // antialiasing cannot be on with cache first bounce
+#define SORT_BY_MATERIAL 0
+#define CACHE_FIRST_BOUNCE 1
+#define STREAM_COMPACTION 1
+#define ANTIALIASING 0 // antialiasing cannot be on with cache first bounce
 #define DEPTH_OF_FIELD 1
 #define FOCAL 5
 #define LENS_RADIUS 0.2
+#define TIMING 1
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -340,11 +342,23 @@ struct compareMatId
 	  }
 };
 
+float totalTime = 0.f;
+int iterNum = 0;
+
 /**
  * Wrapper for the __global__ call that sets up the kernel calls and does a ton
  * of memory management
  */
 void pathtrace(uchar4* pbo, int frame, int iter) {
+
+#if TIMING
+	  cudaEvent_t event_start = nullptr;
+	  cudaEvent_t event_end = nullptr;
+	  cudaEventCreate(&event_start);
+	  cudaEventCreate(&event_end);
+	  cudaEventRecord(event_start);
+#endif
+
 	  const int traceDepth = hst_scene->state.traceDepth;
 	  const Camera& cam = hst_scene->state.camera;
 	  const int pixelcount = cam.resolution.x * cam.resolution.y;
@@ -472,10 +486,11 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 				  dev_materials
 				  );
 
-
+#if STREAM_COMPACTION
 			// stream compaction
 			PathSegment* newEnd = thrust::partition(thrust::device, dev_paths, dev_paths + num_paths, bounceNotZero());
 			num_paths = newEnd - dev_paths;
+#endif
 			
 			if (num_paths <= 0 || depth > traceDepth) {
 				  iterationComplete = true;
@@ -497,6 +512,23 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	  // Retrieve image from GPU
 	  cudaMemcpy(hst_scene->state.image.data(), dev_image,
 			pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+
+	  
+
+#if TIMING
+	  cudaEventRecord(event_end);
+	  cudaEventSynchronize(event_end);
+	  float thisIter = 0.f;
+	  cudaEventElapsedTime(&thisIter, event_start, event_end);
+	  totalTime += thisIter;
+	  std::cout << "time for this iter: " << thisIter << std::endl;
+	  std::cout << "totalTime is: " << totalTime << std::endl;
+	  std::cout << "iter is: " << iterNum << std::endl;
+	  iterNum++;
+
+	  cudaEventDestroy(event_start);
+	  cudaEventDestroy(event_end);
+#endif
 
 	  checkCUDAError("pathtrace");
 }

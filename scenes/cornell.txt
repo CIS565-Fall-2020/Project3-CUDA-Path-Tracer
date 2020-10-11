@@ -140,18 +140,9 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// mesh-cube
-OBJECT 6
-mesh
-../scenes/lion/scene.gltf
-material 6
-TRANS -0.5 1.3 0.9
-ROTAT 0 65 5
-SCALE 1 1 1
-
 
 // Sphere
-OBJECT 7
+OBJECT 6
 sphere
 material 5
 TRANS       -2 4.8 -0.8
@@ -159,7 +150,7 @@ ROTAT       0 0 0
 SCALE       3.3 3.3 3.3
 
 // Cube
-OBJECT 8
+OBJECT 7
 cube
 material 7
 TRANS       2 4 -3
