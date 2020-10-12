@@ -22,9 +22,11 @@ GPU : NVIDIA GeForce RTX 2060
 ## OUTPUT 
 
 <p float="left">
+ <img src="/img/renders/bokeh_2.png" height = "400" width = "400" />
  <img src="/img/renders/unicorn_1.png" height = "400" width = "400" />
  <img src="/img/renders/deer_int.png" height = "400" width = "400" />
-<img src="/img/renders/bokeh_2.png" height = "400" width = "400" />
+ <img src="/img/renders/motion_blur_1.png" height = "400" width = "400" />
+
 </p>
 
 ## PATH TRACER 
@@ -34,11 +36,11 @@ we see things because light emitted by light sources such as the sun bounces off
 This is what we call indirect illumination because light rays follow complex paths before entering the eye.
 
  <p float="left">
- <img src="/img/dlandindl.png"/>
  <img src="/img/pathtracer2.png"/>
 </p>
 
 ## FEATURES 
+Below are the features that I implemented as a part of my path tracer. All features are toggleable in the pathtracer.cu file. 
 
 ### Diffuse Reflective and Refractive Objects 
 
@@ -119,6 +121,9 @@ I have imported the following models into my path tracer. All of these were rend
 In our path tracer, at each bounce, the direction of the next ray is determined based on the material it hits. We do not make any computations to check if the point in space is directly
 visible to light or not. In direct lighting, we make the last bounce hit the light by selecting a point randomly on a randomly selected light and setting the direction of the 
 final ray to be the sampled point. This way, we will know if the object is directly visible to the the light or not. 
+
+<img src="/img/dlandindl.png"/>
+
 We accomplish this by checking the remaining bounces and if it is the last one, instead of sampling the bsdf for the direction, we sample the light instead. This lights up the scene
 as shown below. 
 

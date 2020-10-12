@@ -78,6 +78,44 @@ float find_max(float a, float b)
 	else return b; 
 }
 
+__host__ __device__ void refract(PathSegment& pathSegment, glm::vec3 intersect,
+	glm::vec3 normal,
+	const Material& m,
+	thrust::default_random_engine& rng)
+{
+	//PBRT REFRACT 
+
+	float cosThetaI = glm::dot(-pathSegment.ray.direction, normal);
+	cosThetaI = glm::clamp(cosThetaI, -1.f, 1.f);
+	float eta = 1.f;
+	if (cosThetaI > 0.f)
+	{
+		eta = 1.f / m.indexOfRefraction;
+	}
+	else
+	{
+		normal *= -1.f;
+		eta = m.indexOfRefraction;
+	}
+
+	float sinThetaI = glm::max(float(0.f), float(1.f - cosThetaI * cosThetaI));
+	float sinThetaT = eta * eta * sinThetaI;
+
+	//Handle total internal reflection
+	if (sinThetaT >= 1.f)
+	{
+		pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+		pathSegment.color *= m.color;
+	}
+	else
+	{
+		float cosThetaT = std::sqrt(1.f - sinThetaT);
+		//pathSegment.ray.direction = glm::refract(glm::normalize(pathSegment.ray.direction), normal, eta);
+		pathSegment.ray.direction = (eta * cosThetaI - cosThetaT) + (eta * pathSegment.ray.direction);
+		pathSegment.color *= m.specular.color;
+	}
+}
+
 __host__ __device__
 void scatterRay(
 	PathSegment& pathSegment,
@@ -113,40 +151,11 @@ void scatterRay(
 	//Refractive surface 
 	else if (m.hasReflective && m.hasRefractive)
 	{
-		//PBRT REFRACT 
-		
-		float cosThetaI = glm::dot(-pathSegment.ray.direction, normal);
-		cosThetaI = glm::clamp(cosThetaI, -1.f, 1.f);
-		float eta = 1.f;
-		if (cosThetaI > 0.f)
-		{
-			eta = 1.f / m.indexOfRefraction;
-		}
-		else
-		{
-			normal *= -1.f;
-			eta = m.indexOfRefraction;
-		}
-
-		float sinThetaI = glm::max(float(0.f), float(1.f - cosThetaI * cosThetaI));
-		float sinThetaT = eta * eta * sinThetaI;
-
-		//Handle total internal reflection
-		if (sinThetaT >= 1.f)
-		{
-			pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
-			pathSegment.color *= m.color;
-		}
-		else
-		{
-			float cosThetaT = std::sqrt(1.f - sinThetaT);
-			//pathSegment.ray.direction = glm::refract(glm::normalize(pathSegment.ray.direction), normal, eta);
-			pathSegment.ray.direction = eta * pathSegment.ray.direction + (eta * cosThetaI - cosThetaT); 
-			pathSegment.color *= m.specular.color;
-		}
+		refract(pathSegment, intersect, normal, m, rng); 
 		pathSegment.ray.origin = intersect + (0.001f * pathSegment.ray.direction);
 	}
  }
+
 
 
 

@@ -25,11 +25,12 @@
 //#define CACHE_FIRST_BOUNCE 
 #define STREAM_COMPACT_RAYS 
 #define ANTI_ALIASING
-#define DEPTH_OF_FIELD
+//#define DEPTH_OF_FIELD
+#define DIRECT_LIGHTING 
 #define DIRECT_LIGHTING 
 //#define MOTION_BLUR 
 //#define MOTION_BLUR_2 //Ghost mode lol 
-#define BOKEH
+//#define BOKEH
 #define BOUNDING_VOLUME
 //#define PRINT_TIME
 
@@ -572,20 +573,18 @@ __global__ void shadeMaterialDirectLighting(
 			// like what you would expect from shading in a rasterizer like OpenGL.
 			else
 			{
-				int randLight = getRandLightIdx(numLights, rng);
-				glm::vec3 point_on_light = getPointOnSquarePlane(rng, lights[randLight]);
 				//To set color 
 				scatterRay(currpath
 					, getPointOnRay(currpath.ray, currisect.t)
 					, currisect.surfaceNormal
 					, material
 					, rng);
-				//Ray should hit to the randomly selected light 
-				if (!material.hasRefractive)
-				{
-					currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
-				}
+				//Ray should hit the randomly selected point on light 
+				int randLight = getRandLightIdx(numLights, rng);
+				glm::vec3 point_on_light = getPointOnSquarePlane(rng, lights[randLight]);
+				currpath.ray.direction = glm::normalize(point_on_light - currpath.ray.origin);
 				--currpath.remainingBounces;
+
 			}
 		}
 		else
@@ -862,4 +861,4 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 
 	checkCUDAError("pathtrace");
-}
+	}
