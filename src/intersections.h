@@ -142,3 +142,180 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+__host__ __device__ float meshIntersectionTest(Geom mesh, Triangle *triangles, Ray r,
+	glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
+	
+	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	for (int i = mesh.tIndexStart; i <= mesh.tIndexEnd; i++)
+	{
+		Triangle triangle = triangles[i];
+		glm::vec3 p0 = triangle.vertices[0];
+		glm::vec3 p1 = triangle.vertices[1];
+		glm::vec3 p2 = triangle.vertices[2];
+		glm::vec3 n = glm::cross(p1 - p0, p2 - p0); // normal to check intersection inside a triangle, could opposite to triangle.normal 
+		float d = -glm::dot(triangle.normal, p1);
+
+		if (glm::abs(glm::dot(triangle.normal, rd)) < EPSILON) {
+			continue;
+		}
+		float t = (-d - glm::dot(triangle.normal, ro)) / (glm::dot(triangle.normal, rd));
+		if (t < 0) {
+			continue;
+		}
+		glm::vec3 p = ro + t * rd;
+	
+		if (glm::dot(glm::cross(p1 - p0, p - p0), n) < 0) {
+			continue;
+		}
+		if (glm::dot(glm::cross(p2 - p1, p - p1), n) < 0) {
+			continue;
+		}
+		if (glm::dot(glm::cross(p0 - p2, p - p2), n) < 0) {
+			continue;
+		}
+		if (glm::dot(rd, triangle.normal) <= 0) {
+			outside = true;
+		}
+		else {
+			outside = false;
+		}
+
+		glm::vec3 objspaceIntersection = p;
+		intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+		normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(triangle.normal, 0.f)));
+		return glm::length(r.origin - intersectionPoint);
+	}
+	return -1;
+
+}
+
+// Octree
+__host__ __device__ float meshIntersectionTest_octree(
+	Geom mesh, Triangle *triangles, int *sortTringles,
+	OctreeNode_cuda *octreeVector, Ray r,
+	glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
+
+	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(r.origin, 1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	OctreeNode_cuda stack[600]; // TDOD: 8*8*8 + 4*4*4 + 2*2*2 + 1, should been set according to octree depth
+	int ptr = 0;
+	stack[ptr] = octreeVector[0];
+	int res = -1;
+
+	while (ptr >= 0) {
+		if (res != -1) {
+			break;
+		}
+		OctreeNode_cuda root = stack[ptr];
+		ptr--;
+		float tmin = -1e38f;
+		float tmax = 1e38f;
+		float amin, amax;
+		for (int xyz = 0; xyz < 3; ++xyz) {
+			if (xyz == 0) {
+				amin = root.xmin;
+				amax = root.xmax;
+			}
+			else if (xyz == 1) {
+				amin = root.ymin;
+				amax = root.ymax;
+			}
+			else {
+				amin = root.zmin;
+				amax = root.zmax;
+			}
+			float rdxyz = r.direction[xyz];
+			{
+				float t1 = (amin - r.origin[xyz]) / rdxyz;
+				float t2 = (amax - r.origin[xyz]) / rdxyz;
+				float ta = glm::min(t1, t2);
+				float tb = glm::max(t1, t2);
+				glm::vec3 n;
+				n[xyz] = t2 < t1 ? +1 : -1;
+				if (ta > 0 && ta > tmin) {
+					tmin = ta;
+				}
+				if (tb < tmax) {
+					tmax = tb;
+				}
+			}
+		}
+
+		if (tmax >= tmin && tmax > 0) {
+			if (root.triangleStart != -1 && root.triangleEnd != -1) {
+				for (int i = root.triangleStart; i <= root.triangleEnd; i++) {
+
+					int triangleIdx = sortTringles[i];
+					Triangle triangle = triangles[triangleIdx];
+					glm::vec3 p0 = triangle.vertices[0];
+					glm::vec3 p1 = triangle.vertices[1];
+					glm::vec3 p2 = triangle.vertices[2];
+					glm::vec3 n = glm::cross(p1 - p0, p2 - p0); // normal to check intersection inside a triangle, could opposite to triangle.normal 
+					float d = -glm::dot(triangle.normal, p1);
+
+					if (glm::abs(glm::dot(triangle.normal, rd)) < EPSILON) {
+						continue;
+					}
+					float t = (-d - glm::dot(triangle.normal, ro)) / (glm::dot(triangle.normal, rd));
+					if (t < 0) {
+						continue;
+					}
+					glm::vec3 p = ro + t * rd;
+
+					if (glm::dot(glm::cross(p1 - p0, p - p0), n) < 0) {
+						continue;
+					}
+					if (glm::dot(glm::cross(p2 - p1, p - p1), n) < 0) {
+						continue;
+					}
+					if (glm::dot(glm::cross(p0 - p2, p - p2), n) < 0) {
+						continue;
+					}
+					if (glm::dot(rd, triangle.normal) <= 0) {
+						outside = true;
+					}
+					else {
+						outside = false;
+					}
+
+					glm::vec3 objspaceIntersection = p;
+					intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+					normal = glm::normalize(multiplyMV(mesh.invTranspose, glm::vec4(triangle.normal, 0.f)));
+					res = glm::length(r.origin - intersectionPoint);
+					break;
+				}
+			}
+			else {
+				if (root.tlf != -1) {
+					stack[++ptr] = octreeVector[root.tlf];
+				}
+				if (root.tlb != -1) {
+					stack[++ptr] = octreeVector[root.tlb];
+				}
+				if (root.trf != -1) {
+					stack[++ptr] = octreeVector[root.trf];
+				}
+				if (root.trb != -1) {
+					stack[++ptr] = octreeVector[root.trb];
+				}
+				if (root.blf != -1) {
+					stack[++ptr] = octreeVector[root.blf];
+				}
+				if (root.blb != -1) {
+					stack[++ptr] = octreeVector[root.blb];
+				}
+				if (root.brf != -1) {
+					stack[++ptr] = octreeVector[root.brf];
+				}
+				if (root.brb != -1) {
+					stack[++ptr] = octreeVector[root.brb];
+				}
+			}
+		}
+	}
+	return res;
+}
