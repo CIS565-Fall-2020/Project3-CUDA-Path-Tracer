@@ -23,7 +23,7 @@ GPU : NVIDIA GeForce RTX 2060
 
 <p float="left">
  <img src="/img/renders/bokeh_2.png" height = "400" width = "400" />
- <img src="/img/renders/unicorn_1.png" height = "400" width = "400" />
+ <img src="/img/renders/charizard_2.png" height = "400" width = "400" />
  <img src="/img/renders/deer_int.png" height = "400" width = "400" />
  <img src="/img/renders/motion_blur_1.png" height = "400" width = "400" />
 
@@ -166,7 +166,8 @@ We store the initial ray bounces in a special cache buffer for reusing it in all
 
 ### Bounding volume intersection culling
 The graph below shows the output with and without Bounding volume intersection culling on our meshes. We can see an improvement in performance when we first perform 
-a ray test on the bounding box and if the ray succeeds, only then test it against all the mesh triangles. 
+a ray test on the bounding box and if the ray succeeds, only then test it against all the mesh triangles. This is not as significant if the number of triangles in the 
+mesh are pretty low. 
 <img src="/img/cull.png"/>
 
 ## Bloopers 
