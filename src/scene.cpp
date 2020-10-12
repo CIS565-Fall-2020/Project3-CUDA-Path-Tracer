@@ -5,8 +5,8 @@
 #include <glm/gtx/string_cast.hpp>
 #include "tiny_obj_loader.h"
 
-#define FOCAL_DIST 5.f
-#define LENS_RADIUS 1.5f
+#define FOCAL_DIST 6.5f
+#define LENS_RADIUS 2.5f
 
 Scene::Scene(string filename) {
 	cout << "Reading scene from " << filename << " ..." << endl;

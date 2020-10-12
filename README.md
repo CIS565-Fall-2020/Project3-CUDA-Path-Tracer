@@ -23,6 +23,11 @@ GPU : NVIDIA GeForce RTX 2060
 
 ### Diffuse Reflective and Refractive Objects 
 
+Implemented materials like diffuse, specular with reflective and refractive surfaces. For diffuse, the given ray can bounce off the hemisphere covering the intersection point with equal probability.
+So, we sample a point on this hemisphere randomly and set the reflected ray direction to be so. For reflective surfaces, the ray bounces off the surface with with the same angle as the angle of 
+incidence from the normal, i.e, angle of reflection should be the same as angle of incidence from the normal. For refractive surfaces, the ray passes through the point of intersection. But, due to total
+internal reflection, if the angle of incidence is less than critical angle, the surface behaves as a reflective surface and the ray reflects out. 
+In the images below, you can see the spheres and cubes of different materials. 
 <p float="left">
   <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
   <img src="/img/renders/cornell1.png" height = "400" width = "400" />
@@ -32,11 +37,20 @@ GPU : NVIDIA GeForce RTX 2060
 
 
 ### Depth Of Field 
+Depth of field is an effect produced by the camera in which the lens focuses on objects only at a certain distance called focal length and blurs the rest of the objects. This is implemented in the pathtracer by sampling a point
+from the lens as we were sampling it from a square plane and setting that as the ray origin and the direction based on the point of focus. 
 
 <p float="left">
   <img src="/img/renders/dof_1.png" height = "400" width = "400" />
   <img src="/img/renders/dof_2.png" height = "400" width = "400" /> 
   <img src="/img/renders/refr_dof.png" height = "400" width = "400" /> 
+</p>
+
+#### - Bokeh 
+Bokeh effect can be achieved by using a shaped lens on a regular camera. In our virtual camera, we have to map the points we sample to a particular shape in order to achieve it.
+
+<p float = "left">
+ <img src="/img/renders/bokeh.png" height = "400" width = "400" />
 </p>
 
 ### Motion Blur 
@@ -49,6 +63,11 @@ GPU : NVIDIA GeForce RTX 2060
 
 
 ### OBJ Mesh Loading
+Used tiny_obj_loader to import obj mesh models into the scene. Once we have the triangle data, we check against each triangle in the mesh for intersection with our ray. Since this 
+would lead to numerous computations which are pointless, we cull the number of rays to be tested against all triangles by first checking the ray against the bounding box (min-max corner box)
+, which is just one simple additional check, to see if the ray intersects the mesh at all. 
+
+I have imported the following models into my path tracer. All of these were rendered within 20 mins. 
 
 #### 1) Charizard 
 
@@ -77,7 +96,7 @@ GPU : NVIDIA GeForce RTX 2060
 
 
 ### Direct Lighting 
-
+In our path tracer, at each bounce, the direction 
 With vs. Without 
  <p float="left">
  <img src="/img/renders/myboxdl.png" height = "400" width = "400" />
@@ -98,8 +117,7 @@ With vs. Without
 
 ## PATH TRACER 
 
-Path tracing is a type of ray tracing. The path tracing algorithm then takes a random sampling of all of the rays to create the final image. 
-This results in sampling a variety of different types of lighting, but especially global illumination.
+Path tracing is a type of ray tracing which takes a random sampling of all of the rays to create the final image. This results in sampling a variety of different types of lighting, but especially global illumination.
 we see things because light emitted by light sources such as the sun bounces off of the surface of objects. When light rays bounce only once from the surface of an object to reach the eye, we speak of direct illumination. But when light rays are emitted by a light source, they can bounce off of the surface of objects multiple times before reaching the eye. 
 This is what we call indirect illumination because light rays follow complex paths before entering the eye.
 
@@ -107,7 +125,7 @@ This is what we call indirect illumination because light rays follow complex pat
 
  <p float="left">
  <img src="/img/pathtracer1.png" height = "300" width = "300" />
- <img src="/img/pathtracer2.png"/>
+ <img src="/img/pathtracer2.png" height = "365" width = "286"/>
 </p>
 
 

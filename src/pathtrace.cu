@@ -25,12 +25,13 @@
 //#define CACHE_FIRST_BOUNCE 
 #define STREAM_COMPACT_RAYS 
 #define ANTI_ALIASING
-//#define DEPTH_OF_FIELD
+#define DEPTH_OF_FIELD
 #define DIRECT_LIGHTING 
 //#define MOTION_BLUR 
 //#define MOTION_BLUR_2 //Ghost mode lol 
-//#define BOKEH
+#define BOKEH
 #define BOUNDING_VOLUME
+//#define PRINT_TIME
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -258,6 +259,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 
 #ifdef BOKEH
 			point_on_lens = glm::vec2(cam.lensRadius * glm::vec3(glm::rotate(sample, 45.f), 0.f));
+			//point_on_lens = glm::vec2(squareToBokeh(sample)); 
 #else
 			point_on_lens = glm::vec2(squareToDiskConcentric(sample)) * cam.lensRadius;
 #endif // BOKEH
@@ -837,11 +839,14 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 	num_paths = dev_path_end - dev_paths;
 #endif // USE_SHADE_MATERIAL
 
+
 	//Ending GPU Timer here 
 	timer().endGpuTimer();
 
+#ifdef PRINT_TIME
 	std::cout << "Time Taken for pathtracing : " << iter << " " << std::endl;
 	printElapsedTime(timer().getGpuElapsedTimeForPreviousOperation(), "(CUDA Measured)");
+#endif //PRINT_TIME
 
 	// Assemble this iteration and apply it to the image
 	dim3 numBlocksPixels = (pixelcount + blockSize1d - 1) / blockSize1d;
