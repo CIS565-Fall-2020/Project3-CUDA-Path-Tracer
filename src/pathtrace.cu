@@ -31,8 +31,8 @@
 //#define MOTION_BLUR 
 //#define MOTION_BLUR_2 //Ghost mode lol 
 //#define BOKEH
-#define BOUNDING_VOLUME
-//#define PRINT_TIME
+//#define BOUNDING_VOLUME
+#define PRINT_TIME
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)

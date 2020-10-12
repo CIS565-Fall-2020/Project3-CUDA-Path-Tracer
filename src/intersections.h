@@ -248,6 +248,8 @@ __device__ void barycentric_interpolation(glm::vec3 ray_origin , glm::vec3 ray_d
 
 }
 
+//Same as boxVolumeTest 
+//Only updated min and max corner values
 __host__ __device__ void meshBoundingVolumeTest(Geom box, Ray r, glm::vec3 minCorner, 
      glm::vec3 maxCorner, glm::vec3& intersectionPoint, bool& success)
 {

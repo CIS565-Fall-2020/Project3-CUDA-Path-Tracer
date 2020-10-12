@@ -164,6 +164,10 @@ for different number of iterations.
 We store the initial ray bounces in a special cache buffer for reusing it in all the next iterations. The graph below depicts the effect of caching at different iterations
 <img src="/img/caching.png"/>
 
+### Bounding volume intersection culling
+The graph below shows the output with and without Bounding volume intersection culling on our meshes. We can see an improvement in performance when we first perform 
+a ray test on the bounding box and if the ray succeeds, only then test it against all the mesh triangles. 
+<img src="/img/cull.png"/>
 
 ## Bloopers 
 These are all the silly renders I came across while working on my path tracer.

@@ -84,7 +84,6 @@ __host__ __device__ void refract(PathSegment& pathSegment, glm::vec3 intersect,
 	thrust::default_random_engine& rng)
 {
 	//PBRT REFRACT 
-
 	float cosThetaI = glm::dot(-pathSegment.ray.direction, normal);
 	cosThetaI = glm::clamp(cosThetaI, -1.f, 1.f);
 	float eta = 1.f;

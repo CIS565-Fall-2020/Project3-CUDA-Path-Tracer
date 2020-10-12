@@ -3,7 +3,7 @@
 #include <cstring>
 
 //Change the filename here 
-#define OBJ_FILENAME std::string("../scenes/objs/deer.obj")
+#define OBJ_FILENAME std::string("../scenes/objs/unicorn.obj")
 #define OBJ_LOADING 1
 
 static std::string startTimeString;
