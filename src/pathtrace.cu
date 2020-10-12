@@ -23,7 +23,7 @@
 #define USE_SHADE_MATERIAL
 #define SORT_RAYS_BY_MATERIALS 
 //#define CACHE_FIRST_BOUNCE 
-//#define STREAM_COMPACT_RAYS 
+#define STREAM_COMPACT_RAYS 
 #define ANTI_ALIASING
 //#define DEPTH_OF_FIELD
 #define DIRECT_LIGHTING 
@@ -522,7 +522,7 @@ __global__ void shadeMaterialDirectLighting(
 		thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
 		//thrust::uniform_real_distribution<float> u01(0, 1);
 
-		if (currpath.remainingBounces != 1 && currpath.remainingBounces > 0 && currisect.t > 0.f)
+		if (currpath.remainingBounces != 2 && currpath.remainingBounces > 0 && currisect.t > 0.f)
 		{
 			Material material = materials[currisect.materialId];
 			glm::vec3 materialColor = material.color;
@@ -556,7 +556,7 @@ __global__ void shadeMaterialDirectLighting(
 			// used for opacity, in which case they can indicate "no opacity".
 			// This can be useful for post-processing and image compositing.
 		}
-		else if (currpath.remainingBounces == 1 && currisect.t > 0.f)
+		else if (currpath.remainingBounces == 2 && currisect.t > 0.f)
 		{
 			Material material = materials[currisect.materialId];
 			glm::vec3 materialColor = material.color;
@@ -828,8 +828,8 @@ void pathtrace(uchar4* pbo, int frame, int iter) {
 		}
 		depth++;
 #else
-		depth++; 
-		iterationComplete = true; 
+		depth++;
+		iterationComplete = true;
 #endif // STREAM_COMPACT_RAYS
 	}
 

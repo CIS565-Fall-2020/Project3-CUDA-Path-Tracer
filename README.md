@@ -103,24 +103,35 @@ This results in sampling a variety of different types of lighting, but especiall
 we see things because light emitted by light sources such as the sun bounces off of the surface of objects. When light rays bounce only once from the surface of an object to reach the eye, we speak of direct illumination. But when light rays are emitted by a light source, they can bounce off of the surface of objects multiple times before reaching the eye. 
 This is what we call indirect illumination because light rays follow complex paths before entering the eye.
 
-<img src="/img/dlandindl.png" height = "400" width = "400" />
+<img src="/img/dlandindl.png"/>
 
  <p float="left">
- <img src="/img/pathtracer1.png" height = "400" width = "400" />
- <img src="/img/pathtracer2.png" height = "400" width = "400" />
+ <img src="/img/pathtracer1.png" height = "300" width = "300" />
+ <img src="/img/pathtracer2.png" height = "300" width = "300" />
 </p>
 
 
 ## OPTIMIZATIONS 
 
 ### Sorting Rays by materials 
+<img src="/img/raysort.png" height = "400" width = "400" />
 
 ### Steam Compacting dead rays 
+<img src="/img/sc.png" height = "400" width = "400" />
 
 ### Caching first bounce 
+<img src="/img/caching.png" height = "400" width = "400" />
 
 
 ## Bloopers 
 
-![bloop](img/blooper3.png)
+ <p float="left">
+ <img src="/img/bloop_refr.png" height = "300" width = "300" />
+ <img src="/img/bloop_sc.png" height = "300" width = "300" />
+ <img src="/img/bloop_dl.png" height = "300" width = "300" />
+<img src="/img/bloop_obj.png" height = "300" width = "300" />
+ <img src="/img/bloop_aa_cache.png" height = "300" width = "300" />
+<img src="/img/blooper3" height = "300" width = "300" />
+</p>
+
 
