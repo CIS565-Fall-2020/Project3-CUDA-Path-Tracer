@@ -21,6 +21,11 @@ GPU : NVIDIA GeForce RTX 2060
 
 ## OUTPUT 
 
+<p float="left">
+ <img src="/img/renders/unicorn_1.png" height = "400" width = "400" />
+ <img src="/img/renders/deer_int.png" height = "400" width = "400" />
+<img src="/img/renders/bokeh_2.png" height = "400" width = "400" />
+</p>
 
 ## PATH TRACER 
 
