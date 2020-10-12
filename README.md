@@ -42,9 +42,9 @@ Sphere that reflects and refracts!
 
 #### Black and White Vignette Post Process Shader
 
-![](C:/Users/Helen/Documents/cis565/hw04/img/black.png)
+![](img/black.png)
 
-![](C:/Users/Helen/Documents/cis565/hw04/img/blacklabeled.png)
+![](img/blacklabeled.png)
 
 Used final rays to filter the image. Minimal performance impact.
 
