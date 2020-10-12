@@ -107,31 +107,31 @@ This is what we call indirect illumination because light rays follow complex pat
 
  <p float="left">
  <img src="/img/pathtracer1.png" height = "300" width = "300" />
- <img src="/img/pathtracer2.png" height = "300" width = "300" />
+ <img src="/img/pathtracer2.png"/>
 </p>
 
 
 ## OPTIMIZATIONS 
 
 ### Sorting Rays by materials 
-<img src="/img/raysort.png" height = "400" width = "400" />
+<img src="/img/raysort.png"/>
 
 ### Steam Compacting dead rays 
-<img src="/img/sc.png" height = "400" width = "400" />
+<img src="/img/sc.png"/>
 
 ### Caching first bounce 
-<img src="/img/caching.png" height = "400" width = "400" />
+<img src="/img/caching.png"/>
 
 
 ## Bloopers 
 
  <p float="left">
- <img src="/img/bloop_refr.png" height = "300" width = "300" />
- <img src="/img/bloop_sc.png" height = "300" width = "300" />
- <img src="/img/bloop_dl.png" height = "300" width = "300" />
-<img src="/img/bloop_obj.png" height = "300" width = "300" />
- <img src="/img/bloop_aa_cache.png" height = "300" width = "300" />
-<img src="/img/blooper3" height = "300" width = "300" />
+ <img src="/img/bloop_refr.png" height = "400" width = "400" />
+ <img src="/img/bloop_sc.png" height = "400" width = "400" />
+ <img src="/img/bloop_dl_2.png" height = "400" width = "400" />
+<img src="/img/bloop_obj.png" height = "400" width = "400" />
+ <img src="/img/bloop_aa_cache.png" height = "400" width = "400" />
+<img src="/img/blooper3.png" height = "400" width = "400" />
 </p>
 
 
