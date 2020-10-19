@@ -8,7 +8,7 @@ CUDA Path Tracer
 * Tested on: Windows 10, Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz 16.0GB, GeForce GTX 1050 (Personal)
 * Modified CMakeLists.txt
 
-![](img/heart_lower_sample.png)
+![](img/heart.png)
 
 ### Visual Features
 
@@ -16,7 +16,7 @@ CUDA Path Tracer
 
 ![](img/heart_lower_sample.png)
 
-The heart is an obj file with 1792 triangles
+The heart is an obj file with 1792 triangles, with perfect specular shader and rendered at ~1000 iterations.
 
 
 
