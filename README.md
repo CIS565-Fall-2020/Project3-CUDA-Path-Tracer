@@ -16,7 +16,7 @@ CUDA Path Tracer
 
 ![](img/heart_lower_sample.png)
 
-The heart is an obj file with 1792 triangles, with perfect specular shader and rendered at ~1000 iterations.
+The heart is an obj file with 1792 triangles, with perfect specular shader and rendered at ~1000 iterations. The floor below the heart is a diffuse surface with file-loaded texture. The wall behind the camera (reflected in the heart) is procedurally generated. These textures are showcased in more detail below. 
 
 
 
