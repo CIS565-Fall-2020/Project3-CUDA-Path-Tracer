@@ -168,8 +168,8 @@ void saveImage() {
     img.savePNG(filename);
     //img.saveHDR(filename);  // Save a Radiance HDR file
 }
-double total_time = 0.0;
-int denoise_times = 0;
+// double total_time = 0.0;
+// int denoise_times = 0;
 void runCuda() {
     if (lastLoopIterations != ui_iterations) {
         lastLoopIterations = ui_iterations;
@@ -236,14 +236,14 @@ void runCuda() {
     }
     else {
         if (ui_denoise) {
-            Timer denoise_timer;
-            denoise_timer.start();
-            // denoise(pbo_dptr, iteration, ui_filterSize);
-            gauss_denoise(pbo_dptr, iteration, ui_filterSize);
-            denoise_timer.stop();
-            total_time += denoise_timer.elapsedMilliseconds();
-            denoise_times += 1;
-            std::cout << "Avg denoiser Milliseconds: " << total_time / denoise_times << std::endl;
+            // Timer denoise_timer;
+            // denoise_timer.start();
+            denoise(pbo_dptr, iteration, ui_filterSize);
+            // gauss_denoise(pbo_dptr, iteration, ui_filterSize);
+            // denoise_timer.stop();
+            // total_time += denoise_timer.elapsedMilliseconds();
+            // denoise_times += 1;
+            // std::cout << "Avg denoiser Milliseconds: " << total_time / denoise_times << std::endl;
         }
         else
         {
