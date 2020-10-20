@@ -111,7 +111,7 @@ SCALE       .01 10 10
 // glTF duck
 OBJECT 6
 mesh
-C:\\JiaruiYan\\MasterDegreeProjects\\CIS565\\Proj3\\Project3-CUDA-Path-Tracer\\read_models\\texture_box\\BoxTextured.gltf
+..\\read_models\\texture_box\\BoxTextured.gltf
 material 1
 TRANS       -1 4 -1
 ROTAT       -20 0 0

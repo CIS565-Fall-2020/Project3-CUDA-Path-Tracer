@@ -1,4 +1,4 @@
-CUDA Path Tracer
+CUDA Denoiser
 ================
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture**
@@ -7,120 +7,111 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/jiarui-yan-a06bb5197?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BvRlITiOMSt%2B9Mgg6SZFKDQ%3D%3D), [personal website](https://jiaruiyan.pb.online/), [twitter](https://twitter.com/JerryYan1997), etc.
 * Tested on: Windows 10 Home, i7-9700K @ 3.60GHz 16GB DDR4 RAM, RTX 2070 SUPER 8GB Dedicated GPU memory (Personal desktop)
 
-
 ## Features
 
-* Refraction with Frensel effects
+* A-trous wavelet filter
 
-* Physically-based depth-of-field
+* Gaussian filtering
 
-* Stochastic Sampled Antialiasing
+* Performance Analysis
 
-* Arbitrary mesh loading and rendering with tinygltf
+## Result
 
-* Better hemisphere sampling methods (Jittered)
-
-* Texture mapping
-
-* Direct lighting
-
-* Path continuation/termination using Stream Compaction
-
-* Material sort
-
-## Result (Small Yellow Duck)
-
-![pic 1](./img/title_image.png)
-
-### Refraction with Frensel effects
-
-For refraction with Frensel effects, we want a refractive material to have reflection effects because in our life, material normally has both reflective effect and refractive effect. Here is an example for the glass ball. As we can see, we can see reflection on the glass ball from the light source and the focused light on the floor and refraction of the red wall can also be seen on this ball. 
-
-![pic 1](./img/refl_refra.png)
-
-### Physically-based depth-of-field
-
-For the depth of field, it uses the thin lens camera model from [PBRT 6.2.3]. Here in the example, I gradually increase the focal length. At first, it is not clear because the focal length is in front of the duck model. Then, the duck becomes clear as the focal length is increased. Finally, it becomes unclear again as the focal length gets away from the suitable one. Besides, in order to make this process clear, this rendering is done on direct light integrator, which can give us a relative good result quickly. 
-
-![pic 1](./img/DOF_Duck.gif)
-
-### Stochastic Sampled Antialiasing
-
-As for antialiasing, this project use Stochastic Sampled Antialiasing method. It basically means for each iteration, shooting light from the camera would be jittered by a random number. In this way, undesirable artifacts can be avoided. Here is an example. As we can see, the left hand side rendering has less artifacts than the right hand sided one. In order to make it more obvious, let's take a look at the right wall.
-
-![pic 1](./img/anti_aliasing_overall.png)
-
-As we can see from the zoomed view of the right wall, the right hand side rendering has clear pixel like wall, while the left hand side one is much more smooth than its counterpart. It is achieved by Stochastic Sampled Antialiasing, because for each pixel it can average a little bit different color from adjacency instead of color from one hit point.
-
-![pic 1](./img/anti_aliasing_detail_comparsion.png)
-
-### Arbitrary mesh loading and rendering with tinygltf
-
-For this project, I use gltf2.0 as my mesh format. Meanwhile, I also use a thrid party library named "tinygltf" to facilicate my work. Here is an example of loading an arbitrary mesh. All the models and textures used in this project are got from the official github page of the gltf2.0.
-
-Another things needs to be noted is that I put the absolute path into the scene file for loading a target mesh. Therefore, if you want to build this project on your machine and try your own 3D models, please remember change these paths in the scene file. Besides, I didn't include mine in this project and they are just from the offical site and they have same names.
-
-![pic 1](./img/arbitrary_mesh.png)
-
-### Better hemisphere sampling methods (Jittered)
-
-Besides, I also implement two sampling methods in this project. They are Jittered sampling and Random sampling. Jittered sampling's sampling directions would concentrate more to the top of hemisphere, which can help integrator get more good sampling information by comare to the totally random one. Here is an comparsion between them. As we can see, the Jittered one's shadow is relative small. Meanwhile, although they have difference at first, they are almost same finally. 
-
-![pic 1](./img/sampling_method.png)
-
-### Texture mapping
-
-As for texturing mapping, tinygltf has already prodvide useful API to load .gltf files with textures. Besides, .gltf file would also provide UV information for triangles. Therefore, we can map texture color on the mesh by finding the corresponding pixel indices calculated from UV coordinates.
-
-![pic 1](./img/texture_mapping.png)
-
-### Direct lighting
-
-As you can see from the rendering before, there are some relatively unclear images with lots of noise. They are produced by navie integrator. One good thing about the navie integrator is that it can provude global illumation. However, owing to the fact that a path would bounce in the scene for lots of times before it hits the light source, it also takes lots of time to get a clear rendering result. Normally, in order to get a clear result, it will take 3000 iterations. However, for direct lighting integrator, 30 iterations is normally enough, because at first bounce, it directly finds a point on the light source. As a result, it is really fast but it doesn't have indirect light color. Here is an example compares their results when the render only runs 30 iterations.
-
-![pic 1](./img/integrators.png)
+![pic 1](./img/Capture11.PNG)
 
 ## Performance analysis
 
-### Why material sort can affect rendering performance
+### How much time denoising adds to renders
 
-Material sort can be beneficial to the performance because expensive BSDF computations lead to longer computation for some rays. As a result, the rays' BSDF computation that takes less time would just wait for the expensive ones. Therefore, sort them can help performance. However, according to my experiment, when I conduct tests for app with material sort and without matierial sort under 3000 iterations, the material sort one takes 104709 milliseconds, and the no material sort one takes 50011
-milliseconds. I think this is caused by the fact that BSDF computation now is happened in a large kernel and it is done by if-else branches, which means different BSDF computation now just have no difference.
+Here is an comparison between different filter size of A-Trous denoiser and a iteration of path trace.
 
-### Cache first bounce influence for different max ray depths
+![pic 1](./img/denoiser_time_add.PNG)
 
-The experiments are conducted on the same number of iterations which is 3000 iterations for different max ray depths. 
+As we can see from the graph above, the demoiser can be almost ignored in terms of performance by comparing to an iteration of the path tracer even though we increase the filter size to a large scale for the denoiser. 
 
-![pic 1](./img/Performance.PNG)
+### How denoising influences the number of iterations needed to get an "acceptably smooth" result
 
-As we can see from the graph above, with more depth, the performance is natually going to be bad. Besides, the experiments using first bounce cache always perform better than their counterparts that don't use it. 
+As for acceptably smooth result, I think for different scene it would be different. So, I choose the 'cornell_ceiling_light' under the scenes folder as benchmark here. For me, 1000 iterations for purely path tracer is good for me, while 100 iterations with denoiser that has a 17 width kernel is cool for me too. Here is the comparsion for these two images:
 
-### Performance gain for bounding box of the mesh
+![pic 1](./img/acceptable_scene.png)
 
-The experiments are confucted on the duck scenario with different iterations. The integrator here is naive integrator.
+### How denoiser impacts runtime at different resolutions
 
-![pic 1](./img/BoundingBoxPerformance.PNG)
+According to the algorithm of A-Torus denoising, it is not heavily affected by the resolution because all the operations are relatively cheap by comare to an iteration of path tracing. Here is an experiment result:
 
-As we can see from the analysis above, with more iterations the performance gain of the bounding box is more appearant. This is caused by the fact that for each iteration the bounding box can contribute a little bit performance gain. Therefore, after several iterations, the gain would be appearant.
+![pic 1](./img/different_resolution.PNG)
 
-### Effects of stream compaction within a single iteration
+These experiments are conducted under the environment that the dim of the filter is 17. As we can see, the percentage of one path trace iteration over a denoise process is decreasing as the resolution goes up. Therefore, we can conclude that high resolution can help to eliminate the time consumption of the denoiser. 
 
-Here, I am going to explore the effect of stream compaction within a single iteration. This method is benefical to the perforamnce, because it can significantly reduce the number of tested path within an iteration. Here is a plot to illustrate it. 
+### How effective/ineffective it is with different material types
 
-![pic 1](./img/RemainLightNum.PNG)
+For different material types, the denoiser would produce different results. Here are some experiments conducted on 100 iterations and 1000 iterations with filter dim that is 17.
 
-As we can see from the plot above, the number of remaining light that pass the stream compation early termination would be smaller and smaller. Finally, there will be no light that needs interestion or shading tests. So, we can conclude that with stream compaction can be really helpful to the scenarios that require several depth. 
+![pic 1](./img/100itr_compare.png)
 
-### Different effects of an open scene and a closed scene under stream compaction
+![pic 1](./img/1000itr_compare.png)
 
-For different scene, the early termination may has different effect. For an open scene, a light is easier to bounce out of the scene than an closed scene. Therefore, we can expect that even though the number of light at first would be same, the number of remaining light in the open scene would be less than the counterpart number in the closed scene. Here is the graph illustrates this.
+As we can see from the comparsion above, for reflective and frensel material, the denoiser would blur lots of subtle details like reflection and refraction of the nearby objects, which are important to imply their traits. However, for diffuse material, it almost recovers the appearance of the ground truth. Therefore, from my persepctive, A-Torus denoiser is effective for diffuse material, while ineffective for specular type materials. 
 
-![pic 1](./img/RemainLightNumDiffScene.PNG)
+### Compare visual results and performance for varying filter sizes
 
-## Blooper
+All experiments in this section are conducted with 800x800 resolution and 100 iterations. Here is an example that illustrates the difference results of different kernel sizes.
 
-![pic 1](./img/blooper.png)
+![pic 1](./img/filter_size_compare.png)
 
-## Third party software
+As we can see from the comparsion above, when the kernel dimision is below 17, the artefacts are obvious. However, when we increase the filter size, these artefacts would dispear and the result quality would remain at the same level. 
 
-* [tinygltf](https://github.com/syoyo/tinygltf/)
+Then, let's take a look at the performance of different kernel size.
+
+![pic 1](./img/different_kernel_size_influence.PNG)
+
+As we can see from the graph above, the time-consumption of different kernel size are increasing when we increase the size of these kernels.
+
+### Compare across different scenes
+
+In the A-Trous denoiser, the variance would significantly affect the result of denoise. Therefore, with differnt G-Buffer from different angles for a same scene, we may get different results. Here are two comparsion for more involved scenes. All experiments in this section are conducted with 100 path tracer iterations and 65 dim filter size.
+
+First of all, let's take a look at the open scene of the yellow duck. As we can see, from the bottom-up view, the result doesn't look good.
+
+![pic 1](./img/yellow_duck_pool_compare1.png)
+
+Besides, from the top-down view, the result is also not as good as the cloesd scene shown before.
+
+![pic 1](./img/yellow_duck_pool_comare2.png)
+
+Then, let's take a looks at the closed scene for the yellow class duck.
+
+![pic 1](./img/class_yellow_duck.png)
+
+As we can see from the image above, it is acceptable but not as good as other material types like diffuse materials. 
+
+### Compare A-trous and Gaussian filtering
+
+According to the description of paper, A-Trous filter can significantly reduce the sample number of Gaussian filter and keep the quality of sampling. As a result, we can expect that with A-Torus filter can performs much better than the Gaussian filter. Here is an comparsion of the image quality of different filter.
+
+![pic 1](./img/Gaussian_filter_comparsion.png)
+
+As we can see from the comparsion above, with 17 dim filter size with both Gaussian and A-Torus, the difference between the quality of different kernel is not obvious. The only difference that I can tell is the subtle difference for the reflection material that I highlight in the image above. Therefore, firstly we can conclude that the difference of the result is not obvious. 
+
+Then, let's look at the difference of their performance.
+
+![pic 1](./img/Gaussian_AT_Comparsion.PNG)
+
+As we can see the plot above, the performance difference is obvious. Especially, when the filter size dim is above 33, the A-Torus filter would be obviously faster than the Gaussian filter. Meanwhile, their image quality doesn't have appearant difference. Therefore, we can guess that this is the reason why authors in this paper would choose to use the A-Torus filter instead of the Gaussian filter. 
+
+## Configuration
+
+In order to successfully use the features mentioned and produce the performance data presented, you may want to follow the instructions below.
+
+### How to switch to gaussian filtering
+
+If you search 'gauss_denoise' keywords in main.cpp, you can find that it has been commented out. Everything about gaussian filtering is written in this function. Meanwhile, 'denoise' function above it represents the A-Torus filter. 
+
+### The calculation of variance for position map, normal map and color map
+
+Owing to the fact that this paper mentions that the weight used in GUI represents variance for different maps and I found that it is time-consuming to adjust these parameters to generate an acceptable image, I decide to deprecate these parameters and calculate them by using these maps directly. It looks like it works well. So, I just keep them in this way. As a result, the weight parameters in GUI won't work.
+
+## Reference
+
+[Edge-Avoiding À-Trous Wavelet Transform for fast Global
+Illumination Filtering](https://jo.dreggn.org/home/2010_atrous.pdf)

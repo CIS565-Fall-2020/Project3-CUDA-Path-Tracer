@@ -62,7 +62,7 @@ EMITTANCE   0
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  3000
+ITERATIONS  100
 DEPTH       8
 FILE        cornell
 EYE         0.0 5 10.5
@@ -113,7 +113,7 @@ SCALE       .01 6 10
 // glTF duck
 OBJECT 5
 mesh
-C:\\JiaruiYan\\MasterDegreeProjects\\CIS565\\Proj3\\Project3-CUDA-Path-Tracer\\read_models\\duck\\Duck.gltf
+..\\read_models\\duck\\Duck.gltf
 material 1
 TRANS       0 6 0
 ROTAT       0 -45 0

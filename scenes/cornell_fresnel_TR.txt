@@ -50,9 +50,9 @@ EMITTANCE   0
 
 // Transimissive + Reflective
 MATERIAL 5
-RGB         .98 .98 .80
+RGB         .98 .98 .98
 SPECEX      1
-SPECRGB     .98 .98 0
+SPECRGB     .98 .98 .98
 REFL        1
 REFR        1
 REFRIOR     1.5

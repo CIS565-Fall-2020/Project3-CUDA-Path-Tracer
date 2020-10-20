@@ -95,6 +95,12 @@ struct ShadeableIntersection {
   bool outside;
 };
 
+struct GBufferPixel {
+    float t;
+    glm::vec3 pos;
+    glm::vec3 normal;
+};
+
 struct OctreeNode {
     glm::vec3 minCorner;
     glm::vec3 maxCorner;
