@@ -244,21 +244,27 @@ __host__ __device__ float tanglecubeIntersectionTest(Geom tanglecube, Ray r,
     bool intersected = false;
     float threshold = 0.01f;
     float t = 0;
+    float s = tanglecube.scale.x;
 
     while (t < 20.f) {
-        float d = computeTanglecubeSDF(currPos);
+        float d = s * computeTanglecubeSDF(currPos / s);
         if (fabs(d) < threshold) {
             intersected = true;
             // compute normal
-            computeTanglecubeNormal(currPos, normal);
+            computeTanglecubeNormal(currPos / s, normal);
             intersectionPoint = multiplyMV(tanglecube.transform, glm::vec4(currPos, 1.f));
             normal = glm::normalize(multiplyMV(tanglecube.invTranspose, glm::vec4(normal, 0.f)));
             break;
         }
         currPos = ro + rd * t;
-        t += 0.0001f;
+        t += 0.0005f;
     }
-    if (!intersected) t = -1.f;
+    if (!intersected) {
+        t = -1.f;
+    }
+    else {
+        t -= 0.0005f;
+    }
     return t;
 }
 

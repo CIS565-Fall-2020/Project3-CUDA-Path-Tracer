@@ -478,7 +478,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
         if (!cacheFirstBounce) {
             thrust::default_random_engine rng1 = makeSeededRandomEngine(iter, x, 0);
             thrust::default_random_engine rng2 = makeSeededRandomEngine(iter, y, 0);
-            thrust::uniform_real_distribution<float> u01(0, 1);
+            thrust::uniform_real_distribution<float> u01(-0.5f, 0.5f);
             s = glm::vec2(cam.pixelLength.x * u01(rng1), cam.pixelLength.y * u01(rng2));
         }
 

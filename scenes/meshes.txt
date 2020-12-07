@@ -25,60 +25,59 @@ TEXTURE     0
 // Diffuse red
 MATERIAL 2
 TYPE	    DIFFUSE
-RGB         .93 .65 .71
+RGB         .85 .35 .35
 SPECEX      0
-SPECRGB     0 0 0
+SPECRGB     .85 .35 .35
 REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
 TEXTURE     0
 
-// Diffuse green
+// Diffuse blue
 MATERIAL 3
 TYPE	    DIFFUSE
-RGB         .74 .59 .88
+RGB         .35 .35 .85
 SPECEX      0
-SPECRGB     0 0 0
+SPECRGB     .35 .35 .85
 REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
 TEXTURE     0
 
-// glossy
+// Fresnel
 MATERIAL 4
-TYPE       DIFFUSE
-RGB        0.55 0.56 0.86
-SPECEX     0
-SPECRGB    0.55 0.56 0.86
-REFL       1
-RERF       0
-REFRIOR    0
-EMITTANCE  0
-TEXTURE    0
+TYPE	    DIFFUSE
+RGB         .98 .65 .98
+SPECEX      3.4
+SPECRGB     .98 .65 .98
+REFL        1
+REFR        1
+REFRIOR     2.1
+EMITTANCE   0
+TEXTURE     0
 
 // Camera
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  25
+ITERATIONS  10000
 DEPTH       8
 FILE        cornell
 LENS        0
 FOCAL       8.7
-EYE         0.0 5 10.5
+EYE         0.0 5 9
 LOOKAT      0 5 0
 UP          0 1 0
-
 
 // Ceiling light
 OBJECT 0
 cube
 material 0
-TRANS       2.5 10 2
+TRANS       0 10 1.5
 ROTAT       0 0 0
-SCALE       1 .1 1
+SCALE       4 .25 4
 
 // Floor
 OBJECT 1
@@ -121,17 +120,8 @@ ROTAT       0 0 0
 SCALE       .01 10 10
 
 OBJECT 6
-mesh
-../scenes/meshes/dodecahedron.gltf
+tanglecube
 material 4
-TRANS   0  5  0
-ROTAT   30 45 0
-SCALE   3 3 3
-
-// Ceiling light
-OBJECT 7
-cube
-material 0
-TRANS       -2.5 10 2
-ROTAT       0 0 0
-SCALE       1 .1 1
+TRANS       -1.7 3.5 4
+ROTAT       30 50 25
+SCALE       0.6 0.6 0.6
