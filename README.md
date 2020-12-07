@@ -7,11 +7,7 @@ CUDA Path Tracer
   * [LinkedIn](https://www.linkedin.com/in/gizemdal), [personal website](https://www.gizemdal.com/)
 * Tested on: Predator G3-571 Intel(R) Core(TM) i7-7700HQ CPU @ 2.80 GHz 2.81 GHz - Personal computer
 
-## Sneak Peek ##
-
-<img src="img/8000iter_mat.png" alt="sneak peek" width=1000>
-
-*Scene: Specular Box; Iterations: 8000; Material sort: disabled; Ray depth: 8; Anti-aliasing: enabled*
+<img src="img/renders/cornell_4.png" alt="sneak peek" width=800>
 
 ## Project Description ##
 
