@@ -61,6 +61,8 @@ Lower specular exponent values give results that are closer to diffuse scatterin
 :---: | :---: | :---:
 <img src="img/renders/ico_1500.png" alt="sneak peek" width=300> | <img src="img/renders/magnolia_1000.png" alt="sneak peek" width=300> | <img src="img/renders/duck_1200.png" alt="sneak peek" width=300>
 
+In order to bring the mesh data into C++, I used the [tinygltf](https://github.com/syoyo/tinygltf/) library. I used the VBOs from the imported data to create the mesh triangles and store triangle information per arbitrary mesh.
+
 Bounding volume intersection culling is applied at the ray-geometry intersection test to reduce the number of rays that have to be checked against the entire mesh by first checking rays against a volume that completely bounds the mesh. This feature is implemented as toggleable for performance analysis purposes. Pressing the 'B' key while running the GPU renderer will enable this feature.
 
 In order to smoothen the triangles on round GLTF meshes, the intersection normal is computed from the barycentric interpolation of the 3 normals from the triangle vertices.
@@ -184,4 +186,8 @@ Current procedural textures supported by the renderer make many calls to noise h
 <img src="img/texture_graph.png" alt="Texture graph" width=900>
 
 Although the difference is not very significant due to the small number of iterations, using the FBM texture seems to be slightly less efficient than using Wood Noise or no texture at all. Since FBM functions usually call their helpers the octave amount of times, it is possible that these subsequent function calls could slow down the performance.
+
+## Bloopers ##
+
+<img src="img/blooper_1.png" alt="b" width=300> <img src="img/blooper_2.png" alt="b" width=300> 
 
