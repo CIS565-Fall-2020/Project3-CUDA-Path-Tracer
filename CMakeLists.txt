@@ -63,6 +63,10 @@ find_package(GLM REQUIRED)
 include_directories(${GLM_INCLUDE_DIRS})
 
 set(headers
+    external/include/json.hpp
+    external/include/material.h
+    external/include/mesh.h
+    external/include/gltf-loader.h
     src/main.h
     src/image.h
     src/interactions.h
@@ -73,9 +77,12 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    src/fresnel.h
+    src/warpfunctions.h
     )
 
 set(sources
+    external/include/gltf-loader.cc
     src/main.cpp
     src/stb.cpp
     src/image.cpp
