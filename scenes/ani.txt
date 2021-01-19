@@ -1,0 +1,181 @@
+// Camera
+CAMERA
+RES         800 800
+FOVY        45
+ITERATIONS  1024
+DEPTH       8
+FILE        forest
+EYE         21 5 -4
+LOOKAT      0 5 0
+UP          0 1 0
+
+
+// sun
+MATERIAL sun
+emissive
+RGB         6 6 6
+END
+
+// sky
+MATERIAL sky
+emissive
+NOMIS
+RGB         0.2 0.4 0.6
+END
+
+// ground_dirt1
+MATERIAL aiStandardSurface16SG
+disney
+RGB         0.4 0.2 0.0
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.5
+ROUGHNESS 0.8
+END
+
+// stone_mat
+MATERIAL aiStandardSurface4SG
+disney
+RGB         0.2 0.2 0.2
+CLEARCOAT 0.2
+CLEARCOAT_GLOSS 0.4
+END
+
+// tree11
+MATERIAL aiStandardSurface11SG
+disney
+RGB         0.2 0.17 0.15
+ROUGHNESS 0.8
+END
+
+// glasses_mat
+MATERIAL aiStandardSurface2SG
+disney
+RGB 0.93 0.82 0.0
+METALLIC 1.0
+ROUGHNESS 0.25
+END
+
+// glass2
+MATERIAL aiStandardSurface17SG
+specularTransmission
+RGB         1.0 1.0 1.0
+IOR         1.52
+END
+
+// clover1
+MATERIAL aiStandardSurface10SG
+disney
+RGB         0.02 0.25 0.0
+ROUGHNESS 0.6
+CLEARCOAT 0.6
+CLEARCOAT_GLOSS 0.5
+SHEEN 0.5
+END
+
+// grass_mat
+MATERIAL aiStandardSurface18SG
+disney
+RGB         0.2 0.35 0.0
+ROUGHNESS 0.3
+SPECULAR 0.8
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+SHEEN 0.5
+END
+
+// frog_mat
+MATERIAL aiStandardSurface3SG
+disney
+RGB         0.01 0.22 0.0
+ROUGHNESS 0.3
+SPECULAR 0.8
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+END
+
+// frog_mat2
+MATERIAL frog_mat1SG
+disney
+RGB         0.2 0.5
+ROUGHNESS 0.3
+SPECULAR 0.8
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+END
+
+// water_mat
+MATERIAL aiStandardSurface6SG
+specularTransmission
+RGB         1.0 1.0 1.0
+IOR         1.333
+END
+
+// mushroom_cap
+MATERIAL aiStandardSurface7SG
+disney
+RGB         0.36 0.02 0.02
+ROUGHNESS 0.2
+SPECULAR 0.8
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.7
+END
+
+// mushroom3
+MATERIAL aiStandardSurface8SG
+disney
+RGB         0.35 0.17 0.02
+ROUGHNESS 0.3
+SPECULAR 0.8
+CLEARCOAT 0.4
+CLEARCOAT_GLOSS 0.3
+END
+
+// mushroom_stem
+MATERIAL aiStandardSurface9SG
+disney
+RGB         0.44 0.31 0.21
+ROUGHNESS 0.6
+SPECULAR 0.8
+END
+
+// ladybug_wing_mat
+MATERIAL aiStandardSurface1SG
+disney
+RGB         1.0 0.0 0.0
+ROUGHNESS 0.2
+SPECULAR 0.8
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+END
+
+// ladybug_body
+MATERIAL aiStandardSurface14SG
+disney
+RGB         0.0 0.0 0.0
+ROUGHNESS 0.2
+SPECULAR 0.8
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+END
+
+// wings
+MATERIAL aiStandardSurface15SG
+specularTransmission
+RGB         0.8 0.8 0.8
+IOR 1.3
+END
+
+// lambert1
+MATERIAL initialShadingGroup
+diffuse
+RGB         0.5 0.5 0.5
+END
+
+// Mesh
+OBJECT 1
+mesh
+scenes/models/ani.obj
+MATERIAL initialShadingGroup
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       1 1 1

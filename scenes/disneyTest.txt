@@ -1,0 +1,690 @@
+// Camera
+CAMERA
+RES         800 800
+FOVY        30
+ITERATIONS  4096
+DEPTH       8
+FILE        disney
+EYE         15 9 22
+LOOKAT      0 1 7.5
+UP          0 1 0
+
+
+MATERIAL emissive
+emissive
+RGB         4 4 4
+END
+
+OBJECT 0
+mesh
+scenes/models/squarePlane.obj
+MATERIAL emissive
+TRANS       3 10 6
+ROTAT       0 0 0
+SCALE       3 3 3
+
+OBJECT 0
+mesh
+scenes/models/squarePlane.obj
+MATERIAL emissive
+TRANS       -3 10 9
+ROTAT       0 0 0
+SCALE       3 3 3
+
+
+
+MATERIAL sky
+emissive
+NOMIS
+RGB         0.5 0.5 0.5
+END
+
+OBJECT 0
+mesh
+scenes/models/sphere.obj
+MATERIAL sky
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       1000 1000 1000
+
+
+MATERIAL lambert
+diffuse
+RGB 0.5 0.5 0.5
+END
+
+// ground
+OBJECT ground
+mesh
+scenes/models/squarePlane.obj
+MATERIAL lambert
+TRANS 0 0 0
+SCALE 100 1 100
+
+
+
+
+
+
+
+
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.0
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 1
+TRANS -7.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.2
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 1
+TRANS -4.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.4
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 1
+TRANS -1.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 1
+TRANS 1.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 0.8
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 1
+TRANS 4.5 1 0
+SCALE 2 2 2
+
+
+MATERIAL 1
+disney
+RGB 1.0 0.2 0.5
+ROUGHNESS 1.0
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 1
+TRANS 7.5 1 0
+SCALE 2 2 2
+
+
+
+
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.8 0.2
+ROUGHNESS 0.0
+METALLIC 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 2
+TRANS -7.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.8 0.2
+ROUGHNESS 0.2
+METALLIC 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 2
+TRANS -4.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.8 0.2
+ROUGHNESS 0.4
+METALLIC 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 2
+TRANS -1.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.8 0.2
+ROUGHNESS 0.6
+METALLIC 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 2
+TRANS 1.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.8 0.2
+ROUGHNESS 0.8
+METALLIC 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 2
+TRANS 4.5 1 3
+SCALE 2 2 2
+
+
+MATERIAL 2
+disney
+RGB 1.0 0.8 0.2
+ROUGHNESS 1.0
+METALLIC 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 2
+TRANS 7.5 1 3
+SCALE 2 2 2
+
+
+
+
+
+
+MATERIAL 3
+disney
+RGB 0.2 1.0 0.5
+METALLIC 0.0
+ROUGHNESS 0.1
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 3
+TRANS -7.5 1 6
+SCALE 2 2 2
+
+
+MATERIAL 3
+disney
+RGB 0.2 1.0 0.5
+METALLIC 0.2
+ROUGHNESS 0.1
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 3
+TRANS -4.5 1 6
+SCALE 2 2 2
+
+
+MATERIAL 3
+disney
+RGB 0.2 1.0 0.5
+METALLIC 0.4
+ROUGHNESS 0.1
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 3
+TRANS -1.5 1 6
+SCALE 2 2 2
+
+
+MATERIAL 3
+disney
+RGB 0.2 1.0 0.5
+METALLIC 0.6
+ROUGHNESS 0.1
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 3
+TRANS 1.5 1 6
+SCALE 2 2 2
+
+
+MATERIAL 3
+disney
+RGB 0.2 1.0 0.5
+METALLIC 0.8
+ROUGHNESS 0.1
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 3
+TRANS 4.5 1 6
+SCALE 2 2 2
+
+
+MATERIAL 3
+disney
+RGB 0.2 1.0 0.5
+METALLIC 1.0
+ROUGHNESS 0.1
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 3
+TRANS 7.5 1 6
+SCALE 2 2 2
+
+
+
+
+
+
+
+MATERIAL 4
+disney
+RGB 0.0 0.1 0.2
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.0
+ROUGHNESS 1.0
+SPECULAR 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 4
+TRANS -7.5 1 9
+SCALE 2 2 2
+
+
+MATERIAL 4
+disney
+RGB 0.0 0.1 0.2
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.2
+ROUGHNESS 1.0
+SPECULAR 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 4
+TRANS -4.5 1 9
+SCALE 2 2 2
+
+
+MATERIAL 4
+disney
+RGB 0.0 0.1 0.2
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.4
+ROUGHNESS 1.0
+SPECULAR 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 4
+TRANS -1.5 1 9
+SCALE 2 2 2
+
+
+MATERIAL 4
+disney
+RGB 0.0 0.1 0.2
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.6
+ROUGHNESS 1.0
+SPECULAR 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 4
+TRANS 1.5 1 9
+SCALE 2 2 2
+
+
+MATERIAL 4
+disney
+RGB 0.0 0.1 0.2
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 0.8
+ROUGHNESS 1.0
+SPECULAR 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 4
+TRANS 4.5 1 9
+SCALE 2 2 2
+
+
+MATERIAL 4
+disney
+RGB 0.0 0.1 0.2
+CLEARCOAT 1.0
+CLEARCOAT_GLOSS 1.0
+ROUGHNESS 1.0
+SPECULAR 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 4
+TRANS 7.5 1 9
+SCALE 2 2 2
+
+
+
+
+
+
+
+
+MATERIAL 5
+disney
+RGB 1.0 0.2 0.2
+SHEEN 0.0
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 5
+TRANS -7.5 1 12
+SCALE 2 2 2
+
+
+MATERIAL 5
+disney
+RGB 1.0 0.2 0.2
+SHEEN 0.2
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 5
+TRANS -4.5 1 12
+SCALE 2 2 2
+
+
+MATERIAL 5
+disney
+RGB 1.0 0.2 0.2
+SHEEN 0.4
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 5
+TRANS -1.5 1 12
+SCALE 2 2 2
+
+
+MATERIAL 5
+disney
+RGB 1.0 0.2 0.2
+SHEEN 0.6
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 5
+TRANS 1.5 1 12
+SCALE 2 2 2
+
+
+MATERIAL 5
+disney
+RGB 1.0 0.2 0.2
+SHEEN 0.8
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 5
+TRANS 4.5 1 12
+SCALE 2 2 2
+
+
+MATERIAL 5
+disney
+RGB 1.0 0.2 0.2
+SHEEN 1.0
+ROUGHNESS 0.6
+SPECULAR 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 5
+TRANS 7.5 1 12
+SCALE 2 2 2
+
+
+
+
+
+
+MATERIAL 6
+disney
+RGB 0.2 0.5 1.0
+SPECULAR 0.0
+ROUGHNESS 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 6
+TRANS -7.5 1 15
+SCALE 2 2 2
+
+
+MATERIAL 6
+disney
+RGB 0.2 0.5 1.0
+SPECULAR 0.2
+ROUGHNESS 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 6
+TRANS -4.5 1 15
+SCALE 2 2 2
+
+
+MATERIAL 6
+disney
+RGB 0.2 0.5 1.0
+SPECULAR 0.4
+ROUGHNESS 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 6
+TRANS -1.5 1 15
+SCALE 2 2 2
+
+
+MATERIAL 6
+disney
+RGB 0.2 0.5 1.0
+SPECULAR 0.6
+ROUGHNESS 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 6
+TRANS 1.5 1 15
+SCALE 2 2 2
+
+
+MATERIAL 6
+disney
+RGB 0.2 0.5 1.0
+SPECULAR 0.8
+ROUGHNESS 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 6
+TRANS 4.5 1 15
+SCALE 2 2 2
+
+
+MATERIAL 6
+disney
+RGB 0.2 0.5 1.0
+SPECULAR 1.0
+ROUGHNESS 0.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL 6
+TRANS 7.5 1 15
+SCALE 2 2 2
+
+
+
+
+
+
+
+MATERIAL test1
+specularReflection
+RGB 1.0 1.0 1.0
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL test1
+TRANS 4 4 4
+SCALE 2 2 2
+
+
+
+MATERIAL test1
+specularTransmission
+RGB 1.0 1.0 1.0
+IOR 1.8
+END
+
+OBJECT
+mesh
+scenes/models/sphere.obj
+MATERIAL test1
+TRANS -4 4 11
+SCALE 2 2 2
