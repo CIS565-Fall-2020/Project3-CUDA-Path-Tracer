@@ -1,6 +1,7 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#include <chrono>
 
 static std::string startTimeString;
 
@@ -18,6 +19,8 @@ static glm::vec3 cammove;
 float zoom, theta, phi;
 glm::vec3 cameraPosition;
 glm::vec3 ogLookAt; // for recentering the camera
+
+std::chrono::high_resolution_clock::time_point startTime;
 
 Scene *scene;
 RenderState *renderState;
@@ -125,6 +128,7 @@ void runCuda() {
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
+        startTime = std::chrono::high_resolution_clock::now();
     }
 
     if (iteration < renderState->iterations) {
@@ -138,6 +142,9 @@ void runCuda() {
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
+        if (iteration == 1000) {
+            std::cout << "1000 iterations, time: " << std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count() << "\n";
+        }
     } else {
         saveImage();
         pathtraceFree();
