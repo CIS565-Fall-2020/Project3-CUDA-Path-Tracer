@@ -1,0 +1,305 @@
+{
+    "asset": {
+        "copyright": "(C)2020 69411",
+        "generator": "maya2glTF v1.1.0 c13125a0af77",
+        "version": "2.0"
+    },
+    "scenes": [
+        {
+            "nodes": [
+                0
+            ]
+        }
+    ],
+    "scene": 0,
+    "nodes": [
+        {
+            "name": "pumpkin",
+            "children": [
+                1
+            ],
+            "translation": [
+                0.24434518814086918,
+                1.7751973867416382,
+                3.20851731300354
+            ]
+        },
+        {
+            "name": "pumpkin:PIV",
+            "mesh": 0,
+            "translation": [
+                -0.24434518814086918,
+                -1.7751973867416382,
+                -3.20851731300354
+            ]
+        }
+    ],
+    "meshes": [
+        {
+            "name": "pumpkinShape",
+            "extras": {
+                "targetNames": []
+            },
+            "primitives": [
+                {
+                    "attributes": {
+                        "NORMAL": 1,
+                        "POSITION": 2,
+                        "TANGENT": 3,
+                        "TEXCOORD_0": 4
+                    },
+                    "indices": 0,
+                    "mode": 4,
+                    "material": 0
+                },
+                {
+                    "attributes": {
+                        "NORMAL": 6,
+                        "POSITION": 7,
+                        "TANGENT": 8,
+                        "TEXCOORD_0": 9
+                    },
+                    "indices": 5,
+                    "mode": 4,
+                    "material": 1
+                }
+            ]
+        }
+    ],
+    "materials": [
+        {
+            "name": "pasted__pumpkin1",
+            "pbrMetallicRoughness": {
+                "metallicFactor": 0.0,
+                "roughnessFactor": 0.4545454680919647
+            }
+        },
+        {
+            "name": "lambert1",
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [
+                    0.4000000059604645,
+                    0.4000000059604645,
+                    0.4000000059604645,
+                    1.0
+                ],
+                "metallicFactor": 0.0,
+                "roughnessFactor": 1.0
+            }
+        }
+    ],
+    "accessors": [
+        {
+            "name": "pumpkinShape#0/indices",
+            "bufferView": 0,
+            "byteOffset": 0,
+            "componentType": 5123,
+            "count": 13659,
+            "max": [
+                2981
+            ],
+            "min": [
+                0
+            ],
+            "type": "SCALAR"
+        },
+        {
+            "name": "pumpkinShape#0/vertices/NORMAL",
+            "bufferView": 1,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 2982,
+            "max": [
+                0.9999735355377196,
+                0.998313844203949,
+                0.9999949932098388
+            ],
+            "min": [
+                -0.999973475933075,
+                -0.9998326301574708,
+                -0.9999868273735046
+            ],
+            "type": "VEC3"
+        },
+        {
+            "name": "pumpkinShape#0/vertices/POSITION",
+            "bufferView": 1,
+            "byteOffset": 35784,
+            "componentType": 5126,
+            "count": 2982,
+            "max": [
+                2.709442138671875,
+                4.3830108642578129,
+                5.755499839782715
+            ],
+            "min": [
+                -2.22076416015625,
+                -0.940326690673828,
+                0.8212132453918457
+            ],
+            "type": "VEC3"
+        },
+        {
+            "name": "pumpkinShape#0/vertices/TANGENT",
+            "bufferView": 2,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 2982,
+            "max": [
+                0.9999969005584716,
+                0.980141580104828,
+                0.99883633852005,
+                1.0
+            ],
+            "min": [
+                -0.9999987483024596,
+                -0.9880647659301758,
+                -0.9999310970306397,
+                -1.0
+            ],
+            "type": "VEC4"
+        },
+        {
+            "name": "pumpkinShape#0/vertices/TEXCOORD_0",
+            "bufferView": 3,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": 2982,
+            "max": [
+                0.9859520196914672,
+                0.9551132917404176
+            ],
+            "min": [
+                0.0132218599319458,
+                0.021444082260131837
+            ],
+            "type": "VEC2"
+        },
+        {
+            "name": "pumpkinShape#1/indices",
+            "bufferView": 0,
+            "byteOffset": 27318,
+            "componentType": 5123,
+            "count": 3,
+            "max": [
+                2
+            ],
+            "min": [
+                0
+            ],
+            "type": "SCALAR"
+        },
+        {
+            "name": "pumpkinShape#1/vertices/NORMAL",
+            "bufferView": 1,
+            "byteOffset": 71568,
+            "componentType": 5126,
+            "count": 3,
+            "max": [
+                -0.4116753935813904,
+                -0.1790289729833603,
+                -0.8107079863548279
+            ],
+            "min": [
+                -0.4283301532268524,
+                -0.4162643551826477,
+                -0.8857098817825317
+            ],
+            "type": "VEC3"
+        },
+        {
+            "name": "pumpkinShape#1/vertices/POSITION",
+            "bufferView": 1,
+            "byteOffset": 71604,
+            "componentType": 5126,
+            "count": 3,
+            "max": [
+                -1.636199951171875,
+                0.6114950180053711,
+                3.011280059814453
+            ],
+            "min": [
+                -1.6527099609375,
+                0.5845794677734375,
+                3.002849578857422
+            ],
+            "type": "VEC3"
+        },
+        {
+            "name": "pumpkinShape#1/vertices/TANGENT",
+            "bufferView": 2,
+            "byteOffset": 47712,
+            "componentType": 5126,
+            "count": 3,
+            "max": [
+                0.8987036347389221,
+                -0.33300602436065676,
+                -0.28537482023239138,
+                -1.0
+            ],
+            "min": [
+                0.8692984580993652,
+                -0.34922316670417788,
+                -0.3503322899341583,
+                -1.0
+            ],
+            "type": "VEC4"
+        },
+        {
+            "name": "pumpkinShape#1/vertices/TEXCOORD_0",
+            "bufferView": 3,
+            "byteOffset": 23856,
+            "componentType": 5126,
+            "count": 3,
+            "max": [
+                0.1664838939905167,
+                0.2838881611824036
+            ],
+            "min": [
+                0.16557447612285618,
+                0.2782243490219116
+            ],
+            "type": "VEC2"
+        }
+    ],
+    "bufferViews": [
+        {
+            "name": "pumpkin/data/indices-2",
+            "buffer": 0,
+            "byteOffset": 143280,
+            "byteLength": 27324,
+            "target": 34963
+        },
+        {
+            "name": "pumpkin/data/vertices-12",
+            "buffer": 0,
+            "byteOffset": 47760,
+            "byteLength": 71640,
+            "byteStride": 12,
+            "target": 34962
+        },
+        {
+            "name": "pumpkin/data/vertices-16",
+            "buffer": 0,
+            "byteOffset": 0,
+            "byteLength": 47760,
+            "byteStride": 16,
+            "target": 34962
+        },
+        {
+            "name": "pumpkin/data/vertices-8",
+            "buffer": 0,
+            "byteOffset": 119400,
+            "byteLength": 23880,
+            "byteStride": 8,
+            "target": 34962
+        }
+    ],
+    "buffers": [
+        {
+            "name": "pumpkin/data",
+            "byteLength": 170604,
+            "uri": "pumpkin0.bin"
+        }
+    ]
+}

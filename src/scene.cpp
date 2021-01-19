@@ -3,8 +3,11 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <queue>
 
-Scene::Scene(string filename) {
+Scene::Scene(string filename, bool usingCulling, float sceneSize)
+    : usingCulling(usingCulling), isWorldSpace(usingCulling),
+    octree(9, sceneSize), meshMaterial(0), prepared(false) {
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -30,6 +33,12 @@ Scene::Scene(string filename) {
             }
         }
     }
+
+    // Add triangles and other geometries to octree if we are using culling
+    if (usingCulling) {
+        octree.addTriangles(triangles);
+        octree.addGeoms(geoms);
+    }
 }
 
 int Scene::loadGeom(string objectid) {
@@ -52,6 +61,10 @@ int Scene::loadGeom(string objectid) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
+            else if (strcmp(line.c_str(), "mesh") == 0) {
+                cout << "Creating new mesh..." << endl;
+                newGeom.type = MESH;
+            }
         }
 
         //link material
@@ -60,6 +73,26 @@ int Scene::loadGeom(string objectid) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             newGeom.materialid = atoi(tokens[1].c_str());
             cout << "Connecting Geom " << objectid << " to Material " << newGeom.materialid << "..." << endl;
+        }
+
+        //load mesh
+        if (newGeom.type == MESH) {
+            newGeom.triangleStart = triangles.size();
+            utilityCore::safeGetline(fp_in, line);
+            if (!line.empty() && fp_in.good()) {
+                vector<string> tokens = utilityCore::tokenizeString(line);
+                MeshLoader mLoader; //tokens[0] = "gltf"
+                string filename = tokens[1].substr(1, tokens[1].length() - 2);
+                mLoader.load(filename);
+                mLoader.pushTriangles(triangles);
+            }
+            newGeom.triangleCount = triangles.size() - newGeom.triangleStart;
+            //TODO: temporary solution: using a global mesh material
+            meshMaterial = newGeom.materialid;
+        }
+        else {
+            newGeom.triangleStart = -1;
+            newGeom.triangleCount = -1;
         }
 
         //load transformations
@@ -83,6 +116,12 @@ int Scene::loadGeom(string objectid) {
                 newGeom.translation, newGeom.rotation, newGeom.scale);
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
+
+        if (isWorldSpace) {
+            for (int i = newGeom.triangleStart, ct = 0; ct < newGeom.triangleCount; i++, ct++) {
+                triangles[i] = glm::vec3(newGeom.transform * glm::vec4(triangles[i], 1.f));
+            }
+        }
 
         geoms.push_back(newGeom);
         return 1;
@@ -185,4 +224,58 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
+}
+
+std::vector<OctreeNodeDevice> Scene::prepareOctree() {
+    if (prepared) {
+        return result;
+    }
+    else {
+        prepared = true;
+    }
+
+    std::vector<glm::vec3> rearrangedTriangles;
+    std::vector<Geom> rearrangedGeoms;
+
+    std::queue<OctreeNode*> que;
+    que.push(octree.root);
+    while (!que.empty()) {
+        int n = que.size();
+        int childrenBegin = result.size() + n;
+        for (int i = 0; i < n; i++) {
+            OctreeNode* node = que.front();
+            que.pop();
+            OctreeNodeDevice dev_node;
+            dev_node.minCorner = node->minCorner;
+            dev_node.maxCorner = node->maxCorner;
+            dev_node.triangleStart = rearrangedTriangles.size();
+            dev_node.triangleCount = 0;
+            for (int tIdx : node->triangleIndices) {
+                rearrangedTriangles.push_back(triangles[tIdx]);
+                rearrangedTriangles.push_back(triangles[tIdx + 1]);
+                rearrangedTriangles.push_back(triangles[tIdx + 2]);
+                dev_node.triangleCount++;
+            }
+            dev_node.geomStart = rearrangedGeoms.size();
+            dev_node.geomCount = 0;
+            for (int gIdx : node->geomIndices) {
+                rearrangedGeoms.push_back(geoms[gIdx]);
+                dev_node.geomCount++;
+            }
+            for (int c = 0; c < 8; c++) {
+                if (node->children[c] != nullptr) {
+                    dev_node.children[c] = childrenBegin++;
+                    que.push(node->children[c]);
+                }
+                else {
+                    dev_node.children[c] = -1;
+                }
+            }
+            result.push_back(dev_node);
+        }
+    }
+    triangles = rearrangedTriangles;
+    geoms = rearrangedGeoms;
+
+    return result;
 }

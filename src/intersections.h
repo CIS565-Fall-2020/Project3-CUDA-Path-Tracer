@@ -35,7 +35,6 @@ __host__ __device__ glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
     return glm::vec3(m * v);
 }
 
-// CHECKITOUT
 /**
  * Test intersection between a ray and a transformed cube. Untransformed,
  * the cube ranges from -0.5 to 0.5 in each axis and is centered at the origin.
@@ -141,4 +140,100 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     }
 
     return glm::length(r.origin - intersectionPoint);
+}
+
+// Naive mesh ray intersection test
+__host__ __device__ float meshIntersectionTest(Geom geom, Ray r,
+    glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside,
+    const glm::vec3 *triangles) {
+    Ray q = r;
+    q.origin = multiplyMV(geom.inverseTransform, glm::vec4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+    float tmin = FLT_MAX;
+    int nearest = -1;
+
+    for (int i = geom.triangleStart, ct = 0; ct < geom.triangleCount; ct += 3, i += 3) {
+        glm::vec3 v0 = triangles[i];
+        glm::vec3 v1 = triangles[i + 1];
+        glm::vec3 v2 = triangles[i + 2];
+        glm::vec3 bary;
+        if (glm::intersectRayTriangle(q.origin, q.direction, v0, v1, v2, bary)) {
+            // Get the actual intersect from barycentric coordinates
+            glm::vec3 p = (1 - bary[0] - bary[1]) * v0 + bary[0] * v1 + bary[1] * v2;
+            float t = glm::distance(p, q.origin);
+            if (t < tmin) {
+                tmin = t;
+                nearest = i;
+            }
+        }
+    }
+    if (nearest == -1) {
+        return -1;
+    }
+
+    glm::vec3 objspaceIntersection = getPointOnRay(q, tmin);
+
+    glm::vec3 e1 = triangles[nearest + 1] - triangles[nearest];
+    glm::vec3 e2 = triangles[nearest + 2] - triangles[nearest];
+    glm::vec3 objspaceNormal = glm::normalize(glm::cross(e1, e2));
+    
+    intersectionPoint = multiplyMV(geom.transform, glm::vec4(objspaceIntersection, 1.f));
+    normal = glm::normalize(multiplyMV(geom.invTranspose, glm::vec4(objspaceNormal, 0.f)));
+    outside = glm::dot(normal, r.direction) < 0;
+    
+    return tmin;
+}
+
+/// <summary>
+/// Test intersection between the ray and the triangle.
+/// All parameters are in world space.
+__host__ __device__ float triangleIntersectionTest(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2,
+    Ray r, glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside) {
+    float t;
+    glm::vec3 bary;
+    if (glm::intersectRayTriangle(r.origin, r.direction, v0, v1, v2, bary)) {
+        // Get the actual intersect from barycentric coordinates
+        glm::vec3 p = (1 - bary[0] - bary[1]) * v0 + bary[0] * v1 + bary[1] * v2;
+        t = glm::distance(p, r.origin);
+    }
+    else {
+        return -1;
+    }
+    
+    intersectionPoint = getPointOnRay(r, t);
+
+    glm::vec3 e1 = v1 - v0;
+    glm::vec3 e2 = v2 - v0;
+    normal = glm::normalize(glm::cross(e1, e2));
+
+    outside = glm::dot(normal, r.direction) < 0;
+
+    return t;
+}
+
+/// <summary>
+/// Check whether the ray intersects with the bounding box.
+/// All parameters are in world space.
+__host__ __device__ bool boundingBoxTest(
+    glm::vec3 minCorner, glm::vec3 maxCorner, Ray r) {
+    float tmin = -1e38f;
+    float tmax = 1e38f;
+    glm::vec3 tmin_n;
+    glm::vec3 tmax_n;
+    for (int xyz = 0; xyz < 3; ++xyz) {
+        float qdxyz = r.direction[xyz];
+        float t1 = (minCorner[xyz] - r.origin[xyz]) / qdxyz;
+        float t2 = (maxCorner[xyz] - r.origin[xyz]) / qdxyz;
+        float ta = glm::min(t1, t2);
+        float tb = glm::max(t1, t2);
+        if (ta > 0 && ta > tmin) {
+            tmin = ta;
+        }
+        if (tb < tmax) {
+            tmax = tb;
+        }
+    }
+
+    return (tmax >= tmin && tmax > 0);
 }
