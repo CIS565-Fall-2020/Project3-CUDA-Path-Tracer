@@ -1,0 +1,101 @@
+﻿  Building NVCC (Device) object CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
+  -- Generating dependency file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
+  D:/cuda/dev/bin/nvcc.exe -M -D__CUDACC__ E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+  pathtrace.cu
+  -- Generating temporary cmake readable file: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -D input_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend -D output_file:FILEPATH=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp -D verbose=ON -P E:/Learning/cmake-3.17.2-win64-x64/share/cmake-3.17/Modules/FindCUDA/make2cmake.cmake
+  -- Copy if different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp to E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E copy_if_different E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend
+  -- Removing E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp and E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
+  E:/Learning/cmake-3.17.2-win64-x64/bin/cmake.exe -E rm -f E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend.tmp E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.NVCC-depend
+  -- Generating E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj
+  D:/cuda/dev/bin/nvcc.exe E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu -c -o E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj -ccbin "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe" -m64 -DCUDA_COMPUTE_75 -DGLEW_STATIC -Xcompiler ,\"/DWIN32\",\"/D_WINDOWS\",\"/W3\",\"/GR\",\"/EHsc\",\"/MDd\",\"/Zi\",\"/Ob0\",\"/Od\",\"/RTC1\" -gencode arch=compute_75,code=sm_75 -g -G -DNVCC -ID:/cuda/dev/include -IE:/Learning/CIS565/Project3-CUDA-Path-Tracer/external/include
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(360): warning : variable "firstIteration" was declared but never referenced
+  
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(84): warning : variable "firstTimeRender" was declared but never referenced
+  
+  pathtrace.cu
+E:\Learning\CIS565\Project3-CUDA-Path-Tracer\src\intersections.h(66): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(354): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(374): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(398): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(442): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1218): warning C4244: 'initializing': conversion from 'Integer' to 'int', possible loss of data
+          with
+          [
+              Integer=size_type
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1291): note: see reference to function template instantiation 'cudaError_t thrust::cuda_cub::__merge_sort::doit_step<SORT_ITEMS,STABLE,KeysIt,ItemsIt,size_type,CompareOp>(void *,size_t &,KeysIt,ItemsIt,Size,CompareOp,cudaStream_t,bool)' being compiled
+          with
+          [
+              SORT_ITEMS=thrust::detail::true_type,
+              STABLE=thrust::detail::true_type,
+              KeysIt=ShadeableIntersection *,
+              ItemsIt=PathSegment *,
+              CompareOp=material_sort,
+              Size=size_type
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1545): note: see reference to function template instantiation 'void thrust::cuda_cub::__merge_sort::merge_sort<SORT_ITEMS,STABLE,thrust::cuda_cub::par_t,KeysIt,ItemsIt,CompareOp>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::par_t> &,KeysIt,KeysIt,ItemsIt,CompareOp)' being compiled
+          with
+          [
+              SORT_ITEMS=thrust::detail::true_type,
+              STABLE=thrust::detail::true_type,
+              KeysIt=ShadeableIntersection *,
+              ItemsIt=PathSegment *,
+              CompareOp=material_sort
+          ]
+  D:\cuda\dev\include\thrust/system/cuda/detail/sort.h(1691): note: see reference to function template instantiation 'void thrust::cuda_cub::__smart_sort::smart_sort<thrust::detail::true_type,thrust::detail::true_type,thrust::cuda_cub::execution_policy<thrust::cuda_cub::par_t>,KeysIt,ValuesIt,CompareOp>(Policy &,KeysIt,KeysIt,ItemsIt,CompareOp)' being compiled
+          with
+          [
+              KeysIt=ShadeableIntersection *,
+              ValuesIt=PathSegment *,
+              CompareOp=material_sort,
+              Policy=thrust::cuda_cub::execution_policy<thrust::cuda_cub::par_t>,
+              ItemsIt=PathSegment *
+          ]
+  D:\cuda\dev\include\thrust/detail/sort.inl(147): note: see reference to function template instantiation 'void thrust::cuda_cub::stable_sort_by_key<thrust::cuda_cub::par_t,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::par_t> &,KeysIt,KeysIt,ValuesIt,CompareOp)' being compiled
+          with
+          [
+              RandomAccessIterator1=ShadeableIntersection *,
+              RandomAccessIterator2=PathSegment *,
+              StrictWeakOrdering=material_sort,
+              KeysIt=ShadeableIntersection *,
+              ValuesIt=PathSegment *,
+              CompareOp=material_sort
+          ]
+  E:/Learning/CIS565/Project3-CUDA-Path-Tracer/src/pathtrace.cu(422): note: see reference to function template instantiation 'void thrust::stable_sort_by_key<DerivedPolicy,ShadeableIntersection*,PathSegment*,material_sort>(const thrust::detail::execution_policy_base<DerivedPolicy> &,RandomAccessIterator1,RandomAccessIterator1,RandomAccessIterator2,StrictWeakOrdering)' being compiled
+          with
+          [
+              DerivedPolicy=thrust::cuda_cub::par_t,
+              RandomAccessIterator1=ShadeableIntersection *,
+              RandomAccessIterator2=PathSegment *,
+              StrictWeakOrdering=material_sort
+          ]
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<9>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1496): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<9>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<8>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1491): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<8>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<7>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1486): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<7>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<6>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1481): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<6>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<5>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1476): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<5>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<4>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1471): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<4>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<3>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1466): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<3>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<2>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1461): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<2>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<1>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1456): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<1>>' being compiled
+  D:\cuda\dev\include\thrust/detail/functional/actor.h(49): note: see reference to class template instantiation 'thrust::detail::functional::argument<0>' being compiled
+  D:\cuda\dev\include\thrust/functional.h(1451): note: see reference to class template instantiation 'thrust::detail::functional::actor<thrust::detail::functional::argument<0>>' being compiled
+  Generated E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/Debug/cis565_path_tracer_generated_pathtrace.cu.obj successfully.
+  cis565_path_tracer.vcxproj -> E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\bin\Debug\cis565_path_tracer.exe

@@ -1,0 +1,14 @@
+﻿  Checking Build System
+  CMake is re-running because E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/generate.stamp is out-of-date.
+    the file 'E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/cis565_path_tracer.dir/src/cis565_path_tracer_generated_pathtrace.cu.obj.depend'
+    is newer than 'E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/CMakeFiles/generate.stamp.depend'
+    result='-1'
+  -- E:/Learning/CIS565/Project3-CUDA-Path-Tracer/cmake/cuda_compute_capability.cpp
+  -- CUDA Compute Detection Output: 75
+  -- CUDA Compute Detection Return: 0
+  -- CUDA Compute Detection Worked
+  -- Number of Computes Detected = 1
+  -- Setting Compute 75 to ON
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build

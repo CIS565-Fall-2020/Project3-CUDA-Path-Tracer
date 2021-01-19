@@ -1,0 +1,693 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3A49E9C7-46C4-398E-ACE4-001C1D669E41}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>stream_compaction</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\lib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stream_compaction.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stream_compaction</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\lib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stream_compaction.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stream_compaction</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\lib\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">stream_compaction.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">stream_compaction</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\lib\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">stream_compaction.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">stream_compaction</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR="MinSizeRel";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR=\"MinSizeRel\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR="RelWithDebInfo";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CUDA_COMPUTE_75;GLEW_STATIC;CMAKE_INTDIR=\"RelWithDebInfo\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Learning\CIS565\Project3-CUDA-Path-Tracer\external\include;D:\cuda\dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\common.cu">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_common.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.Debug.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.Debug.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_common.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_common.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.Release.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.Release.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_common.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_common.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.MinSizeRel.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.MinSizeRel.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_common.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_common.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_common.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_common.cu.obj.RelWithDebInfo.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.RelWithDebInfo.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_common.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\cpu.cu">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_cpu.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.Debug.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.Debug.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_cpu.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_cpu.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.Release.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.Release.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_cpu.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_cpu.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.MinSizeRel.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.MinSizeRel.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_cpu.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_cpu.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_cpu.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_cpu.cu.obj.RelWithDebInfo.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.RelWithDebInfo.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_cpu.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\efficient.cu">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_efficient.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.Debug.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.Debug.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_efficient.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_efficient.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.Release.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.Release.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_efficient.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_efficient.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.MinSizeRel.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.MinSizeRel.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_efficient.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_efficient.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_efficient.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_efficient.cu.obj.RelWithDebInfo.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.RelWithDebInfo.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_efficient.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\naive.cu">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_naive.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.Debug.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.Debug.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_naive.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_naive.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.Release.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.Release.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_naive.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_naive.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.MinSizeRel.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.MinSizeRel.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_naive.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_naive.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_naive.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_naive.cu.obj.RelWithDebInfo.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.RelWithDebInfo.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_naive.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\thrust.cu">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_thrust.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.Debug.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.Debug.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_thrust.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_thrust.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.Release.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.Release.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_thrust.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_thrust.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.MinSizeRel.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.MinSizeRel.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_thrust.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building NVCC (Device) object stream_compaction/CMakeFiles/stream_compaction.dir/$(Configuration)/stream_compaction_generated_thrust.cu.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -E make_directory E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)
+if %errorlevel% neq 0 goto :cmEnd
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -D verbose:BOOL=ON -D "CCBIN:PATH=$(VCInstallDir)Tools/MSVC/$(VCToolsVersion)/bin/Host$(Platform)/$(PlatformTarget)" -D build_configuration:STRING=$(ConfigurationName) -D generated_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj -D generated_cubin_file:STRING=E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//$(Configuration)/stream_compaction_generated_thrust.cu.obj.cubin.txt -P E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/stream_compaction.dir//stream_compaction_generated_thrust.cu.obj.RelWithDebInfo.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.RelWithDebInfo.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_thrust.cu.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -SE:/Learning/CIS565/Project3-CUDA-Path-Tracer -BE:/Learning/CIS565/Project3-CUDA-Path-Tracer/build --check-stamp-file E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\cmake-3.17.2-win64-x64\share\cmake-3.17\Modules\FindCUDA\run_nvcc.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -SE:/Learning/CIS565/Project3-CUDA-Path-Tracer -BE:/Learning/CIS565/Project3-CUDA-Path-Tracer/build --check-stamp-file E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\cmake-3.17.2-win64-x64\share\cmake-3.17\Modules\FindCUDA\run_nvcc.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -SE:/Learning/CIS565/Project3-CUDA-Path-Tracer -BE:/Learning/CIS565/Project3-CUDA-Path-Tracer/build --check-stamp-file E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\cmake-3.17.2-win64-x64\share\cmake-3.17\Modules\FindCUDA\run_nvcc.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/Learning/CIS565/Project3-CUDA-Path-Tracer/stream_compaction/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+E:\Learning\cmake-3.17.2-win64-x64\bin\cmake.exe -SE:/Learning/CIS565/Project3-CUDA-Path-Tracer -BE:/Learning/CIS565/Project3-CUDA-Path-Tracer/build --check-stamp-file E:/Learning/CIS565/Project3-CUDA-Path-Tracer/build/stream_compaction/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_common.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_cpu.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_efficient.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_naive.cu.obj.depend;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.cmake.pre-gen;E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\stream_compaction_generated_thrust.cu.obj.depend;E:\Learning\cmake-3.17.2-win64-x64\share\cmake-3.17\Modules\FindCUDA\run_nvcc.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_common.cu.obj" />
+    <Object Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_cpu.cu.obj" />
+    <Object Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_efficient.cu.obj" />
+    <Object Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_naive.cu.obj" />
+    <Object Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\stream_compaction\CMakeFiles\stream_compaction.dir\$(Configuration)\stream_compaction_generated_thrust.cu.obj" />
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\common.h" />
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\cpu.h" />
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\efficient.h" />
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\naive.h" />
+    <ClInclude Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\stream_compaction\thrust.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="E:\Learning\CIS565\Project3-CUDA-Path-Tracer\build\ZERO_CHECK.vcxproj">
+      <Project>{065ED5E5-5241-30BC-B616-1178A9EFED1C}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
