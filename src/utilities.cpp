@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <iostream>
 #include <cstdio>
+#include <algorithm>
 
 #include "utilities.h"
 
@@ -110,3 +111,4 @@ std::istream& utilityCore::safeGetline(std::istream& is, std::string& t) {
         }
     }
 }
+

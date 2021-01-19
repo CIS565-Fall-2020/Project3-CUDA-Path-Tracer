@@ -71,8 +71,15 @@ set(headers
     src/pathtrace.h
     src/scene.h
     src/sceneStructs.h
+    src/json.hpp
     src/preview.h
     src/utilities.h
+    src/tiny_gltf.h
+    src/macros.h
+    src/gltf-loader.h
+    src/material.h
+    src/mesh.h
+    src/octree.h
     )
 
 set(sources
@@ -84,6 +91,8 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/gltf-loader.cc
+    src/octree.cpp
     )
 
 list(SORT headers)
@@ -92,7 +101,7 @@ list(SORT sources)
 source_group(Headers FILES ${headers})
 source_group(Sources FILES ${sources})
 
-#add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
+add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
 
 cuda_add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${CMAKE_PROJECT_NAME}
