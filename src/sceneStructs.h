@@ -70,7 +70,22 @@ struct PathSegment {
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
 struct ShadeableIntersection {
-  float t;
-  glm::vec3 surfaceNormal;
-  int materialId;
+    float t;
+    glm::vec3 surfaceNormal;
+    int materialId;
+};
+
+// Boolean function for path termination
+struct path_terminated {
+    __host__ __device__ bool operator()(const PathSegment& segment) {
+        return segment.remainingBounces <= 0;
+    }
+};
+
+// Sort function for different materials of intersection
+struct path_sort {
+    __host__ __device__ bool operator()(const ShadeableIntersection& a,
+        const ShadeableIntersection& b) {
+        return a.materialId < b.materialId;
+    }
 };
