@@ -1,6 +1,8 @@
 #pragma once
 
 #include "intersections.h"
+#include "glm/glm.hpp"
+#include "glm/gtx/norm.hpp"
 
 // CHECKITOUT
 /**
@@ -76,4 +78,47 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+	
+	if (m.emittance > 0.0f) {
+		pathSegment.color *= (m.color * m.emittance);
+	}
+	if (pathSegment.remainingBounces <= 0) {
+		return;
+	}
+	// pure-diffusive
+	/*float reflectiveRatio;
+	if (m.hasReflective) {
+		reflectiveRatio = 0.8;
+	}
+	else {
+		reflectiveRatio = 0.2;
+	}
+
+	thrust::uniform_real_distribution<float> u01(0, 1);
+	float randomNum = u01(rng);
+	*/
+	if (!m.hasReflective) {
+		glm::vec3 diffuseDirection = calculateRandomDirectionInHemisphere(normal, rng);
+		pathSegment.ray.direction = diffuseDirection;
+		//float lightTerm = glm::abs(glm::dot(normal, diffuseDirection));
+		pathSegment.color *= m.color;
+	}
+	if (m.hasReflective) {
+		glm::vec3 reflectDirection = glm::reflect(pathSegment.ray.direction, normal); 
+		pathSegment.ray.direction = reflectDirection;
+		float lightTerm = pow(glm::abs(glm::dot(normal, reflectDirection)), m.specular.exponent);
+		pathSegment.color *= (m.color * lightTerm);
+	}
+	if (m.hasRefractive) {
+		float n = m.indexOfRefraction;
+		glm::vec3 refractDirection = glm::refract(pathSegment.ray.direction, normal, n);
+		pathSegment.ray.direction = refractDirection;
+		float F0 = (n - 1) * (n - 1) / (n + 1) / (n + 1);
+		float lightTerm = glm::abs(glm::dot(normal, refractDirection));
+		float F = F0 + (1 - F0) * pow((1 - lightTerm), 5);
+		pathSegment.color *= (m.color * F);
+	}
+
+	pathSegment.ray.origin = intersect + 0.01f * normal;
+	pathSegment.remainingBounces--;
 }

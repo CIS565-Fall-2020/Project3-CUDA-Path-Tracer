@@ -10,11 +10,18 @@
 enum GeomType {
     SPHERE,
     CUBE,
+	MESH,
 };
 
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
+};
+
+struct Triangle {
+	glm::vec3 vertices[3];
+	glm::vec3 normal;
+	int materialId;
 };
 
 struct Geom {
@@ -26,7 +33,12 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+
+	// triangle index of a mesh
+	int tIndexStart;
+	int tIndexEnd;
 };
+
 
 struct Material {
     glm::vec3 color;
@@ -74,3 +86,56 @@ struct ShadeableIntersection {
   glm::vec3 surfaceNormal;
   int materialId;
 };
+
+// Octree
+struct OctreeNode {
+	std::vector<int> triangleIdx;
+	bool hasTriangle = false;
+	float xmin, xmax, ymin, ymax, zmin, zmax;
+	OctreeNode *tlf, *tlb, *trf, *trb, *blf, *blb, *brf, *brb; // top/bottom, left/right, front/back
+
+	OctreeNode(
+		float xmin, float xmax,
+		float ymin, float ymax,
+		float zmin, float zmax)
+		:xmin(xmin), xmax(xmax),
+		ymin(ymin), ymax(ymax),
+		zmin(zmin), zmax(zmax),
+		tlf(NULL), tlb(NULL),
+		trf(NULL), trb(NULL),
+		blf(NULL), blb(NULL),
+		brf(NULL), brb(NULL) {
+	}
+};
+struct OctreeNode_cuda {
+	int triangleStart = -1;
+	int triangleEnd = -1;
+	float xmin, xmax, ymin, ymax, zmin, zmax;
+	int tlf, tlb, trf, trb, blf, blb, brf, brb; // top/bottom, left/right, front/back
+
+	OctreeNode_cuda(
+		float xmin, float xmax,
+		float ymin, float ymax,
+		float zmin, float zmax)
+
+		:xmin(xmin), xmax(xmax),
+		ymin(ymin), ymax(ymax),
+		zmin(zmin), zmax(zmax),
+		tlf(tlf), tlb(tlb),
+		trf(trf), trb(trb),
+		blf(blf), blb(blb),
+		brf(brf), brb(brb) {
+	}
+};
+
+void constructOctree(OctreeNode *&root,
+	int maxdepth,
+	float xmin, float xmax,
+	float ymin, float ymax,
+	float zmin, float zmax);
+
+void traverseOctree(OctreeNode *&root, Triangle &t, int Idx);
+
+int traverseOctreeToArray(OctreeNode *root
+	, std::vector<int> &sortTriangles
+	, std::vector<OctreeNode_cuda> &octreeVector);
