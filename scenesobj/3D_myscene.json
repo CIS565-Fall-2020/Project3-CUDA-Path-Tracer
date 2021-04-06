@@ -1,0 +1,35 @@
+{
+	"objects":
+	[
+		{
+			"type": "obj",
+			"name": "Tress",
+			"filename": "tree-up.obj",
+			"texture": "tex_nor_maps/tree-up.jpg"
+		},
+		{
+			"type": "obj",
+			"name": "Root",
+			"filename": "tree-down.obj",
+			"texture": "tex_nor_maps/165.jpg"
+		},
+		{
+			"type": "obj",
+			"name": "Wahoo",
+			"filename": "mario.obj",
+			"texture": "tex_nor_maps/wahoo.bmp"
+		},
+		{
+			"type": "obj",
+			"name": "Wahoo",
+			"filename": "soccer.obj",
+			"texture": "tex_nor_maps/soccer.png"
+		},
+		{
+			"type": "obj",
+			"name": "Root",
+			"filename": "grass.obj",
+			"texture": "tex_nor_maps/156.jpg"
+		}
+	]
+}

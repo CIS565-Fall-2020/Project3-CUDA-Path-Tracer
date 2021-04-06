@@ -73,6 +73,9 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    src/tiny_obj_loader.cc
+    src/tiny_obj_loader.h
+    src/octree.h
     )
 
 set(sources
@@ -84,6 +87,7 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/octree.cpp
     )
 
 list(SORT headers)
