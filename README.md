@@ -15,4 +15,9 @@ CUDA Path Tracer
 
   My laptop kept throttling and crashing due to overheating. the project can produce better images if ran for longer iterations.
 
-![](img\Capture.PNG)
+<img src="img\cornell.2020-10-02_01-41-36z.10samp.png" style="zoom: 80%;" />
+
+<img src="img\cornell.2021-06-03_08-34-14z.71samp.png" style="zoom:80%;" />
+
+
+

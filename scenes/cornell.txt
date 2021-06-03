@@ -115,3 +115,12 @@ material 4
 TRANS       -1 4 -1
 ROTAT       0 0 0
 SCALE       3 3 3
+
+
+//Mesh ../scenes/Cube.gltf 
+MESH 8 
+../scenes/Cube.gltf
+material 3
+TRANS       2 2 0
+ROTAT       -90 -90 45
+SCALE       1 1 1
