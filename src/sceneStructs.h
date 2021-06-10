@@ -10,6 +10,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    TRIANGLE,
 };
 
 struct Ray {
@@ -64,6 +65,7 @@ struct PathSegment {
 	glm::vec3 color;
 	int pixelIndex;
 	int remainingBounces;
+    bool inObject = false;
 };
 
 // Use with a corresponding PathSegment to do:

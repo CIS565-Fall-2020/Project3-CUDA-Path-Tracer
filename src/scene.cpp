@@ -3,6 +3,8 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
 
 Scene::Scene(string filename) {
     cout << "Reading scene from " << filename << " ..." << endl;
@@ -185,4 +187,125 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
+}
+
+
+int Scene::loadMesh(string objectid) {
+
+    int id = atoi(objectid.c_str());
+
+    cout << "Loading Mesh " << id << "..." << endl;
+    string filename;
+    string line;
+
+    //load filename and get tinygltf model
+    utilityCore::safeGetline(fp_in, filename);
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err;
+    std::string warn;
+    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+
+    if (!warn.empty()) {
+        printf("Warn %s \n", warn.c_str());
+    }
+    if (!err.empty()) {
+        printf("Error %s \n", err.c_str());
+    }
+    if (!ret) {
+        printf("Parsing Failed \n");
+    }
+    if (ret && warn.empty() && err.empty()) {
+        printf("GLtf loading completed successfully \n");
+    }
+
+    //link material
+    int materialId;
+    utilityCore::safeGetline(fp_in, line);
+    if (!line.empty() && fp_in.good()) {
+        vector<string> tokens = utilityCore::tokenizeString(line);
+        materialId = atoi(tokens[1].c_str());
+        cout << "Connecting Mesh " << objectid << " to Material " << materialId << "..." << endl;
+    }
+
+    //load transformations
+    utilityCore::safeGetline(fp_in, line);
+    glm::vec3 translate;
+    glm::vec3 rotate;
+    glm::vec3 scale;
+    while (!line.empty() && fp_in.good()) {
+        vector<string> tokens = utilityCore::tokenizeString(line);
+
+        //load tranformations
+        if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
+            translate = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        }
+        else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
+            rotate = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        }
+        else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
+            scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+        }
+
+        utilityCore::safeGetline(fp_in, line);
+    }
+
+    glm::mat4 transform = utilityCore::buildTransformationMatrix(translate, rotate, scale);
+    obj_starts.push_back(geoms.size());
+    for (tinygltf::Mesh& modelMesh : model.meshes) {
+        for (tinygltf::Primitive& primitive : modelMesh.primitives) {
+            // setup accessors for positions and normals
+            const tinygltf::Accessor& accessorPos = model.accessors[primitive.attributes["POSITION"]];
+            const tinygltf::BufferView& bufferViewPos = model.bufferViews[accessorPos.bufferView];
+            const tinygltf::Buffer& bufferPos = model.buffers[bufferViewPos.buffer];
+
+            const tinygltf::Accessor& accessorNor = model.accessors[primitive.attributes["NORMAL"]];
+            const tinygltf::BufferView& bufferViewNor = model.bufferViews[accessorNor.bufferView];
+            const tinygltf::Buffer& bufferNor = model.buffers[bufferViewNor.buffer];
+
+            const tinygltf::Accessor& accessorIdx = model.accessors[primitive.attributes["INDEX"]];
+            const tinygltf::BufferView& bufferViewIdx = model.bufferViews[accessorIdx.bufferView];
+            const tinygltf::Buffer& bufferIdx = model.buffers[bufferViewIdx.buffer];
+
+            const float* positions = reinterpret_cast<const float*>(&bufferPos.data[bufferViewPos.byteOffset + accessorPos.byteOffset]);
+            const float* normals = reinterpret_cast<const float*>(&bufferNor.data[bufferViewNor.byteOffset + accessorNor.byteOffset]);
+            const unsigned short* indices = reinterpret_cast<const unsigned short*>(&bufferIdx.data[bufferViewIdx.byteOffset + accessorIdx.byteOffset]);
+
+            // From here, you choose what you wish to do with this position data. In this case, we  will display it out.
+            for (size_t i = 0; i < accessorIdx.count; i += 3) {
+                int v1 = indices[i] * 3;
+                int v2 = indices[i + 1] * 3;
+                int v3 = indices[i + 2] * 3;
+
+                glm::vec3 pos1{ positions[v1], positions[v1 + 1], positions[v1 + 2] };
+                glm::vec3 pos2{ positions[v2], positions[v2 + 1], positions[v2 + 2] };
+                glm::vec3 pos3{ positions[v3], positions[v3 + 1], positions[v3 + 2] };
+
+                glm::vec3 nor1{ normals[v1], normals[v1 + 1], normals[v1 + 2] };
+                glm::vec3 nor2{ normals[v2], normals[v2 + 1], normals[v2 + 2] };
+                glm::vec3 nor3{ normals[v3], normals[v3 + 1], normals[v3 + 2] };
+
+                geoms.push_back(createTriangle(pos1, pos2, pos3, nor1, nor2, nor3, transform, materialId));
+            }
+        }
+    }
+    return 1;
+}
+
+Geom Scene::createTriangle(glm::vec3 vert1, glm::vec3 vert2, glm::vec3 vert3, glm::vec3 norm1, glm::vec3 norm2, glm::vec3 norm3, glm::mat4& transform, int materialId) {
+    glm::mat4 invTransposeTransform = glm::inverseTranspose(transform);
+
+    Geom triangle;
+    triangle.type = TRIANGLE;
+    triangle.translation = glm::vec3(transform * glm::vec4(vert1, 1.f));
+    triangle.rotation = glm::vec3(transform * glm::vec4(vert2, 1.f));
+    triangle.scale = glm::vec3(transform * glm::vec4(vert3, 1.f));
+
+    triangle.transform[0] = invTransposeTransform * glm::vec4(norm1, 0.f);
+    triangle.transform[1] = invTransposeTransform * glm::vec4(norm2, 0.f);
+    triangle.transform[2] = invTransposeTransform * glm::vec4(norm3, 0.f);
+
+    triangle.materialid = materialId;
+
+    return triangle;
 }
