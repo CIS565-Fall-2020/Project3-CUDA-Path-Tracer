@@ -13,11 +13,19 @@ CUDA Path Tracer
 
 * Tested on: Windows 10, i7-7700HQ @ 2.80GHz 16GB, GTX 1060 6GB (Personal laptop)
 
-  My laptop kept throttling and crashing due to overheating. the project can produce better images if ran for longer iterations.
 
-<img src="img\cornell.2020-10-02_01-41-36z.10samp.png" style="zoom: 80%;" />
+I have implemented a path tracer for this project. I also implemented a BSDF-kernel based shader that shades rays depending on the surfaces that it hits.If an object is specular then a specular reflection and scattering is done based on the probability set in the shader.
+
+ Diffuse surfaces use cos-weghted scatering function to generate rays in random direction. Stream compaction is implimented using partitioning function in thrust library to eliminate terminated rays.
+
+Here are some renders showcasing some of these main features that I have added.
 
 <img src="img\cornell.2021-06-03_08-34-14z.71samp.png" style="zoom:80%;" />
 
 
 
+<img src="\img\cornell.2021-06-10_01-26-46z.95samp.png" style="zoom:80%;" />
+
+<img src="\img\cornell.2021-06-10_01-13-06z.90samp.png" style="zoom:80%;" />
+
+I implemented first-bounce caching for the first part of the project. Sorting intersections based on materials before shading also optimized the program. Its effectiveness stems from the fact that GPU can be efficiently utilized because of less branching since adjacent paths are generally of the same material. For this path tracer, sorting resulted in performance drop since most of the materials are same and sorting was redundant.
