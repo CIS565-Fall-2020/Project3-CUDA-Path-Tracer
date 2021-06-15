@@ -2,6 +2,10 @@
 #include "preview.h"
 #include <cstring>
 
+//Change the filename here 
+#define OBJ_FILENAME std::string("../scenes/objs/unicorn.obj")
+#define OBJ_LOADING 1
+
 static std::string startTimeString;
 
 // For camera controls
@@ -41,7 +45,11 @@ int main(int argc, char** argv) {
     const char *sceneFile = argv[1];
 
     // Load scene file
+#ifdef OBJ_LOADING
+    scene = new Scene(sceneFile, OBJ_FILENAME);
+#else
     scene = new Scene(sceneFile);
+#endif // OBJ_LOADING
 
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
@@ -134,6 +142,8 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
+
+
         pathtrace(pbo_dptr, frame, iteration);
 
         // unmap buffer object
@@ -203,3 +213,6 @@ void mousePositionCallback(GLFWwindow* window, double xpos, double ypos) {
   lastX = xpos;
   lastY = ypos;
 }
+
+
+

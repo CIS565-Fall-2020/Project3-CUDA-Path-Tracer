@@ -55,7 +55,7 @@ SPECEX      0
 SPECRGB     .98 .98 .98
 REFL        1
 REFR        1
-REFRIOR     1.49
+REFRIOR     0
 EMITTANCE   0
 
 // Camera
@@ -123,19 +123,29 @@ SCALE       .01 10 10
 
 //Mesh object 
 OBJECT 6
-sphere
-material 5
-TRANS       0 4 0
-ROTAT       0 0 0
-SCALE       2 2 2
+mesh
+material 1
+TRANS       0 0 0
+ROTAT       0 70 0
+SCALE       0.3 0.3 0.3 
 
 
 // Ceiling light 2
+
+
+// Ceiling light 3
 OBJECT 7
 cube
 material 0
-TRANS       0 10 1
-ROTAT       0 0 0
+TRANS       5 5 1
+ROTAT       0 0 90
 SCALE       3 .3 3
 
+// Ceiling light 4
+OBJECT 8
+cube
+material 0
+TRANS       -5 5 1
+ROTAT       0 0 90
+SCALE       3 .3 3
 

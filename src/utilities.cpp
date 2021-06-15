@@ -4,10 +4,13 @@
 //  File: utilities.cpp
 //  A collection/kitchen sink of generally useful functions
 
+
+#pragma once
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <iostream>
 #include <cstdio>
+
 
 #include "utilities.h"
 
@@ -110,3 +113,7 @@ std::istream& utilityCore::safeGetline(std::istream& is, std::string& t) {
         }
     }
 }
+
+
+
+

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include <vector>
 #include <cuda_runtime.h>
 #include "glm/glm.hpp"
@@ -10,6 +11,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH,
 };
 
 struct Ray {
@@ -26,6 +28,7 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    glm::vec3 geomMinCorner, geomMaxCorner;
 };
 
 struct Material {
@@ -49,6 +52,8 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    float lensRadius; 
+    float focalDistance; 
 };
 
 struct RenderState {
@@ -74,3 +79,36 @@ struct ShadeableIntersection {
   glm::vec3 surfaceNormal;
   int materialId;
 };
+
+//struct Triangle {
+//    std::array<glm::vec3, 3> vertices{};
+//    std::array<glm::vec3, 3> normals{};
+//    std::array<glm::vec2, 3> uvs{};
+//};
+
+struct Triangle {
+    glm::vec3 vert1, vert2, vert3;
+    glm::vec3 norm1, norm2, norm3; 
+};
+
+struct Mesh {
+    std::vector<Triangle> triangles; 
+    int num_triangles = 0;
+    std::string filename; 
+    int start_triangle, end_triangle; 
+    glm::vec3 minCorner, maxCorner; 
+};
+
+//struct OctTreeNode
+//{
+//    int children[8]; 
+//    glm::vec3 minCorner;
+//    glm::vec3 maxCorner;
+//    int startID;
+//    int endID; 
+//};
+//
+//struct OctTree
+//{
+//    OctTreeNode* root; 
+//};
