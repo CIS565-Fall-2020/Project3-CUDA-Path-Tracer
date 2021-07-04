@@ -38,11 +38,31 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
-// Specular white
+// Glass
 MATERIAL 4
 RGB         .98 .98 .98
-SPECEX      0
+SPECEX      1
 SPECRGB     .98 .98 .98
+REFL        0
+REFR        1
+REFRIOR     3.5
+EMITTANCE   0
+
+// Mirror
+MATERIAL 5
+RGB         .98 .98 .98
+SPECEX      1
+SPECRGB     .65 .65 .98
+REFL        1
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Blurry specular
+MATERIAL 6
+RGB         .65 .98 .98
+SPECEX      0.2
+SPECRGB     .65 .98 .98
 REFL        1
 REFR        0
 REFRIOR     0
@@ -112,6 +132,23 @@ SCALE       .01 10 10
 OBJECT 6
 sphere
 material 4
-TRANS       -1 4 -1
+TRANS       0.5 3.75 2
 ROTAT       0 0 0
 SCALE       3 3 3
+
+// Cube
+OBJECT 7
+cube
+material 5
+TRANS       3.2 6 -1.75
+ROTAT       30 45 0
+SCALE       2 2 2
+
+// Rectangular box
+OBJECT 8
+cube
+material 6
+TRANS       -2 4 -2
+ROTAT       25 60 42
+SCALE       2.9 0.75 0.75
+

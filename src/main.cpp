@@ -1,6 +1,16 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#include <iostream>
+#include "common.h"
+
+
+using StreamCompaction::Common::PerformanceTimer;
+PerformanceTimer& timer()
+{
+    static PerformanceTimer timer;
+    return timer;
+}
 
 static std::string startTimeString;
 
@@ -12,6 +22,10 @@ static double lastX;
 static double lastY;
 
 static bool camchanged = true;
+static bool cacheChanged = true;
+static bool sortMaterialChanged = true;
+static bool cacheFirstBounce = false;
+static bool sortByMaterial = true;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
 
@@ -119,12 +133,24 @@ void runCuda() {
         camchanged = false;
       }
 
+    // Reset iterations if cache or sort status changes
+    if (cacheChanged) {
+        iteration = 0;
+        cacheChanged = false;
+    }
+
+    if (sortMaterialChanged) {
+        iteration = 0;
+        sortMaterialChanged = false;
+    }
+
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
+        //timer().startGpuTimer();
     }
 
     if (iteration < renderState->iterations) {
@@ -134,10 +160,16 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        pathtrace(pbo_dptr, frame, iteration, cacheFirstBounce, sortByMaterial);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
+
+        /*if (iteration == 1000) {
+            timer().endGpuTimer();
+            std::cout << timer().getGpuElapsedTimeForPreviousOperation() << std::endl;
+        }*/
+
     } else {
         saveImage();
         pathtraceFree();
@@ -156,6 +188,18 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
       case GLFW_KEY_S:
         saveImage();
         break;
+      case GLFW_KEY_C:
+          // cache first bounce
+          cacheFirstBounce = !cacheFirstBounce;
+          std::cout << "Cache First Bounce: " << std::boolalpha << cacheFirstBounce << std::endl;
+          cacheChanged = true;
+          break;
+      case GLFW_KEY_M:
+          // sort by material
+          sortByMaterial = !sortByMaterial;
+          std::cout << "Sort By Material: " << std::boolalpha << sortByMaterial << std::endl;
+          sortMaterialChanged = true;
+          break;
       case GLFW_KEY_SPACE:
         camchanged = true;
         renderState = &scene->state;

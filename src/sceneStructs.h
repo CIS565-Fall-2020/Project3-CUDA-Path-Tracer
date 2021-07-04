@@ -74,3 +74,19 @@ struct ShadeableIntersection {
   glm::vec3 surfaceNormal;
   int materialId;
 };
+
+struct keep_path
+{
+    __host__ __device__
+        bool operator()(const PathSegment path)
+    {
+        return path.remainingBounces > 0;
+    }
+};
+
+struct material_sort {
+    __host__ __device__
+        bool operator()(const ShadeableIntersection& i1, const ShadeableIntersection& i2) {
+        return i1.materialId < i2.materialId;
+    }
+};
