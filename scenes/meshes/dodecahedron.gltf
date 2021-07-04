@@ -1,0 +1,115 @@
+{
+  "accessors": [
+    {
+      "name": "Object001_1_0_positions",
+      "componentType": 5126,
+      "count": 20,
+      "min": [
+        -0.9341719746589661,
+        -0.9341719746589661,
+        -0.9341719746589661
+      ],
+      "max": [
+        0.9341719746589661,
+        0.9341719746589661,
+        0.9341719746589661
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "name": "Object001_1_0_indices",
+      "componentType": 5123,
+      "count": 108,
+      "min": [
+        0
+      ],
+      "max": [
+        19
+      ],
+      "type": "SCALAR",
+      "bufferView": 1,
+      "byteOffset": 0
+    }
+  ],
+  "asset": {
+    "generator": "obj2gltf",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "name": "dodecahedron",
+      "byteLength": 456,
+      "uri": "data:application/octet-stream;base64,Ns0TPzbNE782zRM/5SVvP2Cxtr4AAAAA5SVvP2Cxtj4AAAAAYLG2PgAAAADlJW8/Ns0TPzbNEz82zRM/YLG2PgAAAADlJW+/Ns0TPzbNEz82zRO/Ns0TPzbNE782zRO/Ns0TvzbNE782zRO/5SVvv2Cxtr4AAAAA5SVvv2Cxtj4AAAAAYLG2vgAAAADlJW+/Ns0TvzbNEz82zRO/YLG2vgAAAADlJW8/Ns0TvzbNEz82zRM/Ns0TvzbNE782zRM/AAAAAOUlbz9gsba+AAAAAOUlbz9gsbY+AAAAAOUlb79gsba+AAAAAOUlb79gsbY+AAABAAIAAwAAAAIABAADAAIABQAGAAIABwAFAAIAAQAHAAIACAAJAAoACwAIAAoADAALAAoADQAOAAoADwANAAoACQAPAAoAEAAMAAoAEQAQAAoADgARAAoAEQAEAAIAEAARAAIABgAQAAIAEgAHAAEAEwASAAEAAAATAAEAEwAPAAkAEgATAAkACAASAAkACAALAAUAEgAIAAUABwASAAUACwAMABAABQALABAABgAFABAAAwAEABEADQADABEADgANABEADQAPABMAAwANABMAAAADABMA"
+    }
+  ],
+  "bufferViews": [
+    {
+      "name": "bufferView_0",
+      "buffer": 0,
+      "byteLength": 240,
+      "byteOffset": 0,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_1",
+      "buffer": 0,
+      "byteLength": 216,
+      "byteOffset": 240,
+      "target": 34963
+    }
+  ],
+  "materials": [
+    {
+      "name": "default",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.5,
+          0.5,
+          0.5,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object001_1",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0
+          },
+          "indices": 1,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Object001",
+      "mesh": 0
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}

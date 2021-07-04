@@ -1,5 +1,6 @@
 // Emissive material (light)
 MATERIAL 0
+TYPE	    EMISSIVE
 RGB         1 1 1
 SPECEX      0
 SPECRGB     0 0 0
@@ -7,9 +8,11 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   5
+TEXTURE     0
 
 // Diffuse white
 MATERIAL 1
+TYPE	    DIFFUSE
 RGB         .98 .98 .98
 SPECEX      0
 SPECRGB     0 0 0
@@ -17,64 +20,133 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
 
 // Diffuse red
 MATERIAL 2
+TYPE	    GLOSSY
 RGB         .85 .35 .35
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
+SPECEX      12.5
+SPECRGB     .85 .35 .35
+REFL        1
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
 
-// Diffuse green
+// Diffuse blue
 MATERIAL 3
-RGB         .35 .85 .35
-SPECEX      0
-SPECRGB     0 0 0
-REFL        0
+TYPE	    GLOSSY
+RGB         .35 .35 .85
+SPECEX      250.5
+SPECRGB     .35 .35 .85
+REFL        1
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
 
-// Specular white
+// Glass
 MATERIAL 4
+TYPE	    DIELECTRIC
+RGB         .98 .65 .98
+SPECEX      2.3
+SPECRGB     .98 .65 .98
+REFL        0
+REFR        1
+REFRIOR     4.5
+EMITTANCE   0
+TEXTURE     0
+
+// Mirror
+MATERIAL 5
+TYPE	    MIRROR
 RGB         .98 .98 .98
-SPECEX      0
+SPECEX      1
 SPECRGB     .98 .98 .98
 REFL        1
 REFR        0
 REFRIOR     0
 EMITTANCE   0
+TEXTURE     0
+
+// Fresnel
+MATERIAL 6
+TYPE	    DIELECTRIC
+RGB         .65 .98 .98
+SPECEX      3.4
+SPECRGB     .65 .98 .98
+REFL        0
+REFR        1
+REFRIOR     2.1
+EMITTANCE   0
+TEXTURE     0
+
+// Textured diffuse
+MATERIAL 7
+TYPE	    DIFFUSE
+RGB         .65 .98 .98
+SPECEX      0
+SPECRGB     .65 .98 .98
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+TEXTURE     1
+noise
+
+// Refractive
+MATERIAL 8
+TYPE	    GLASS
+RGB         .65 .65 .98
+SPECEX      0
+SPECRGB     .65 .65 .98
+REFL        0
+REFR        1
+REFRIOR     2.4
+EMITTANCE   0
+TEXTURE     0
+
+// Fresnel
+MATERIAL 9
+TYPE	    DIFFUSE
+RGB         .98 .35 .65
+SPECEX      0
+SPECRGB     .98 .35 .65
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+TEXTURE     0
 
 // Camera
 CAMERA
 RES         800 800
 FOVY        45
-ITERATIONS  5000
+ITERATIONS  10000
 DEPTH       8
 FILE        cornell
-EYE         0.0 5 10.5
+LENS        0
+FOCAL       8.7
+EYE         0.0 5 9
 LOOKAT      0 5 0
 UP          0 1 0
-
 
 // Ceiling light
 OBJECT 0
 cube
 material 0
-TRANS       0 10 0
+TRANS       0 10 1.5
 ROTAT       0 0 0
-SCALE       3 .3 3
+SCALE       4 .25 4
 
 // Floor
 OBJECT 1
 cube
 material 1
 TRANS       0 0 0
-ROTAT       0 0 0
-SCALE       10 .01 10
+ROTAT       0 0 90
+SCALE       .01 10 10
 
 // Ceiling
 OBJECT 2
@@ -87,7 +159,7 @@ SCALE       .01 10 10
 // Back wall
 OBJECT 3
 cube
-material 1
+material 5
 TRANS       0 5 -5
 ROTAT       0 90 0
 SCALE       .01 10 10
@@ -95,7 +167,7 @@ SCALE       .01 10 10
 // Left wall
 OBJECT 4
 cube
-material 2
+material 3
 TRANS       -5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
@@ -103,15 +175,54 @@ SCALE       .01 10 10
 // Right wall
 OBJECT 5
 cube
-material 3
+material 2
 TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
-// Sphere
+// Reflective cube
 OBJECT 6
+cube
+material 5
+TRANS       -1.9 6.5 -1
+ROTAT       50 20 25
+SCALE       2 2 2
+
+// fresnel magnolia
+OBJECT 7
+mesh
+../scenes/meshes/magnolia.gltf
+material 6
+TRANS       -1.5 2.6 1.2
+ROTAT       30 15 0
+SCALE       0.03 0.03 0.03
+
+// Textured sphere
+OBJECT 8
+sphere
+material 7
+TRANS       2.3 1.55 -2.6
+ROTAT       50 45 25
+SCALE       3 3 3
+
+// Fresnel sphere
+OBJECT 9
 sphere
 material 4
-TRANS       -1 4 -1
-ROTAT       0 0 0
+TRANS       2.5 5.1 -0.75
+ROTAT       50 45 25
 SCALE       3 3 3
+
+OBJECT 10
+sphere
+material 8
+TRANS       2.9 1.2 2.3
+ROTAT       50 45 25
+SCALE       2 2 2
+
+OBJECT 11
+tanglecube
+material 9
+TRANS       -1.9 4.7 5
+ROTAT       0 60 25
+SCALE       0.6 0.6 0.6

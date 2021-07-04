@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <vector>
 #include <sstream>
 #include <fstream>
@@ -22,5 +23,8 @@ public:
 
     std::vector<Geom> geoms;
     std::vector<Material> materials;
+    std::map<int, std::vector<Geom>> meshes;
+    int num_triangles;
+    int num_meshes;
     RenderState state;
 };

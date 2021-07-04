@@ -1,0 +1,90 @@
+// Emissive material (light)
+MATERIAL 0
+TYPE	    EMISSIVE
+RGB         1 1 1
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   3
+
+// Diffuse white
+MATERIAL 1
+TYPE	    DIFFUSE
+RGB         .98 .98 .98
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Camera
+CAMERA
+RES         800 800
+FOVY        45
+ITERATIONS  5000
+DEPTH       8
+FILE        cornell
+LENS        0
+FOCAL       8.7
+EYE         0.0 0 10
+LOOKAT      0 0 0
+UP          0 1 0
+
+OBJECT 0
+sphere
+material 0
+TRANS       -2.5 2.5 -2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 1
+sphere
+material 0
+TRANS       2.5 2.5 -2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 2
+sphere
+material 0
+TRANS       -2.5 2.5 2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 3
+sphere
+material 0
+TRANS       2.5 2.5 2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 4
+sphere
+material 0
+TRANS       -2.5 -2.5 -2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 5
+sphere
+material 0
+TRANS       2.5 -2.5 -2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 6
+sphere
+material 0
+TRANS       -2.5 -2.5 2.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+OBJECT 7
+sphere
+material 0
+TRANS       2.5 -2.5 2.5
+ROTAT       0 0 0
+SCALE       1 1 1
