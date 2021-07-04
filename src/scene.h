@@ -13,9 +13,11 @@ using namespace std;
 class Scene {
 private:
     ifstream fp_in;
+    ifstream fp_obj_in;
     int loadMaterial(string materialid);
     int loadGeom(string objectid);
     int loadCamera();
+    int loadObj(std::vector<Geom>& triangles, int materialId, glm::mat4 transform, string fileName);
 public:
     Scene(string filename);
     ~Scene();

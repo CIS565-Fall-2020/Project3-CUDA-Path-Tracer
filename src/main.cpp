@@ -1,5 +1,6 @@
 #include "main.h"
 #include "preview.h"
+#include "common.h"
 #include <cstring>
 
 static std::string startTimeString;
@@ -180,11 +181,14 @@ void mousePositionCallback(GLFWwindow* window, double xpos, double ypos) {
     theta -= (ypos - lastY) / height;
     theta = std::fmax(0.001f, std::fmin(theta, PI));
     camchanged = true;
+    //cout << "Look at: " << renderState->camera.lookAt.x << ", " << renderState->camera.lookAt.y << ", " << renderState->camera.lookAt.z << endl;
+    //cout << "Up: " << renderState->camera.up.x << ", " << renderState->camera.up.y << ", " << renderState->camera.up.z << endl;
   }
   else if (rightMousePressed) {
     zoom += (ypos - lastY) / height;
     zoom = std::fmax(0.1f, zoom);
     camchanged = true;
+    //cout << "Eye: " << renderState->camera.position.x << ", " << renderState->camera.position.x << ", " << renderState->camera.position.x << endl;
   }
   else if (middleMousePressed) {
     renderState = &scene->state;
@@ -199,7 +203,9 @@ void mousePositionCallback(GLFWwindow* window, double xpos, double ypos) {
     cam.lookAt -= (float) (xpos - lastX) * right * 0.01f;
     cam.lookAt += (float) (ypos - lastY) * forward * 0.01f;
     camchanged = true;
+    //cout << "Eye: " << renderState->camera.position.x << ", " << renderState->camera.position.y << ", " << renderState->camera.position.z << endl;
   }
+
   lastX = xpos;
   lastY = ypos;
 }

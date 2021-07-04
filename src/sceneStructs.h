@@ -10,11 +10,36 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    TRIANGLE,
+    IMPLICIT
+};
+
+enum ImplicitGeomType {
+    TANGLECUBE,
+    TWIST
 };
 
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
+};
+
+struct TrianglePoint {
+    glm::vec3 pos;
+    glm::vec3 nor;
+    glm::vec2 uv;
+};
+
+struct Triangle {
+    TrianglePoint point1;
+    TrianglePoint point2;
+    TrianglePoint point3;
+};
+
+struct Implicit {
+    ImplicitGeomType type;
+    bool sdf;
+    float shadowEpsilon;
 };
 
 struct Geom {
@@ -26,6 +51,8 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    Triangle tri;
+    Implicit implicit;
 };
 
 struct Material {
@@ -34,10 +61,12 @@ struct Material {
         float exponent;
         glm::vec3 color;
     } specular;
+    float hasDiffuse;
     float hasReflective;
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    int   proceduralTexture;
 };
 
 struct Camera {
@@ -49,6 +78,8 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    float lensRadius;
+    float focalDist;
 };
 
 struct RenderState {
