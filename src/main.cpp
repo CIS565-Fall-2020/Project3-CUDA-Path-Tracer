@@ -26,6 +26,13 @@ int iteration;
 int width;
 int height;
 
+float loopTimer = 0.f;
+
+utilityCore::PerformanceTimer& getTimer() {
+    static utilityCore::PerformanceTimer timer;
+    return timer;
+}
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -134,7 +141,13 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
+        getTimer().startGpuTimer();
         pathtrace(pbo_dptr, frame, iteration);
+        getTimer().endGpuTimer();
+        loopTimer += getTimer().getGpuElapsedTimeForPreviousOperation();
+        if (iteration % 50 == 0) {
+            std::cout << "Iteration time for " << iteration << " iterations is " << loopTimer / iteration << std::endl;
+        }
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
