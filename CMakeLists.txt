@@ -73,6 +73,7 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    src/tiny_obj_loader.h
     )
 
 set(sources
@@ -92,10 +93,10 @@ list(SORT sources)
 source_group(Headers FILES ${headers})
 source_group(Sources FILES ${sources})
 
-#add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
+add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
 
 cuda_add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${LIBRARIES}
-    #stream_compaction  # TODO: uncomment if using your stream compaction
+    stream_compaction  # TODO: uncomment if using your stream compaction
     )

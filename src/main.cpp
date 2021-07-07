@@ -1,6 +1,13 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#include <chrono>
+
+// Jacky added
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#include "tiny_obj_loader.h"
+
+#include <glm/gtc/matrix_inverse.hpp>
 
 static std::string startTimeString;
 
@@ -26,6 +33,21 @@ int iteration;
 int width;
 int height;
 
+// Jacky added
+std::string inputfile = "../scenes/bunny.obj";
+tinyobj::attrib_t attrib;
+std::vector<tinyobj::shape_t> shapes;
+std::vector<tinyobj::material_t> materials;
+
+std::string warn;
+std::string err;
+
+std::vector<int> faces;
+std::vector<glm::vec3> vertices;
+std::vector<glm::vec3> normals;
+int numVertices;
+
+Geom meshBB;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -42,6 +64,71 @@ int main(int argc, char** argv) {
 
     // Load scene file
     scene = new Scene(sceneFile);
+
+    // Load obj file (Jacky added)
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, inputfile.c_str());
+
+    if (!warn.empty()) {
+        std::cout << warn << std::endl;
+    }
+
+    if (!err.empty()) {
+        std::cerr << err << std::endl;
+    }
+
+    if (!ret) {
+        exit(1);
+    }
+
+    Geom newGeom;
+    newGeom.type = MESH;
+    newGeom.materialid = 6;
+    scene->geoms.push_back(newGeom);
+
+    glm::vec3 minCorner(FLT_MAX);
+    glm::vec3 maxCorner(FLT_MIN);
+
+    for (size_t s = 0; s < shapes.size(); s++) {
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+            int fv = shapes[s].mesh.num_face_vertices[f];
+
+            // Loop over vertices in the face.
+            for (size_t v = 0; v < fv; v++) {
+                // access to vertex
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+                vertices.push_back(glm::vec3(
+                    attrib.vertices[3 * idx.vertex_index + 0], 
+                    attrib.vertices[3 * idx.vertex_index + 1],
+                    attrib.vertices[3 * idx.vertex_index + 2]));
+
+                normals.push_back(glm::vec3(
+                    attrib.normals[3 * idx.normal_index + 0],
+                    attrib.normals[3 * idx.normal_index + 1],
+                    attrib.normals[3 * idx.normal_index + 2]));
+
+                minCorner[0] = glm::min(minCorner[0], attrib.vertices[3 * idx.vertex_index + 0]);
+                minCorner[1] = glm::min(minCorner[1], attrib.vertices[3 * idx.vertex_index + 1]);
+                minCorner[2] = glm::min(minCorner[2], attrib.vertices[3 * idx.vertex_index + 2]);
+
+                maxCorner[0] = glm::max(maxCorner[0], attrib.vertices[3 * idx.vertex_index + 0]);
+                maxCorner[1] = glm::max(maxCorner[1], attrib.vertices[3 * idx.vertex_index + 1]);
+                maxCorner[2] = glm::max(maxCorner[2], attrib.vertices[3 * idx.vertex_index + 2]);
+            }
+            index_offset += fv;
+        }
+    }
+
+    numVertices = vertices.size();
+
+    meshBB.translation = minCorner - glm::vec3(glm::scale(maxCorner - minCorner) * glm::vec4(-0.5f, -0.5f, -0.5f, 1.f));
+    meshBB.scale = maxCorner - minCorner;
+    meshBB.rotation = glm::vec3(0.f);
+
+    meshBB.transform = utilityCore::buildTransformationMatrix(meshBB.translation, meshBB.rotation, meshBB.scale);
+    meshBB.inverseTransform = glm::inverse(meshBB.transform);
+    meshBB.invTranspose = glm::inverseTranspose(meshBB.transform);
 
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
@@ -122,9 +209,15 @@ void runCuda() {
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
+    // Performance Timing Variables (Jacky added)
+    std::chrono::high_resolution_clock::time_point startTime, endTime;
+
     if (iteration == 0) {
         pathtraceFree();
-        pathtraceInit(scene);
+        pathtraceInit(scene, vertices, normals, numVertices, meshBB);
+
+        // Jacky added code for timing purposes
+        startTime = std::chrono::high_resolution_clock::now();
     }
 
     if (iteration < renderState->iterations) {
@@ -134,11 +227,16 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
+        pathtrace(pbo_dptr, frame, iteration, renderState->iterations);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
+        // Jacky added code for timing purposes
+        endTime = std::chrono::high_resolution_clock::now();
+        std::cout << "Time Duration: " <<
+            std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count() << std::endl;
+
         saveImage();
         pathtraceFree();
         cudaDeviceReset();

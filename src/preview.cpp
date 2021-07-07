@@ -2,6 +2,7 @@
 #include <ctime>
 #include "main.h"
 #include "preview.h"
+#include <chrono>
 
 GLuint positionLocation = 0;
 GLuint texcoordsLocation = 1;
@@ -169,6 +170,7 @@ bool init() {
 }
 
 void mainLoop() {
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         runCuda();

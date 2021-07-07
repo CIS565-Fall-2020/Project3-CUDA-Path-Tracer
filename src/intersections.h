@@ -142,3 +142,48 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
 
     return glm::length(r.origin - intersectionPoint);
 }
+
+__host__ __device__ 
+float meshIntersectionTest(Ray r,
+    glm::vec3& tmp_intersect, glm::vec3& tmp_normal,
+    glm::vec3* dev_vertices, glm::vec3* dev_normals, int dev_numVertices, Geom dev_meshBB) {
+
+    // First check if the ray hits the bounding box of the obj mesh at all
+    glm::vec3 tmp_intersect_BB, tmp_normal_BB;
+    bool outside_BB;
+    
+    if (boxIntersectionTest(dev_meshBB, r, tmp_intersect_BB, tmp_normal_BB, outside_BB) < 0.f) {
+        return -1;
+    }
+    
+    bool intersect = false;
+    float t_min = FLT_MAX;
+    for (int v = 0; v < dev_numVertices; v += 3) {
+        glm::vec3 v0 = dev_vertices[v];
+        glm::vec3 v1 = dev_vertices[v + 1];
+        glm::vec3 v2 = dev_vertices[v + 2];
+
+        glm::vec3 n0 = dev_normals[v];
+        glm::vec3 n1 = dev_normals[v + 1];
+        glm::vec3 n2 = dev_normals[v + 2];
+
+        glm::vec3 baryPos;
+        if (glm::intersectRayTriangle(r.origin, glm::normalize(r.direction), v0, v1, v2, baryPos)) {
+            intersect = true;
+
+            float z = 1.0 / (glm::dot(baryPos, glm::vec3(1.0 / v0.z, 1.0 / v1.z, 1.0 / v2.z)));
+            glm::vec3 intersect_current = z * (glm::mat3(v0 / v0.z, v1 / v1.z, v2 / v2.z) * baryPos);
+            float t_current = glm::length(r.origin - intersect_current);
+            glm::vec3 normal_current = glm::normalize(z * (glm::mat3(n0 / v0.z, n1 / v1.z, n2 / v2.z) * baryPos));
+
+            if (t_current > 0.0f && t_current < t_min)
+            {
+                t_min = t_current;
+                tmp_intersect = intersect_current;
+                tmp_normal = normal_current;
+            }
+        }
+    }
+
+    return intersect ? t_min : -1;
+}
