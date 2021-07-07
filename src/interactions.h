@@ -1,5 +1,7 @@
 #pragma once
-
+#include <thrust/execution_policy.h>
+#include <thrust/random.h>
+#include <thrust/remove.h>
 #include "intersections.h"
 
 // CHECKITOUT
@@ -76,4 +78,29 @@ void scatterRay(
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float p = u01(rng);
+    // try diffuse
+    //pathSegment.ray.origin = intersect;
+    if (p > m.hasReflective + m.hasRefractive) {
+
+        glm::vec3 diffuse_dir = calculateRandomDirectionInHemisphere(normal, rng);
+
+        //float costheta = glm::dot(normal, diffuse_dir);
+        pathSegment.ray.direction = diffuse_dir;
+
+        pathSegment.color *= m.color;
+        //pathSegment.color = glm::normalize(normal);
+        
+    } 
+    else if (p > m.hasRefractive) {
+        glm::vec3 reflection_dir = glm::reflect(pathSegment.ray.direction, normal);
+        pathSegment.color *= m.color;
+        pathSegment.ray.direction = reflection_dir;
+    }
+    else {
+        // refractive under construction
+    }
+    pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
+    pathSegment.remainingBounces--;
 }
