@@ -4,12 +4,14 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "glm/glm.hpp"
+#include "tinyobj.h"
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH
 };
 
 struct Ray {
@@ -26,6 +28,9 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    int triStart, triEnd;
+    glm::vec3 min_bound;
+    glm::vec3 max_bound;
 };
 
 struct Material {
@@ -49,6 +54,22 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    glm::vec3 motion;
+    bool depth_of_field;
+    float lens_radius;
+    float focal_distance;
+};
+
+struct Mesh {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    int triangleCnt;
+};
+
+struct Triangle {
+    glm::vec3 v[3];
+    glm::vec3 n;
 };
 
 struct RenderState {
