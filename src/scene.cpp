@@ -30,6 +30,14 @@ Scene::Scene(string filename) {
             }
         }
     }
+    cout << "Adding lights now. I made this myself :)" << endl;
+    for (int i = 0; i < geoms.size(); i++) {
+        Geom& g = geoms.at(i);
+        if (materials.at(g.materialid).emittance > 0) {
+            cout << "Geometry " << i << " is a light." << endl;
+            lights.push_back(i);
+        }
+    }
 }
 
 int Scene::loadGeom(string objectid) {
