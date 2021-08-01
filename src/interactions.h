@@ -1,6 +1,11 @@
 #pragma once
 
 #include "intersections.h"
+#include "glm/glm.hpp"
+#include "glm/gtx/norm.hpp"
+
+#define PROCEDURAL_TEXTURE 0
+#define STRATIFIED 0
 
 // CHECKITOUT
 /**
@@ -9,7 +14,7 @@
  */
 __host__ __device__
 glm::vec3 calculateRandomDirectionInHemisphere(
-        glm::vec3 normal, thrust::default_random_engine &rng) {
+    glm::vec3 normal, thrust::default_random_engine& rng) {
     thrust::uniform_real_distribution<float> u01(0, 1);
 
     float up = sqrt(u01(rng)); // cos(theta)
@@ -24,9 +29,52 @@ glm::vec3 calculateRandomDirectionInHemisphere(
     glm::vec3 directionNotNormal;
     if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
         directionNotNormal = glm::vec3(1, 0, 0);
-    } else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
         directionNotNormal = glm::vec3(0, 1, 0);
-    } else {
+    }
+    else {
+        directionNotNormal = glm::vec3(0, 0, 1);
+    }
+
+    // Use not-normal direction to generate two perpendicular directions
+    glm::vec3 perpendicularDirection1 =
+        glm::normalize(glm::cross(normal, directionNotNormal));
+    glm::vec3 perpendicularDirection2 =
+        glm::normalize(glm::cross(normal, perpendicularDirection1));
+
+    return up * normal
+        + cos(around) * over * perpendicularDirection1
+        + sin(around) * over * perpendicularDirection2;
+}
+
+__host__ __device__
+glm::vec3 calculateStratifiedDirectionInHemisphere(
+    glm::vec3 normal, thrust::default_random_engine& rng, int iter, int max_iter) {
+
+    int samples = max_iter;
+    int sqrtVal = (int)(sqrt((float)samples) + 0.5f);
+    float invSqrtVal = 1.f / (float)sqrtVal;
+
+    int x = iter % sqrtVal;
+    int y = (float)(iter) / (float)sqrtVal;
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float x_point = glm::clamp((x + u01(rng)) * invSqrtVal, 0.f, 1.f);
+    float y_point = glm::clamp((y + u01(rng)) * invSqrtVal, 0.f, 1.f);
+
+    float up = sqrt(y_point); // cos(theta)
+    float over = sqrt(1.f - (up * up)); // sin(theta)
+    float around = x_point * TWO_PI;
+
+    glm::vec3 directionNotNormal;
+    if (abs(normal.x) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(1, 0, 0);
+    }
+    else if (abs(normal.y) < SQRT_OF_ONE_THIRD) {
+        directionNotNormal = glm::vec3(0, 1, 0);
+    }
+    else {
         directionNotNormal = glm::vec3(0, 0, 1);
     }
 
@@ -47,11 +95,11 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  * A perfect specular surface scatters in the reflected ray direction.
  * In order to apply multiple effects to one surface, probabilistically choose
  * between them.
- * 
+ *
  * The visual effect you want is to straight-up add the diffuse and specular
  * components. You can do this in a few ways. This logic also applies to
  * combining other types of materias (such as refractive).
- * 
+ *
  * - Always take an even (50/50) split between a each effect (a diffuse bounce
  *   and a specular bounce), but divide the resulting color of either branch
  *   by its probability (0.5), to counteract the chance (0.5) of the branch
@@ -62,18 +110,104 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  *   branch result by that branch's probability (whatever probability you use).
  *
  * This method applies its changes to the Ray parameter `ray` in place.
- * It also modifies the color `color` of the ray in place.
+ * It also modifies the color `col or` of the ray in place.
  *
  * You may need to change the parameter list for your purposes!
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
-        glm::vec3 intersect,
-        glm::vec3 normal,
-        const Material &m,
-        thrust::default_random_engine &rng) {
-    // TODO: implement this.
-    // A basic implementation of pure-diffuse shading will just call the
-    // calculateRandomDirectionInHemisphere defined above.
+    PathSegment& pathSegment,
+    glm::vec3 intersect,
+    glm::vec3 normal,
+    const Material& m,
+    thrust::default_random_engine& rng,
+    int iter, int depth) {
+
+    //procedural colors
+    if (PROCEDURAL_TEXTURE && m.indexOfRefraction < 0) {
+        if (m.indexOfRefraction == -1) {
+            pathSegment.color *= normal;
+            pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+            pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+        }
+        else if (m.indexOfRefraction == -2) {
+            glm::vec3 rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+            glm::vec3 new_color = glm::clamp(glm::vec3(m.color.x + sin(intersect.x), m.color.y + cos(intersect.y), m.color.z + sin(intersect.z)), 0.f, 1.f);
+            pathSegment.color *= new_color;
+            pathSegment.ray.direction = rand_dir;
+            pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+        }
+        return;
+    }
+
+    //specular
+    if (m.hasReflective > 0) {
+        pathSegment.color *= m.specular.color;
+        pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, normal);
+        pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+    }
+    // refractive glass
+    else if (m.hasRefractive > 0) {
+        float etaI = 1.f;
+        float etaT = m.indexOfRefraction;
+
+        glm::vec3 new_normal = normal;
+        float cosThetaI = glm::clamp(glm::dot(pathSegment.ray.direction, normal), -1.f, 1.f);
+        if (cosThetaI < 0.f) {
+            // outside shape
+            cosThetaI = glm::abs(cosThetaI);
+        }
+        else {
+            // inside shape
+            new_normal = -new_normal;
+            etaI = etaT;
+            etaT = 1.f;
+        }
+
+        float sinThetaI = glm::sqrt(glm::max(0.f, 1.f - cosThetaI * cosThetaI));
+
+        // check if there is total internal reflection
+        if (etaI / etaT * sinThetaI >= 1.f) {
+            pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, new_normal);
+        }
+        else {
+            // calculate Schlick's approximation
+            float reflect_coeff_in = ((etaI - etaT) / (etaI + etaT)) * ((etaI - etaT) / (etaI + etaT));
+            float reflect_coeff = reflect_coeff_in + (1.f - reflect_coeff_in) * glm::pow((1.f - cosThetaI), 5.f);
+
+            // generate a random number
+            thrust::uniform_real_distribution<float> u01(0, 1);
+            float random = u01(rng);
+
+            // reflect
+            if (random < reflect_coeff) {
+                pathSegment.ray.direction = glm::reflect(pathSegment.ray.direction, new_normal);
+            }
+            // refract
+            else {
+                pathSegment.ray.direction = glm::refract(pathSegment.ray.direction, new_normal, etaI / etaT);
+            }
+        }
+        pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+        pathSegment.color *= m.specular.color;
+
+    }
+    //diffuse
+    else {
+        glm::vec3 rand_dir;
+#if STRATIFIED
+        if (depth == 1) {
+            rand_dir = calculateStratifiedDirectionInHemisphere(normal, rng, iter, 5000);
+        }
+        else
+        {
+            rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+        }
+#else
+        rand_dir = calculateRandomDirectionInHemisphere(normal, rng);
+#endif
+        pathSegment.color *= m.color;
+        pathSegment.ray.direction = rand_dir;
+        pathSegment.ray.origin = intersect + (pathSegment.ray.direction * 0.01f);
+    }
 }
