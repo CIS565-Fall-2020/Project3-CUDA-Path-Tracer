@@ -156,11 +156,12 @@ SCALE       2 2 2
 
 // Sphere
 OBJECT 8
-sphere
-material 5
+mesh
+../scenes/sphere.obj
+material 1
 TRANS       3 4 -1
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       4 4 4
 
 // Cube
 OBJECT 9

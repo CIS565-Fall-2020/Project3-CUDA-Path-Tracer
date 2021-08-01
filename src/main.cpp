@@ -54,7 +54,6 @@ int main(int argc, char** argv) {
     glm::vec3 up = cam.up;
     glm::vec3 right = glm::cross(view, up);
     up = glm::cross(right, view);
-
     cameraPosition = cam.position;
 
     // compute phi (horizontal) and theta (vertical) relative 3D axis
@@ -100,13 +99,16 @@ void saveImage() {
 
 void runCuda() {
     if (camchanged) {
-        iteration = 0;
+        cout << "cam changed" << endl;
+        //iteration = 0;
         Camera &cam = renderState->camera;
         cameraPosition.x = zoom * sin(phi) * sin(theta);
         cameraPosition.y = zoom * cos(theta);
         cameraPosition.z = zoom * cos(phi) * sin(theta);
-
+        glm::vec3 tmp = cam.view;
         cam.view = -glm::normalize(cameraPosition);
+        cam.move += (tmp - cam.view);
+        cout << "cam.move" << cam.move[0] << " " << cam.move[1] << " " << cam.move[2] << " " << endl;
         glm::vec3 v = cam.view;
         glm::vec3 u = glm::vec3(0, 1, 0);//glm::normalize(cam.up);
         glm::vec3 r = glm::cross(v, u);
@@ -134,8 +136,18 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
 
+        // add timer
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        pathtrace(pbo_dptr, frame, iteration);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        //std::cout << milliseconds << std::endl;
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
