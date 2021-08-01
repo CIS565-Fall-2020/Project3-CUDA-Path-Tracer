@@ -2,9 +2,11 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 
 #include "sceneStructs.h"
 #include "utilities.h"
+#include "octree.h"
 
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
@@ -141,4 +143,161 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     }
 
     return glm::length(r.origin - intersectionPoint);
+}
+
+#if 0
+__host__ __device__
+float octreeIntersectionTest(const OctreeNode &node, const Ray &ray,
+		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside, int &index, 
+		Geom *geoms, int *geom_indices, OctreeNode *octree) {
+	Geom box;
+	box.type = CUBE;
+	box.translation = node.center;
+	box.rotation = glm::vec3(0.0f);
+	box.scale = node.bp1 - node.bp0;
+
+	box.transform = utilityCore::buildTransformationMatrix(
+		box.translation, box.rotation, box.scale);
+	box.inverseTransform = glm::inverse(box.transform);
+	box.invTranspose = glm::inverseTranspose(box.transform);
+
+	glm::vec3 tmp_intersect;
+	glm::vec3 tmp_normal;
+	bool tmp_outside = true;
+	int tmp_idx = -1;
+	float t_min = FLT_MAX;
+
+	float t0 = boxIntersectionTest(box, ray, tmp_intersect, tmp_normal, tmp_outside);
+	if (t0 < 0.f) {
+		return -1;
+	}
+	if (node.childrenIndices[0] > 0) {
+		glm::vec3 tmp_intersect2;
+		glm::vec3 tmp_normal2;
+		bool tmp_outside2 = true;
+		int tmp_idx2 = -1;
+		for (int cIdx : node.childrenIndices) {
+			float t = octreeIntersectionTest(octree[cIdx], ray, 
+				tmp_intersect2, tmp_normal2, tmp_outside2, tmp_idx2, geoms, geom_indices, octree);
+			if (t > 0.0f && t_min > t) {
+				t_min = t;
+				tmp_idx = tmp_idx2;
+				tmp_intersect = tmp_intersect2;
+				tmp_outside = tmp_outside2;
+				tmp_normal = tmp_normal2;
+			}
+		}
+	}
+	else {
+		// This is a leaf
+		int l = node.geom_idx_start;
+		int r = node.geom_idx_end;
+		for (int k = l; k < r; k++) {
+			int gIdx = geom_indices[k];
+			Geom & geom = geoms[gIdx];
+			glm::vec3 baryRes;
+			bool ret = glm::intersectRayTriangle(ray.origin, ray.direction,
+				geom.v0, geom.v1, geom.v2, baryRes);
+			if (ret) {
+				// Intersect
+				float t = baryRes.z;
+				if (t_min > t)
+				{
+					t_min = t;
+					tmp_idx = gIdx;
+					tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * (1 - baryRes.x - baryRes.y);
+					if (glm::dot(ray.origin, geom.normal) > 0.0f) {
+						tmp_outside = false;
+						tmp_normal = -geom.normal;
+					}
+					else {
+						tmp_outside = true;
+						tmp_normal = geom.normal;
+					}
+				}
+			}
+		}
+		
+	}
+	if (tmp_idx >= 0) {
+		intersectionPoint = tmp_intersect;
+		normal = tmp_normal;
+		outside = tmp_outside;
+		index = tmp_idx;
+		return t_min;
+	}
+	else {
+		return -1;
+	}
+}
+#endif
+
+__host__ __device__
+float octreeNodeIntersectionTest(const OctreeNode &node, const Ray &ray,
+		glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside, int &index,
+		Geom *geoms, int *geom_indices, bool &isLeaf) {
+
+	isLeaf = (node.childrenIndices[0] < 0);
+
+	// check mesh in box
+	if (node.geom_idx_start == node.geom_idx_end) {
+		// no mesh within box
+		return -1;
+	}
+	// check bounding box intersection
+	Geom box;
+	box.type = CUBE;
+
+	box.transform = node.transform;
+	box.inverseTransform = node.invTransform;
+	box.invTranspose = node.invTranspose;
+
+	glm::vec3 tmp_intersect;
+	glm::vec3 tmp_normal;
+	bool tmp_outside = true;
+	int tmp_idx = -1;
+	float t_min = FLT_MAX;
+
+	float t0 = boxIntersectionTest(box, ray, tmp_intersect, tmp_normal, tmp_outside);
+	if (t0 < 0.f) {
+		return -1;
+	}
+	// test intersections 
+	int l = node.geom_idx_start;
+	int r = node.geom_idx_end;
+	for (int k = l; k < r; k++) {
+		int gIdx = geom_indices[k];
+		Geom & geom = geoms[gIdx];
+		glm::vec3 baryRes;
+		bool ret = glm::intersectRayTriangle(ray.origin, ray.direction,
+			geom.v0, geom.v1, geom.v2, baryRes);
+		if (ret) {
+			// Intersect
+			float t = baryRes.z;
+			if (t_min > t)
+			{
+				t_min = t;
+				tmp_idx = gIdx;
+				tmp_intersect = geom.v0 * baryRes.x + geom.v1 * baryRes.y + geom.v2 * (1 - baryRes.x - baryRes.y);
+				if (glm::dot(ray.origin, geom.normal) > 0.0f) {
+					tmp_outside = false;
+					tmp_normal = -geom.normal;
+				}
+				else {
+					tmp_outside = true;
+					tmp_normal = geom.normal;
+				}
+			}
+		}
+	}
+	if (tmp_idx >= 0) {
+		intersectionPoint = tmp_intersect;
+		normal = tmp_normal;
+		outside = tmp_outside;
+		index = tmp_idx;
+		return t_min;
+	}
+	else {
+		return -1;
+	}
 }

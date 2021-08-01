@@ -66,6 +66,13 @@ int main(int argc, char** argv) {
     ogLookAt = cam.lookAt;
     zoom = glm::length(cam.position - ogLookAt);
 
+	// Load Gltf if needed
+	for (int i = 2; i < argc; i++) {
+		const char *gltfFile = argv[i];
+		scene->loadGltf(gltfFile);
+	}
+	scene->buildOctree();
+
     // Initialize CUDA and GL components
     init();
 
@@ -132,9 +139,21 @@ void runCuda() {
         iteration++;
         cudaGLMapBufferObject((void**)&pbo_dptr, pbo);
 
+		// start timer
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start);
+
         // execute the kernel
         int frame = 0;
         pathtrace(pbo_dptr, frame, iteration);
+
+		// time
+		cudaEventRecord(stop);
+		cudaEventSynchronize(stop);
+		float milliseconds = 0.f;
+		cudaEventElapsedTime(&milliseconds, start, stop);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
