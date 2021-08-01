@@ -68,12 +68,43 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
-        glm::vec3 intersect,
+		PathSegment &pathSegment,
         glm::vec3 normal,
+		float t, // t as in ShadableIntersection
         const Material &m,
         thrust::default_random_engine &rng) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+	thrust::uniform_real_distribution<float> u01(0, 1);
+	glm::vec3 dir_spec = glm::normalize(glm::reflect(pathSegment.ray.direction, normal));
+	glm::vec3 dir_diff = glm::normalize(calculateRandomDirectionInHemisphere(normal, rng));
+	float choice = u01(rng);
+	bool spec;
+	float scale;
+	if (m.hasReflective) {
+		spec = choice > 0.2f;
+		scale = 0.8f;
+	}
+	else {
+		spec = choice > 0.8f;
+		scale = 0.2f;
+	}
+	glm::vec3 dir_final = spec ? dir_spec : dir_diff;
+	// update ray
+	glm::vec3 intersect = pathSegment.ray.origin + t * pathSegment.ray.direction;
+	pathSegment.ray.direction = dir_final;
+	pathSegment.ray.origin = intersect;
+	// update color
+	
+	//pathSegment.color *= (m.color * lightTerm) * 0.3f + ((1.0f - t * 0.02f) * m.color) * 0.7f;
+	//pathSegment.color *= u01(rng); // apply some noise
+	
+	if (spec) {
+		pathSegment.color *= m.specular.color * scale;
+	}
+	else {
+		pathSegment.color *= m.color * (1 - scale);
+	}
+	
 }
