@@ -1,3 +1,4 @@
+
 // Emissive material (light)
 MATERIAL 0
 RGB         1 1 1
@@ -6,7 +7,7 @@ SPECRGB     0 0 0
 REFL        0
 REFR        0
 REFRIOR     0
-EMITTANCE   5
+EMITTANCE   8
 
 // Diffuse white
 MATERIAL 1
@@ -48,14 +49,44 @@ REFR        0
 REFRIOR     0
 EMITTANCE   0
 
+// glass
+MATERIAL 5
+RGB         .98 .98 .98
+SPECEX      0
+SPECRGB     0.99 0.99 0.8
+REFL        0.2
+REFR        0.8
+REFRIOR     1.5
+EMITTANCE   0
+
+// purple glass
+MATERIAL 6
+RGB         .98 .98 .98
+SPECEX      0
+SPECRGB     0.9 0.7 0.99
+REFL        0.5
+REFR        0.95
+REFRIOR     1.2
+EMITTANCE   0
+
+// blue metal
+MATERIAL 7
+RGB         .2 .2 .98
+SPECEX      0
+SPECRGB     0.2 0.2 0.99
+REFL        0.8
+REFR        0.2
+REFRIOR     1
+EMITTANCE   0
+
 // Camera
 CAMERA
-RES         800 800
+RES         1000 1000
 FOVY        45
 ITERATIONS  5000
 DEPTH       8
 FILE        cornell
-EYE         0.0 5 10.5
+EYE         0.0 5 5
 LOOKAT      0 5 0
 UP          0 1 0
 
@@ -66,7 +97,7 @@ cube
 material 0
 TRANS       0 10 0
 ROTAT       0 0 0
-SCALE       3 .3 3
+SCALE       3 .1 3
 
 // Floor
 OBJECT 1
@@ -92,6 +123,7 @@ TRANS       0 5 -5
 ROTAT       0 90 0
 SCALE       .01 10 10
 
+
 // Left wall
 OBJECT 4
 cube
@@ -108,10 +140,19 @@ TRANS       5 5 0
 ROTAT       0 0 0
 SCALE       .01 10 10
 
+
 // Sphere
 OBJECT 6
 sphere
-material 4
-TRANS       -1 4 -1
+material 5
+TRANS       -2 4.8 -0.8
 ROTAT       0 0 0
-SCALE       3 3 3
+SCALE       3.3 3.3 3.3
+
+// Cube
+OBJECT 7
+cube
+material 7
+TRANS       2 4 -3
+ROTAT       30 30 30
+SCALE       2.5 2.5 2.5

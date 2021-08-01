@@ -73,6 +73,11 @@ set(headers
     src/sceneStructs.h
     src/preview.h
     src/utilities.h
+    external/include/tiny_gltf.h
+    external/include/json.hpp
+    external/include/gltf-loader.h
+    external/include/mesh.h
+    external/include/material.h
     )
 
 set(sources
