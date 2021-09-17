@@ -3,11 +3,19 @@ CUDA Path Tracer
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 3**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+* Thy (Tea) Tran 
+  * [LinkedIn](https://www.linkedin.com/in/thy-tran-97a30b148/), [personal website](https://tatran5.github.io/), [email](thytran316@outlook.com)
+* Tested on: Windows 10, i7-8750H @ 2.20GHz 22GB, GTX 1070
 
-### (TODO: Your README)
+### Path Tracer - Part 1
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+![](img/basic_cornell_5000samp.png)
+![](img/basic_cornell_reflective_5000samp.png)
+
+The problem with coloring every path segment in a buffer and performing BSDF evaluation using one big shading kernel is that there will be a lot of branches within the kernel due to different materials/BSDF evaluations resulting in different amounts of time to complete. Hence, threads within one branch (similar if not same material) in that kernel have to wait for other threads from a branch to finish executing the kernel first to continue execution. This means the performance time would not be optimal. 
+
+Sorting the ray/path segments so that rays/paths interactinve with the same material are contiguous in memory before shading results in less random memory access. Hence, threads in a warp can access the memory related to one material faster.
+
+Caching the first bounce intersections means the performance time per iteration is greatly reduced because the first bounce of each iteration is already calculated and cached.
+
 
