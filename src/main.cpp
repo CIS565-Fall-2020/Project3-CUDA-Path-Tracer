@@ -134,8 +134,18 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
-        pathtrace(pbo_dptr, frame, iteration);
 
+        // add timer
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        pathtrace(pbo_dptr, frame, iteration);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        //std::cout << milliseconds << std::endl;
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
