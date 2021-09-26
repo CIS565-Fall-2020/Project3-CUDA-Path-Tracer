@@ -50,7 +50,7 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  * 
  * The visual effect you want is to straight-up add the diffuse and specular
  * components. You can do this in a few ways. This logic also applies to
- * combining other types of materias (such as refractive).
+ * combining other types of materials (such as refractive).
  * 
  * - Always take an even (50/50) split between a each effect (a diffuse bounce
  *   and a specular bounce), but divide the resulting color of either branch
@@ -68,12 +68,43 @@ glm::vec3 calculateRandomDirectionInHemisphere(
  */
 __host__ __device__
 void scatterRay(
-		PathSegment & pathSegment,
-        glm::vec3 intersect,
-        glm::vec3 normal,
-        const Material &m,
+        const Camera& cam,
+		PathSegment& pathSegment,
+        ShadeableIntersection& intersection,
+        Material& mat,
         thrust::default_random_engine &rng) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
     // calculateRandomDirectionInHemisphere defined above.
+    glm::vec3 color;
+    glm::vec3 normal = intersection.surfaceNormal;
+    pathSegment.ray.origin = intersection.intersectPos;
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    float randMat = u01(rng);
+
+    // used 2nd suggestion for determining which material to sample
+    if (randMat <= mat.hasReflective) {
+        // specular calculation
+        glm::vec3 r = glm::reflect(pathSegment.ray.direction, normal);
+        glm::vec3 v = glm::normalize(intersection.intersectPos);
+        color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(r, v), mat.specular.exponent) / mat.hasReflective;
+        // glm::vec3 v = glm::normalize(cam.position - intersection.intersectPos);
+        // color = glm::vec3(1.f) * mat.specular.color * mat.hasReflective * glm::pow(glm::dot(r, v), mat.specular.exponent) / mat.hasReflective;
+        color = mat.specular.color;
+        pathSegment.ray.direction = r;
+    }
+    else {
+        // diffuse calculation
+        float diffuse = glm::dot(normal, glm::vec3(0.0f, 1.0f, 0.0f));
+        float ambient = 0.2;
+        float lux = diffuse + ambient;
+        color = mat.color * lux / (1.f - mat.hasReflective);
+        
+        pathSegment.ray.direction = calculateRandomDirectionInHemisphere(normal, rng);
+    }
+
+    pathSegment.color *= color;
+    pathSegment.remainingBounces--;
+    pathSegment.remainingBounces = 0;
 }
