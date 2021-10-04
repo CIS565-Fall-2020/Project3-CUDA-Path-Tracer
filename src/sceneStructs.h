@@ -10,6 +10,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH,
 };
 
 struct Ray {
@@ -26,6 +27,15 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    int meshIdx;
+    glm::vec3 min_bound;
+    glm::vec3 max_bound;
+    glm::vec3 velocity;  // for motion blur
+};
+
+struct Triangle {
+	glm::vec3 v[3];
+	glm::vec3 n;
 };
 
 struct Material {
@@ -73,4 +83,18 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+};
+
+struct isContinuing {
+    __host__ __device__ bool operator()(const PathSegment& segment) {
+        return segment.remainingBounces >= 0;
+    }
+};
+
+
+struct material_sort {
+	__host__ __device__ bool operator()(const ShadeableIntersection& a,
+		const ShadeableIntersection& b) {
+		return a.materialId < b.materialId;
+	}
 };

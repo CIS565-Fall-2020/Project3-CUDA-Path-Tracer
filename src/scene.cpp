@@ -4,7 +4,12 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-Scene::Scene(string filename) {
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#include "tiny_obj_loader.h"
+
+Scene::Scene(string filename)
+    :totalTriangles(0)
+{
     cout << "Reading scene from " << filename << " ..." << endl;
     cout << " " << endl;
     char* fname = (char*)filename.c_str();
@@ -27,7 +32,12 @@ Scene::Scene(string filename) {
             } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
                 loadCamera();
                 cout << " " << endl;
-            }
+			}
+			else if (strcmp(tokens[0].c_str(), "TEST") == 0) {
+				loadGeom(tokens[1]);
+				cout << " " << endl;
+			}
+
         }
     }
 }
@@ -41,6 +51,7 @@ int Scene::loadGeom(string objectid) {
         cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
+        newGeom.velocity = glm::vec3(0.f);
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -51,7 +62,21 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(line.c_str(), "cube") == 0) {
                 cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
-            }
+			}
+			else if (strcmp(line.c_str(), "mesh") == 0) {
+				cout << "Creating new mesh..." << endl;
+				utilityCore::safeGetline(fp_in, line);
+                glm::vec3 minBound = glm::vec3(0.f);
+                glm::vec3 maxBound = glm::vec3(0.f);
+				int idx = loadMesh(line, minBound, maxBound);
+				if (idx < 0) {
+					return -1;
+				}
+                newGeom.min_bound = minBound;
+                newGeom.max_bound = maxBound;
+				newGeom.meshIdx = idx;
+				newGeom.type = MESH;
+			}
         }
 
         //link material
@@ -75,6 +100,9 @@ int Scene::loadGeom(string objectid) {
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
                 newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
+            else if (strcmp(tokens[0].c_str(), "VELOCITY") == 0) {
+                newGeom.velocity = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+            }
 
             utilityCore::safeGetline(fp_in, line);
         }
@@ -87,6 +115,7 @@ int Scene::loadGeom(string objectid) {
         geoms.push_back(newGeom);
         return 1;
     }
+    return 0;
 }
 
 int Scene::loadCamera() {
@@ -185,4 +214,83 @@ int Scene::loadMaterial(string materialid) {
         materials.push_back(newMaterial);
         return 1;
     }
+}
+
+// Reference: example code-tinyobj
+// https://github.com/tinyobjloader/tinyobjloader/blob/bd4d94494924a37eb57adf68167c047af75224b8/README.md
+int Scene::loadMesh(string filename, glm::vec3& min_bound, glm::vec3& max_bound) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+	std::vector<Triangle> triangles;
+
+	// load obj
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
+		return -1;
+	}
+
+	if (!warn.empty()) {
+		std::cout << warn << std::endl;
+	}
+
+	if (!err.empty()) {
+		std::cerr << err << std::endl;
+	}
+
+    tinyobj::index_t idx_temp = shapes[0].mesh.indices[0];
+
+    // init max and min bound
+    min_bound.x = attrib.vertices[3 * idx_temp.vertex_index];
+    min_bound.y = attrib.vertices[3 * idx_temp.vertex_index + 1];
+    min_bound.z = attrib.vertices[3 * idx_temp.vertex_index + 2];
+
+	max_bound.x = attrib.vertices[3 * idx_temp.vertex_index];
+	max_bound.y = attrib.vertices[3 * idx_temp.vertex_index + 1];
+	max_bound.z = attrib.vertices[3 * idx_temp.vertex_index + 2];
+
+	// Loop over shapes
+	for (const tinyobj::shape_t& shape : shapes) {
+		// Loop over faces(polygon)
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+			int fv = shape.mesh.num_face_vertices[f];
+			// Loop over vertices in the face.
+			Triangle t;
+
+			for (size_t v = 0; v < fv; v++) {
+				// access to vertex
+				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+				tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index];
+				tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+				tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+				t.v[v] = glm::vec3(vx, vy, vz);
+
+                min_bound.x = vx <= min_bound.x ? vx : min_bound.x;
+                min_bound.y = vy <= min_bound.y ? vy : min_bound.y;
+                min_bound.z = vz <= min_bound.z ? vz : min_bound.z;
+
+				max_bound.x = vx >= max_bound.x ? vx : max_bound.x;
+                max_bound.y = vy >= max_bound.y ? vy : max_bound.y;
+                max_bound.z = vz >= max_bound.z ? vz : max_bound.z;
+			}
+
+			index_offset += fv;
+			// compute normal
+			t.n = glm::normalize(glm::cross(t.v[1] - t.v[0], t.v[2] - t.v[0]));
+			triangles.push_back(t);
+		}
+	}
+	cout << triangles.size() << " triangles loaded" << endl;
+	meshes.push_back(triangles);
+
+    // set some triangles related variables
+    idxOfEachMesh.push_back(totalTriangles);
+    totalTriangles += triangles.size();
+    endIdxOfEachMesh.push_back(totalTriangles - 1);
+
+    //cout <<  " min_bound:  " << min_bound.x << " : " << min_bound.y << ":" << min_bound.z << endl;
+    //cout << " max_bound:  " << max_bound.x << " : " << max_bound.y << ":" << max_bound.z << endl;
+
+	return meshes.size() - 1;
 }

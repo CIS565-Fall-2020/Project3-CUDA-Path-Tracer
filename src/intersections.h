@@ -6,6 +6,9 @@
 #include "sceneStructs.h"
 #include "utilities.h"
 
+#define BOUNDING_VOLUME 0
+#define MOTION_BLUR 0
+
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
  */
@@ -100,10 +103,16 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
  * @return                   Ray parameter `t` value. -1 if no intersection.
  */
 __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
-        glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside) {
+        glm::vec3 &intersectionPoint, glm::vec3 &normal, bool &outside, float time) {
     float radius = .5;
 
-    glm::vec3 ro = multiplyMV(sphere.inverseTransform, glm::vec4(r.origin, 1.0f));
+	glm::vec3 origin = r.origin;
+
+#if MOTION_BLUR == 1
+	origin = origin - sin(time * PI + 1.234f) * sphere.velocity;
+#endif //MOTION_BLUR
+
+    glm::vec3 ro = multiplyMV(sphere.inverseTransform, glm::vec4(origin, 1.0f));
     glm::vec3 rd = glm::normalize(multiplyMV(sphere.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     Ray rt;
@@ -141,4 +150,92 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     }
 
     return glm::length(r.origin - intersectionPoint);
+}
+
+__host__ __device__ float meshIntersectionTest(Geom mesh, Triangle* triangles, Ray r,
+	glm::vec3& intersectionPoint, glm::vec3& normal, bool& outside,
+    int startIdx, int endIdx, float time) {
+
+    glm::vec3 origin = r.origin;
+
+#if MOTION_BLUR == 1
+    origin = origin - sin(time * 2 * PI) * mesh.velocity;
+#endif //MOTION_BLUR
+
+	glm::vec3 ro = multiplyMV(mesh.inverseTransform, glm::vec4(origin, 1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(mesh.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	Ray rt;
+	rt.origin = ro;
+	rt.direction = rd;
+
+    // Reference: Axis Aligned Bounding Box
+    // https://gamedev.stackexchange.com/questions/18436/most-efficient-aabb-vs-ray-collision-algorithms
+#if BOUNDING_VOLUME == 1
+	// r.dir is unit direction vector of ray
+	glm::vec3 dirfrac;
+	dirfrac.x = 1.0f / rt.direction.x;
+	dirfrac.y = 1.0f / rt.direction.y;
+	dirfrac.z = 1.0f / rt.direction.z;
+	// lb is the corner of AABB with minimal coordinates - left bottom, rt is maximal corner
+	// r.org is origin of ray
+	float t1 = (mesh.min_bound.x - rt.origin.x) * dirfrac.x;
+	float t2 = (mesh.max_bound.x - rt.origin.x) * dirfrac.x;
+	float t3 = (mesh.min_bound.y - rt.origin.y) * dirfrac.y;
+	float t4 = (mesh.max_bound.y - rt.origin.y) * dirfrac.y;
+	float t5 = (mesh.min_bound.z - rt.origin.z) * dirfrac.z;
+	float t6 = (mesh.max_bound.z - rt.origin.z) * dirfrac.z;
+
+	float tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
+	float tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+
+	// if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+	if (tmax < 0 ) 
+    {
+		return -1;
+	}
+    
+	// if tmin > tmax, ray doesn't intersect AABB
+	if (tmin > tmax)
+	{
+		return -1;
+	}
+
+#endif // BOUNDING_VOLUME
+
+	// find intersecting triangle with minimum t
+	float min_t = FLT_MAX;
+	
+    //int startIdx = idxOfEachMesh[mesh.meshIdx];
+    //int endIdx = endIdxOfEachMesh[mesh.meshIdx];
+    int idxTmp = -1;
+
+	for (int i = startIdx; i <= endIdx; i++) {
+		Triangle tri = triangles[i];
+		float t = -1;
+		glm::vec3 bary;
+		if (glm::intersectRayTriangle(rt.origin, rt.direction, tri.v[0], tri.v[1], tri.v[2], bary)) {
+			t = bary.z;
+			if (t > 0.0f && t < min_t) {
+				min_t = t;
+                idxTmp = i;
+			}
+		};
+	}
+
+	if (idxTmp == -1) {
+		return -1;
+	}
+
+	glm::vec3 objspaceIntersection = getPointOnRay(rt, min_t);
+
+	intersectionPoint = multiplyMV(mesh.transform, glm::vec4(objspaceIntersection, 1.f));
+	normal = glm::normalize(multiplyMV(mesh.transform, glm::vec4(triangles[idxTmp + startIdx].n, 0.f)));
+
+    if (glm::dot(rt.origin, normal) < 0)
+        outside = true;
+    else
+        outside = false;
+
+	return min_t;
 }
