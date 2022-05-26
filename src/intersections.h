@@ -36,6 +36,15 @@ __host__ __device__ glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
     return glm::vec3(m * v);
 }
 
+/**
+ * Multiplies a mat4 and a vec4 and returns a vec3 clipped from the vec4.
+ */
+__host__ __device__ glm::vec3 multiplyMVHomo(glm::mat4 m, glm::vec4 v) {
+    glm::vec4 tmp = m * v;
+
+    return glm::vec3(m * v) / tmp.w;
+}
+
 // CHECKITOUT
 /**
  * Test intersection between a ray and a transformed cube. Untransformed,
@@ -152,7 +161,7 @@ __host__ __device__ float triangleIntersectionTest(
     glm::vec3& normal
 ) {
     Ray q;
-    q.origin    =                multiplyMV(supp_geom.inverseTransform, glm::vec4(r.origin   , 1.0f));
+    q.origin    = multiplyMVHomo(supp_geom.inverseTransform, glm::vec4(r.origin   , 1.0f));
     q.direction = glm::normalize(multiplyMV(supp_geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     float t = -1;
@@ -166,16 +175,17 @@ __host__ __device__ float triangleIntersectionTest(
         glm_ret)) {
         t = glm_ret.z;
         // transform to world space
-        intersectionPoint = multiplyMV(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
+        intersectionPoint = multiplyMVHomo(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
         // intepolate normal
         normal =
-            glm_ret.x * triangle.n1 +
-            glm_ret.y * triangle.n2 +
-            (1.0f - glm_ret.x - glm_ret.y) * triangle.n0;
+            glm_ret.x * triangle.n0 +
+            glm_ret.y * triangle.n1 +
+            (1.0f - glm_ret.x - glm_ret.y) * triangle.n2;
         normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(normal, 0.0f)));
         ///normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(triangle.norm, 0.0f)));
+        return glm::length(r.origin - intersectionPoint);
     }
-    return t;
+    return -1.0;
 }
 
 __host__ __device__ float meshIntersectionTest(

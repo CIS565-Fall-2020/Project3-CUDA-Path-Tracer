@@ -43,6 +43,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    //std::cout << "Current dir: "<< argv[0] << std::endl;
+
     const char *sceneFile = argv[1];
 
     // Load scene file
