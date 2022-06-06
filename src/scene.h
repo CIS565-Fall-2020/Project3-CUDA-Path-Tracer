@@ -12,6 +12,9 @@
 #include "tiny_gltf.h"
 #include "gltf-loader.h"
 
+#include "image.h"
+#include <unordered_map>
+
 // Jack12 add gltf support 
 
 
@@ -33,6 +36,8 @@ private:
     int loadGLTFMesh(
         const std::string& file_path,
         const Geom& parent);
+
+    TextureDescriptor loadTexture(const string& path, bool normalize);
 public:
     Scene(string filename);
     ~Scene();
@@ -42,5 +47,9 @@ public:
     std::vector<GLTF_Model> gltf_models;
 
     std::vector<Material> materials;
+
+    std::vector<Texture*> textures;
+    std::unordered_map<string, Texture*> textureMap; // avoid repeated texture
+
     RenderState state;
 };

@@ -98,6 +98,42 @@ glm::vec3 calculateRandomDirectionInHemisphere(
         + sin(around) * over * perpendicularDirection2;
 }
 
+__forceinline__
+__host__ __device__ glm::vec3 sampleTexture(glm::vec3* dev_textures, glm::vec2 uv, TextureDescriptor tex)
+{
+    //uv.y = 1.f - uv.y;
+    uv = glm::mod(uv * tex.repeat, glm::vec2(1.f));
+    if (tex.type == 0)
+    {
+        int x = glm::min((int)(uv.x * tex.width), tex.width - 1);
+        int y = glm::min((int)(uv.y * tex.height), tex.height - 1);
+        int index = y * tex.width + x;
+        return dev_textures[tex.index + index];
+    }
+    else
+    {
+        int steps = 0;
+        glm::vec2 z = glm::vec2(0.f);
+        glm::vec2 c = (uv * 2.f - glm::vec2(1.f)) * 1.5f;
+        c.x -= .5;
+
+        for (steps = 0; steps < 100; steps++)
+        {
+            float x = z.x * z.x - z.y * z.y + c.x;
+            float y = 2.f * z.x * z.y + c.y;
+
+            z = glm::vec2(x, y);
+
+            if (glm::dot(z, z) > 2.f)
+                break;
+        }
+
+        float sn = float(steps) - log2(log2(dot(z, z))) + 4.0f; // http://iquilezles.org/www/articles/mset_smooth/mset_smooth.htm
+        sn = glm::clamp(sn, 0.1f, 1.f);
+        return glm::vec3(sn);
+    }
+}
+
 __host__ __device__
 void perfectSpecularReflection(
     PathSegment& pathSegment,
@@ -160,9 +196,11 @@ void imperfectSpecularReflection(
 __host__ __device__
 void diffuseReflection(
     PathSegment& pathSegment,
-    glm::vec3 intersect,
-    glm::vec3 normal,
+    const glm::vec3& intersect,
+    const glm::vec3& normal,
+    const glm::vec2& uv,
     const Material& m,
+    glm::vec3* textureArray,
     thrust::default_random_engine& rng) {
     glm::vec3 diffuse_dir = calculateRandomDirectionInHemisphere(normal, rng);
 
@@ -171,6 +209,10 @@ void diffuseReflection(
 
     //pathSegment.color *= m.color * costheta;
     pathSegment.color *= m.color;
+    if (m.diffuseTexture.valid == 1) {
+        pathSegment.color *= sampleTexture(textureArray, uv, m.diffuseTexture);
+        //pathSegment.color = glm::vec3(uv, 0.);
+    }
     //pathSegment.color = glm::normalize(normal);
    // pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
     pathSegment.ray.origin = intersect + normal * 0.01f;
@@ -269,9 +311,11 @@ void SchlickFresnel(
 __host__ __device__
 void scatterRay(
 		PathSegment & pathSegment,
-        glm::vec3 intersect,
-        glm::vec3 normal,
+        const glm::vec3& intersect,
+        const glm::vec3& normal,
+        const glm::vec2& uv,
         const Material &m,
+        glm::vec3* textureArray,
         thrust::default_random_engine &rng) {
     // TODO: implement this.
     // A basic implementation of pure-diffuse shading will just call the
@@ -281,7 +325,7 @@ void scatterRay(
     // try diffuse
     //pathSegment.ray.origin = intersect;
     if (p > m.hasReflective + m.hasRefractive) {
-        diffuseReflection(pathSegment, intersect, normal, m, rng);
+        diffuseReflection(pathSegment, intersect, normal, uv, m, textureArray, rng);
     } 
     else if (m.hasReflective > 0 && m.hasRefractive > 0) {
         // fresnel

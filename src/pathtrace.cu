@@ -91,6 +91,8 @@ static GLTF_Model* dev_gltf_models = NULL;
 static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
+
+static glm::vec3* dev_textures = NULL;
 // TODO: static variables for device memory, any extra info you need, etc
 // ...
 
@@ -287,14 +289,12 @@ __global__ void computeIntersections(
 		PathSegment pathSegment = pathSegments[path_index];
 
 		float t;
-		glm::vec3 intersect_point;
 		glm::vec3 normal;
+        glm::vec2 uv;
+
 		float t_min = FLT_MAX;
 		int hit_geom_index = -1;
 		bool outside = true;
-
-		glm::vec3 tmp_intersect;
-		glm::vec3 tmp_normal;
 
 		// naive parse through global geoms
 
@@ -311,36 +311,36 @@ __global__ void computeIntersections(
             /// ty john marcao
             geom.invTranspose = glm::inverseTranspose(new_transform);
 #endif
-
+            Intersection tmp_itsct{glm::vec3(0), glm::vec3(0), glm::vec2(0) };
 			if (geom.type == CUBE)
 			{
-				t = boxIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				t = boxIntersectionTest(geom, pathSegment.ray, tmp_itsct, outside);
 			}
 			else if (geom.type == SPHERE)
 			{
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_intersect, tmp_normal, outside);
+				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_itsct, outside);
 			}
-            else if (geom.type == BBOX) {
+            else if (geom.type == BBOX) {     
                 t = meshIntersectionTest(
                     geom,
                     models,
                     triangles,
                     pathSegment.ray,
-                    tmp_intersect,
-                    tmp_normal,
+                    tmp_itsct,
                     outside);
             }
 			// TODO: add more intersection tests here... triangle? metaball? CSG?
 
 			// Compute the minimum t from the intersection tests to determine what
 			// scene geometry object was hit first.
-			if (t > 0.0f && t_min > t)
-			{
-				t_min = t;
-				hit_geom_index = i;
-				intersect_point = tmp_intersect;
-				normal = tmp_normal;
-			}
+
+            if (t > 0.0f && t_min > t)
+            {
+                t_min = t;
+                hit_geom_index = i;
+                normal = tmp_itsct.normal;
+                uv = tmp_itsct.uv;
+            }
 
 #if motion_blur
             geom.inverseTransform = inv_transform_cache;
@@ -358,6 +358,7 @@ __global__ void computeIntersections(
 			intersections[path_index].t = t_min;
 			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
 			intersections[path_index].surfaceNormal = normal;
+            intersections[path_index].uv = uv;
 		}
 	}
 }
@@ -422,6 +423,7 @@ __global__ void shadeTrueMaterial(
     , ShadeableIntersection* shadeableIntersections
     , PathSegment* pathSegments
     , Material* materials,
+    glm::vec3* textures,
     glm::vec3* dev_image
 )
 {
@@ -446,22 +448,23 @@ __global__ void shadeTrueMaterial(
             if (material.emittance > 0.0f) {
 
                 cur_pathSegment.color *= (materialColor * material.emittance);
-                //cur_pathSegment.color = glm::vec3(1.0, 1.0, 1.0);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
-                //dev_image[cur_pathSegment.pixelIndex] += cur_pathSegment.color;
             }
             // Otherwise, do some pseudo-lighting computation. This is actually more
             // like what you would expect from shading in a rasterizer like OpenGL.
             // TODO: replace this! you should be able to start with basically a one-liner
             else {
-
+                // TODO normal mapping
+                glm::vec3 n = intersection.surfaceNormal;
 
                 scatterRay(
                     cur_pathSegment,
                     getPointOnRay(cur_pathSegment.ray, intersection.t),
-                    intersection.surfaceNormal,
+                    n,
+                    intersection.uv,
                     material,
+                    textures,
                     rng
                 );
             }
@@ -691,6 +694,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         dev_intersections,
         dev_paths,
         dev_materials,
+        dev_textures,
         dev_image
         );
         if (depth > traceDepth) {
@@ -724,4 +728,65 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             pixelcount * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 
     checkCUDAError("pathtrace");
+}
+
+__global__ void correctTexturesKernel(glm::vec3* texture, glm::vec3 gamma, int size)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+
+    if (index < size)
+        texture[index] = glm::pow(texture[index], gamma);
+}
+
+void initDeviceTexture(Scene* scene)
+{
+    int totalMemory = 0;
+
+    for (int i = 0; i < scene->textures.size(); i++)
+        totalMemory += scene->textures[i]->xSize * scene->textures[i]->ySize;
+
+    std::cout << "Total texture memory: " << totalMemory << std::endl;
+
+    std::vector<int> offsetList;
+
+    if (totalMemory > 0)
+    {
+        cudaMalloc(&dev_textures, totalMemory * sizeof(glm::vec3));
+
+        const int blockSize1d = 128;
+
+        int offset = 0;
+        for (int i = 0; i < scene->textures.size(); i++)
+        {
+            offsetList.push_back(offset);
+
+            Texture* tex = scene->textures[i];
+            int size = tex->xSize * tex->ySize;
+            cudaMemcpy(dev_textures + offset, tex->pixels, size * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+
+            glm::vec3 gamma = glm::vec3(tex->gamma);
+            dim3 numBlocksPixels = (size + blockSize1d - 1) / blockSize1d;
+            correctTexturesKernel << <numBlocksPixels, blockSize1d >> > (dev_textures + offset, gamma, size);
+
+            offset += size;
+        }
+    }
+
+    // Now we need to set all texture descriptor indices
+    /*if (scene->state.camera.bokehTexture.index >= 0)
+        scene->state.camera.bokehTexture.index = offsetList[scene->state.camera.bokehTexture.index];*/
+
+    for (Material& m : scene->materials)
+    {
+        if (m.diffuseTexture.index >= 0)
+            m.diffuseTexture.index = offsetList[m.diffuseTexture.index];
+
+        if (m.specularTexture.index >= 0)
+            m.specularTexture.index = offsetList[m.specularTexture.index];
+
+        if (m.normalTexture.index >= 0)
+            m.normalTexture.index = offsetList[m.normalTexture.index];
+    }
+
+    checkCUDAError("initializeDeviceTextures");
 }

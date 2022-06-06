@@ -61,6 +61,18 @@ struct GLTF_Model {
     int triangle_count;
 };
 
+//ref: https://github.com/mmerchante/CUDA-Path-tracer
+struct TextureDescriptor
+{
+    int valid;
+    int type; // 0 bitmap, 1 procedural TODO
+    int index;
+    int width;
+    int height;
+    glm::vec2 repeat;
+    TextureDescriptor() : valid(-1), type(0), index(-1), width(0), height(0), repeat(glm::vec2(1.f)){};
+};
+
 struct Material {
     glm::vec3 color;
     struct {
@@ -71,6 +83,10 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+
+    TextureDescriptor diffuseTexture;
+    TextureDescriptor specularTexture;
+    TextureDescriptor normalTexture;
 };
 
 struct Camera {
@@ -109,4 +125,6 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+
+  glm::vec2 uv;
 };

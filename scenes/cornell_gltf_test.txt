@@ -58,6 +58,30 @@ REFR        1
 REFRIOR     1.5
 EMITTANCE   0
 
+// Diffuse white with texture
+MATERIAL 6
+RGB         1. 1. 1.
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\rubber_duck\textures\Duck_baseColor.png
+//TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\excalibur_fatestay_night\textures\excalibur_metal2_baseColor.jpeg
+//TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\kirby\textures\KirbypSphere1SG_diffuse.jpeg
+
+// kirby texture
+MATERIAL 7
+RGB         1. 1. 1.
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\kirby_plush\textures\Material_0_baseColor.jpeg
+
 // Camera
 CAMERA
 RES         800 800
@@ -117,19 +141,28 @@ cube
 material 3
 TRANS       5 5 0
 ROTAT       0 0 0
-SCALE       .01 10 10
+SCALE       0.01 10 10
 
 
 // gltf_test
 OBJECT 6
 gltf_mesh
-material 4
-PATH		../gltf_mesh/kirby/scene.gltf
-//PATH		../gltf_mesh/Duck.glb
-//PATH		../gltf_mesh/Box.glb
-//PATH		../gltf_mesh/hat/scene.gltf
-TRANS       -1 4 -2
-ROTAT     90 180 90
-//ROTAT		0 0 0
-SCALE       1.5 1.5 1.5 
-//SCALE       0.1 0.1 0.1
+material 6
+//PATH		C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\cube\scene.gltf
+//PATH		C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\kirby\scene.gltf
+//PATH		C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\excalibur_fatestay_night\scene.gltf
+PATH		C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\rubber_duck\scene.gltf
+//TRANS       -2 1 -2
+TRANS       2 0 -2
+//ROTAT     90 180 90
+ROTAT		-90 0 0
+SCALE       4 4 4 
+
+// gltf_test
+OBJECT 7
+gltf_mesh
+material 7
+PATH		C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\kirby_plush\scene.gltf
+TRANS       -2 2 -2
+ROTAT		90 0 0
+SCALE       1. 1. 1. 
