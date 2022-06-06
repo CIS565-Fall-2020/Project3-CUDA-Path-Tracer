@@ -7,6 +7,15 @@
 #include "utilities.h"
 #include "cfg.h"
 
+struct Intersection
+{
+    glm::vec3 pos;
+    glm::vec3 normal;
+    glm::vec2 uv;
+
+    //Intersection() : uv(glm::vec2(-1.)) {};
+};
+
 /**
  * Handy-dandy hash function that provides seeds for random number generation.
  */
@@ -35,6 +44,17 @@ __host__ __device__ glm::vec3 getPointOnRay(Ray r, float t) {
 __host__ __device__ glm::vec3 multiplyMV(glm::mat4 m, glm::vec4 v) {
     return glm::vec3(m * v);
 }
+
+/**
+ * Multiplies a mat4 and a vec4 and returns a vec3 clipped from the vec4.
+ */
+__host__ __device__ glm::vec3 multiplyMVHomo(glm::mat4 m, glm::vec4 v) {
+    glm::vec4 tmp = m * v;
+
+    return glm::vec3(m * v) / tmp.w;
+}
+
+
 
 // CHECKITOUT
 /**
@@ -90,6 +110,13 @@ __host__ __device__ float boxIntersectionTest(Geom box, Ray r,
     return -1;
 }
 
+__host__ __device__ float boxIntersectionTest(Geom box, Ray r,
+    Intersection& itsct, bool& outside) {
+    return boxIntersectionTest(box, r, itsct.pos, itsct.normal, outside);
+}
+
+
+
 // CHECKITOUT
 /**
  * Test intersection between a ray and a transformed sphere. Untransformed,
@@ -144,38 +171,50 @@ __host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
     return glm::length(r.origin - intersectionPoint);
 }
 
+__host__ __device__ float sphereIntersectionTest(Geom sphere, Ray r,
+    Intersection& itsct, bool& outside) {
+    return sphereIntersectionTest(sphere, r, itsct.pos, itsct.normal, outside);
+}
+
 __host__ __device__ float triangleIntersectionTest(
     const Triangle& triangle,
     const Geom& supp_geom,
     const Ray& r,
-    glm::vec3& intersectionPoint,
-    glm::vec3& normal
+    Intersection& itsct
 ) {
     Ray q;
-    q.origin    =                multiplyMV(supp_geom.inverseTransform, glm::vec4(r.origin   , 1.0f));
+    q.origin    = multiplyMVHomo(supp_geom.inverseTransform, glm::vec4(r.origin   , 1.0f));
     q.direction = glm::normalize(multiplyMV(supp_geom.inverseTransform, glm::vec4(r.direction, 0.0f)));
 
     float t = -1;
-    glm::vec3 glm_ret;
+    glm::vec3 baryCoor;
     if (glm::intersectRayTriangle(
         q.origin,
         q.direction,
         triangle.v0,
         triangle.v1,
         triangle.v2,
-        glm_ret)) {
-        t = glm_ret.z;
+        baryCoor)) {
+        t = baryCoor.z;
         // transform to world space
-        intersectionPoint = multiplyMV(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
+        /*glm::vec3 local_itsct_pos = (1.f - baryCoor.x - baryCoor.y) * triangle.v0 + baryCoor.x * triangle.v1 + baryCoor.y * triangle.v2;
+        intersectionPoint = multiplyMVHomo(supp_geom.transform, glm::vec4(local_itsct_pos, 1.0f));*/
+        itsct.pos = multiplyMVHomo(supp_geom.transform, glm::vec4(getPointOnRay(q, t), 1.0f));
         // intepolate normal
-        normal =
-            glm_ret.x * triangle.n1 +
-            glm_ret.y * triangle.n2 +
-            (1.0f - glm_ret.x - glm_ret.y) * triangle.n0;
-        normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(normal, 0.0f)));
-        ///normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(triangle.norm, 0.0f)));
+        itsct.normal =
+            baryCoor.x * triangle.n0 +
+            baryCoor.y * triangle.n1 +
+            (1.0f - baryCoor.x - baryCoor.y) * triangle.n2;
+        itsct.normal = glm::normalize(multiplyMV(supp_geom.invTranspose, glm::vec4(itsct.normal, 0.0f)));
+        // inverse the normal if ray shot in the front of the triangle
+        itsct.normal *= 2 * (glm::dot(itsct.normal, r.direction) < 0) - 1;
+        itsct.uv = 
+            baryCoor.x * triangle.uv0 +
+            baryCoor.y * triangle.uv1 +
+            (1.0f - baryCoor.x - baryCoor.y) * triangle.uv2;
+        return glm::length(r.origin - itsct.pos);
     }
-    return t;
+    return -1.0;
 }
 
 __host__ __device__ float meshIntersectionTest(
@@ -183,8 +222,7 @@ __host__ __device__ float meshIntersectionTest(
     GLTF_Model* models,
     Triangle* triangles,
     const Ray &r,
-    glm::vec3& intersectionPoint,
-    glm::vec3& normal,
+    Intersection& itsct,
     bool& outside) {
     ///
     /// check bbox then triangles
@@ -193,7 +231,7 @@ __host__ __device__ float meshIntersectionTest(
 #if usebbox
     // got no idea what this would do, but anyway...
     //bool bbox_outside = true;
-    t = boxIntersectionTest(bbox, r, intersectionPoint, normal, outside);
+    t = boxIntersectionTest(bbox, r, itsct.pos, itsct.normal, outside);
     if (t < 0) {
         return -1;
     }
@@ -204,8 +242,7 @@ __host__ __device__ float meshIntersectionTest(
     int start_idx = cur_model.triangle_idx;
     int end_idx = cur_model.triangle_count + start_idx;
 
-    glm::vec3 tmp_intersection;
-    glm::vec3 tmp_normal;
+    Intersection tmp_itsct;
 
     float t_min = INFINITY;
     for (int idx = start_idx; idx < end_idx; idx++) {
@@ -215,12 +252,10 @@ __host__ __device__ float meshIntersectionTest(
             cur_triangle, 
             cur_model.self_geom,
             r,
-            tmp_intersection,
-            tmp_normal);
+            tmp_itsct);
         if (t_tmp > 0.0f && t_tmp < t_min) {
             t_min = t_tmp;
-            intersectionPoint = tmp_intersection;
-            normal = tmp_normal;
+            itsct = tmp_itsct;
         }
     }
     if (t_min > 0.0 && t_min < INFINITY) {

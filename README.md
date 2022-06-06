@@ -137,16 +137,9 @@ To simulate a scene with the effect like time of exposure and moving objects, we
 
 ### glTF mesh loading
 
-Here we implement the glTF loading function, which can load the glTF format meshed, which contains tons of triangles. However, as you can see from the image, the loading is still buggy , which basically include:
+Here we implement the glTF loading function, which can load the glTF format mesh.
 
-- Incorrect relative position between meshes
-- can not load all the glTF mesh. The kirby is the most visibly-reasonable one.
-  - Probably due to glTF mesh itself( they were converted from obj actually)
-- Do not handle outside test yet( so triangle can not work well with refraction )
-
-This function is still under development yet (maybe not).
-
-![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/gltf_load.svg)
+![alt text](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/test_gltf.png)
 
 ##### Bounding box
 
@@ -187,6 +180,12 @@ However, for scenes simple like Cornell box, the more contiguous memory read can
 
 
 #### Blooper
+
+##### Wrong GLTF model loading
+
+Funny thing, I debugged this for almost 1.5 years haha.
+
+![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/gltf_load.svg)
 
 ![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/bloopers/failed_dof.png)
 

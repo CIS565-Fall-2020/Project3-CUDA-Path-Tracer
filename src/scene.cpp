@@ -103,13 +103,15 @@ int Scene::loadGeom(string objectid) {
                 newGeom.translation, newGeom.rotation, newGeom.scale);
         newGeom.inverseTransform = glm::inverse(newGeom.transform);
         newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
-        if (newGeom.type != GLTF_MESH) {
-            geoms.push_back(newGeom);
-        }
-        else {
+        
+        if (newGeom.type == GLTF_MESH) {
             this->loadGLTFMesh(cur_path, newGeom);
         }
-        
+        else {
+            // gltf would push back its bbox
+            geoms.push_back(newGeom);
+        }
+
         return 1;
     }
 }
@@ -456,76 +458,78 @@ bool Scene::myGLTFloader(
                         }
 
                         // Face varying comment on the normals is also true for the UVs
-                        if (attribute.first == "TEXCOORD_0") {
-                            std::cout << "Found texture coordinates\n";
+                        
+                    }
 
-                            switch (attribAccessor.type) {
-                            case TINYGLTF_TYPE_VEC2: {
-                                std::cout << "TEXTCOORD is VEC2\n";
-                                switch (attribAccessor.componentType) {
-                                case TINYGLTF_COMPONENT_TYPE_FLOAT: {
-                                    std::cout << "TEXTCOORD is FLOAT\n";
-                                    v2fArray uvs(
-                                        arrayAdapter<v2f>(dataPtr, count, byte_stride));
+                    if (attribute.first == "TEXCOORD_0") {
+                        std::cout << "Found texture coordinates\n";
 
-                                    for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
-                                        // get the i'th triange's indexes
-                                        auto f0 = indices[3 * i + 0];
-                                        auto f1 = indices[3 * i + 1];
-                                        auto f2 = indices[3 * i + 2];
+                        switch (attribAccessor.type) {
+                        case TINYGLTF_TYPE_VEC2: {
+                            std::cout << "TEXTCOORD is VEC2\n";
+                            switch (attribAccessor.componentType) {
+                            case TINYGLTF_COMPONENT_TYPE_FLOAT: {
+                                std::cout << "TEXTCOORD is FLOAT\n";
+                                v2fArray uvs(
+                                    arrayAdapter<v2f>(dataPtr, count, byte_stride));
 
-                                        // get the texture coordinates for each triangle's
-                                        // vertices
-                                        v2f uv0, uv1, uv2;
-                                        uv0 = uvs[f0];
-                                        uv1 = uvs[f1];
-                                        uv2 = uvs[f2];
+                                for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
+                                    // get the i'th triange's indexes
+                                    auto f0 = indices[3 * i + 0];
+                                    auto f1 = indices[3 * i + 1];
+                                    auto f2 = indices[3 * i + 2];
 
-                                        // push them in order into the mesh data
-                                        loadedMesh.facevarying_uvs.push_back(uv0.x);
-                                        loadedMesh.facevarying_uvs.push_back(uv0.y);
+                                    // get the texture coordinates for each triangle's
+                                    // vertices
+                                    v2f uv0, uv1, uv2;
+                                    uv0 = uvs[f0];
+                                    uv1 = uvs[f1];
+                                    uv2 = uvs[f2];
 
-                                        loadedMesh.facevarying_uvs.push_back(uv1.x);
-                                        loadedMesh.facevarying_uvs.push_back(uv1.y);
+                                    // push them in order into the mesh data
+                                    loadedMesh.facevarying_uvs.push_back(uv0.x);
+                                    loadedMesh.facevarying_uvs.push_back(uv0.y);
 
-                                        loadedMesh.facevarying_uvs.push_back(uv2.x);
-                                        loadedMesh.facevarying_uvs.push_back(uv2.y);
-                                    }
+                                    loadedMesh.facevarying_uvs.push_back(uv1.x);
+                                    loadedMesh.facevarying_uvs.push_back(uv1.y);
 
-                                } break;
-                                case TINYGLTF_COMPONENT_TYPE_DOUBLE: {
-                                    std::cout << "TEXTCOORD is DOUBLE\n";
-                                    v2dArray uvs(
-                                        arrayAdapter<v2d>(dataPtr, count, byte_stride));
+                                    loadedMesh.facevarying_uvs.push_back(uv2.x);
+                                    loadedMesh.facevarying_uvs.push_back(uv2.y);
+                                }
 
-                                    for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
-                                        // get the i'th triange's indexes
-                                        auto f0 = indices[3 * i + 0];
-                                        auto f1 = indices[3 * i + 1];
-                                        auto f2 = indices[3 * i + 2];
+                            } break;
+                            case TINYGLTF_COMPONENT_TYPE_DOUBLE: {
+                                std::cout << "TEXTCOORD is DOUBLE\n";
+                                v2dArray uvs(
+                                    arrayAdapter<v2d>(dataPtr, count, byte_stride));
 
-                                        v2d uv0, uv1, uv2;
-                                        uv0 = uvs[f0];
-                                        uv1 = uvs[f1];
-                                        uv2 = uvs[f2];
+                                for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
+                                    // get the i'th triange's indexes
+                                    auto f0 = indices[3 * i + 0];
+                                    auto f1 = indices[3 * i + 1];
+                                    auto f2 = indices[3 * i + 2];
 
-                                        loadedMesh.facevarying_uvs.push_back(uv0.x);
-                                        loadedMesh.facevarying_uvs.push_back(uv0.y);
+                                    v2d uv0, uv1, uv2;
+                                    uv0 = uvs[f0];
+                                    uv1 = uvs[f1];
+                                    uv2 = uvs[f2];
 
-                                        loadedMesh.facevarying_uvs.push_back(uv1.x);
-                                        loadedMesh.facevarying_uvs.push_back(uv1.y);
+                                    loadedMesh.facevarying_uvs.push_back(uv0.x);
+                                    loadedMesh.facevarying_uvs.push_back(uv0.y);
 
-                                        loadedMesh.facevarying_uvs.push_back(uv2.x);
-                                        loadedMesh.facevarying_uvs.push_back(uv2.y);
-                                    }
-                                } break;
-                                default:
-                                    std::cerr << "unrecognized vector type for UV";
+                                    loadedMesh.facevarying_uvs.push_back(uv1.x);
+                                    loadedMesh.facevarying_uvs.push_back(uv1.y);
+
+                                    loadedMesh.facevarying_uvs.push_back(uv2.x);
+                                    loadedMesh.facevarying_uvs.push_back(uv2.y);
                                 }
                             } break;
                             default:
-                                std::cerr << "unreconized componant type for UV";
+                                std::cerr << "unrecognized vector type for UV";
                             }
+                        } break;
+                        default:
+                            std::cerr << "unreconized componant type for UV";
                         }
                     }
                 }
@@ -549,11 +553,11 @@ bool Scene::myGLTFloader(
             bCenter.y = 0.5f * (pMax.y - pMin.y) + pMin.y;
             bCenter.z = 0.5f * (pMax.z - pMin.z) + pMin.z;
 
-            for (size_t v = 0; v < loadedMesh.vertices.size() / 3; v++) {
+            /*for (size_t v = 0; v < loadedMesh.vertices.size() / 3; v++) {
                 loadedMesh.vertices[3 * v + 0] -= bCenter.x;
                 loadedMesh.vertices[3 * v + 1] -= bCenter.y;
                 loadedMesh.vertices[3 * v + 2] -= bCenter.z;
-            }
+            }*/
 
             loadedMesh.pivot_xform[0][0] = 1.0f;
             loadedMesh.pivot_xform[0][1] = 0.0f;
@@ -587,7 +591,7 @@ bool Scene::myGLTFloader(
     // Iterate through all texture declaration in glTF file
     for (const auto& gltfTexture : model.textures) {
         std::cout << "Found texture!";
-        Texture loadedTexture;
+        example::Texture loadedTexture;
         const auto& image = model.images[gltfTexture.source];
         loadedTexture.components = image.component;
         loadedTexture.width = image.width;
@@ -628,13 +632,6 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
 
     // Material pushed as first material on the list
     gltf_materials.push_back(default_material);
-    //example::LoadGLTF
-    /*flag = example::LoadGLTF(
-        file_path, 
-        1.0f, 
-        &gltf_meshes, 
-        &gltf_materials,
-        &gltf_textures);*/
     flag = this->myGLTFloader(file_path, 1.0, gltf_meshes, gltf_materials, gltf_textures);
 
     if (!flag) {
@@ -654,7 +651,6 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             for (int i = 0; i < cur_mesh->faces.size(); i+=3) {
                 
                 Triangle cur_triangle;
-                
 
                 int idx_f0 = i;
                 int idx_f1 = i + 1;
@@ -724,13 +720,18 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 
                 // assign bounding box
                 //TODO check correctness for this
-                minVal_vec = glm::min(minVal_vec, cur_triangle.v0);
-                minVal_vec = glm::min(minVal_vec, cur_triangle.v1);
-                minVal_vec = glm::min(minVal_vec, cur_triangle.v2);
 
-                maxVal_vec = glm::max(maxVal_vec, cur_triangle.v0);
-                maxVal_vec = glm::max(maxVal_vec, cur_triangle.v1);
-                maxVal_vec = glm::max(maxVal_vec, cur_triangle.v2);
+                glm::vec3 w_v0 = glm::vec3(parent_geom.transform * glm::vec4(cur_triangle.v0, 1.f));
+                glm::vec3 w_v1 = glm::vec3(parent_geom.transform * glm::vec4(cur_triangle.v1, 1.f));
+                glm::vec3 w_v2 = glm::vec3(parent_geom.transform * glm::vec4(cur_triangle.v2, 1.f));
+
+                minVal_vec = glm::min(minVal_vec, w_v0);
+                minVal_vec = glm::min(minVal_vec, w_v1);
+                minVal_vec = glm::min(minVal_vec, w_v2);
+
+                maxVal_vec = glm::max(maxVal_vec, w_v0);
+                maxVal_vec = glm::max(maxVal_vec, w_v1);
+                maxVal_vec = glm::max(maxVal_vec, w_v2);
             }
             cur_model.self_geom.type = GLTF_MESH;
             cur_model.self_geom = parent_geom;
@@ -745,11 +746,13 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             cur_bbox = parent_geom;
             cur_bbox.type = BBOX;
             
-            cur_bbox.scale = (maxVal_vec - minVal_vec) * parent_geom.scale;
+           /* cur_bbox.scale = (maxVal_vec - minVal_vec) * parent_geom.scale;
             cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
-            //cur_bbox.translation = glm::vec3(parent_geom.transform * glm::vec4(cur_bbox.translation, 1.0f));
-            cur_bbox.translation = cur_bbox.translation + parent_geom.translation;
-            cur_bbox.rotation = parent_geom.rotation;
+            cur_bbox.translation = cur_bbox.translation + parent_geom.translation;*/
+            //cur_bbox.rotation = parent_geom.rotation;
+            cur_bbox.scale = maxVal_vec - minVal_vec;
+            cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
+            cur_bbox.rotation = glm::vec3(0);
 
             cur_bbox.transform = utilityCore::buildTransformationMatrix(
                 cur_bbox.translation,
@@ -766,6 +769,28 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
         }
     }
     return 0;
+}
+
+TextureDescriptor Scene::loadTexture(const std::string& path, bool normalize)
+{
+    TextureDescriptor desc;
+
+    Texture* tex = nullptr;
+    if (textureMap.find(path) == textureMap.end()) {
+        tex = new Texture(path, 1.f, normalize);
+        this->textures.push_back(tex);
+    }
+    else {
+        tex = textureMap[path];
+    }
+
+    desc.type = 0;
+    desc.index = textures.size() - 1;
+    desc.width = tex->xSize;
+    desc.height = tex->ySize;
+    desc.valid = 1;
+
+    return desc;
 }
 
 int Scene::loadCamera() {
@@ -845,10 +870,12 @@ int Scene::loadMaterial(string materialid) {
         cout << "Loading Material " << id << "..." << endl;
         Material newMaterial;
 
+        string line;
+        utilityCore::safeGetline(fp_in, line);
         //load static properties
-        for (int i = 0; i < 7; i++) {
-            string line;
-            utilityCore::safeGetline(fp_in, line);
+        while (!line.empty() && fp_in.good()) {
+            /*string line;
+            utilityCore::safeGetline(fp_in, line);*/
             vector<string> tokens = utilityCore::tokenizeString(line);
             if (strcmp(tokens[0].c_str(), "RGB") == 0) {
                 glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
@@ -867,6 +894,20 @@ int Scene::loadMaterial(string materialid) {
             } else if (strcmp(tokens[0].c_str(), "EMITTANCE") == 0) {
                 newMaterial.emittance = atof(tokens[1].c_str());
             }
+            else if (strcmp(tokens[0].c_str(), "TEX_DIFFUSE") == 0)
+            {
+                newMaterial.diffuseTexture = loadTexture(tokens[1], false);
+            }
+            else if (strcmp(tokens[0].c_str(), "TEX_SPECULAR") == 0)
+            {
+                newMaterial.specularTexture = loadTexture(tokens[1], false);
+            }
+            else if (strcmp(tokens[0].c_str(), "TEX_NORMAL") == 0)
+            {
+                newMaterial.normalTexture = loadTexture(tokens[1], false);
+            }
+
+            utilityCore::safeGetline(fp_in, line);
         }
         materials.push_back(newMaterial);
         return 1;
