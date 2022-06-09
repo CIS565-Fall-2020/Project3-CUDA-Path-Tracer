@@ -217,7 +217,7 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.colorSum = glm::vec3(1.0f, 1.0f, 1.0f);
         
 		// TODO: implement antialiasing by jittering the ray
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
@@ -396,33 +396,34 @@ __global__ void shadeFakeMaterial (
 
       // If the material indicates that the object was a light, "light" the ray
       if (material.emittance > 0.0f) {
-        pathSegments[idx].color *= (materialColor * material.emittance);
+        pathSegments[idx].colorSum *= (materialColor * material.emittance);
       }
       // Otherwise, do some pseudo-lighting computation. This is actually more
       // like what you would expect from shading in a rasterizer like OpenGL.
       // TODO: replace this! you should be able to start with basically a one-liner
       else {
         float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
-        pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
-        pathSegments[idx].color *= u01(rng); // apply some noise because why not
+        pathSegments[idx].colorSum *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
+        pathSegments[idx].colorSum *= u01(rng); // apply some noise because why not
       }
     // If there was no intersection, color the ray black.
     // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
     // used for opacity, in which case they can indicate "no opacity".
     // This can be useful for post-processing and image compositing.
     } else {
-      pathSegments[idx].color = glm::vec3(0.0f);
+      pathSegments[idx].colorSum = glm::vec3(0.0f);
     }
   }
 }
 
 #pragma region myMaterial
 __global__ void shadeTrueMaterial(
-    int iter
-    , int num_paths
-    , ShadeableIntersection* shadeableIntersections
-    , PathSegment* pathSegments
-    , Material* materials,
+    int iter,
+    int max_depth,
+    int num_paths,
+    ShadeableIntersection* shadeableIntersections,
+    PathSegment* pathSegments,
+    Material* materials,
     glm::vec3* textures,
     glm::vec3* dev_image
 )
@@ -446,10 +447,18 @@ __global__ void shadeTrueMaterial(
 
             // If the material indicates that the object was a light, "light" the ray
             if (material.emittance > 0.0f) {
-
+#if DirectLightPass == 1:
+                bool specularBounce = true; // TODO make this really specular bounce
+                if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
+                    cur_pathSegment.colorSum *= (materialColor * material.emittance);
+                    // stop if hit a light
+                    cur_pathSegment.remainingBounces = 0;
+                }
+#else
                 cur_pathSegment.color *= (materialColor * material.emittance);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
+#endif
             }
             // Otherwise, do some pseudo-lighting computation. This is actually more
             // like what you would expect from shading in a rasterizer like OpenGL.
@@ -468,16 +477,14 @@ __global__ void shadeTrueMaterial(
                     rng
                 );
             }
+            
+        }
+        else {
             // If there was no intersection, color the ray black.
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
             // used for opacity, in which case they can indicate "no opacity".
             // This can be useful for post-processing and image compositing.
-        }
-        else {
-            /*if (depth == 1) {
-                cur_pathSegment.color = glm::vec3(0.0f);
-            }*/
-            cur_pathSegment.color = glm::vec3(0.0f);
+            cur_pathSegment.colorSum = glm::vec3(0.0f);
             cur_pathSegment.remainingBounces = 0;
         }
     }
@@ -494,7 +501,7 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 	if (index < nPaths)
 	{
 		PathSegment iterationPath = iterationPaths[index];
-		image[iterationPath.pixelIndex] += iterationPath.color;
+		image[iterationPath.pixelIndex] += iterationPath.colorSum;
 	}
 }
 
@@ -690,6 +697,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         #endif
         shadeTrueMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
         iter,
+        traceDepth,
         num_paths,
         dev_intersections,
         dev_paths,

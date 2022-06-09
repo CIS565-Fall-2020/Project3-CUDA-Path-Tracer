@@ -143,7 +143,7 @@ void perfectSpecularReflection(
     const Material& m,
     thrust::default_random_engine& rng) {
     glm::vec3 reflection_dir = glm::reflect(pathSegment.ray.direction, normal);
-    pathSegment.color *= m.color;
+    pathSegment.colorSum *= m.color;
     pathSegment.ray.direction = reflection_dir;
     pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.001f;
 }
@@ -188,7 +188,7 @@ void imperfectSpecularReflection(
         glm::mat3 base_m = glm::mat3(base_x, base_y, base_z);
 
         pathSegment.ray.direction = base_m * local_dir;
-        pathSegment.color *= m.specular.color;
+        pathSegment.colorSum *= m.specular.color;
         pathSegment.ray.origin = intersect + 0.001f * normal;
 
     }
@@ -209,9 +209,9 @@ void diffuseReflection(
     pathSegment.ray.direction = diffuse_dir;
 
     //pathSegment.color *= m.color * costheta;
-    pathSegment.color *= m.color;
+    pathSegment.colorSum *= m.color;
     if (m.diffuseTexture.valid == 1) {
-        pathSegment.color *= sampleTexture(textureArray, uv, m.diffuseTexture);
+        pathSegment.colorSum *= sampleTexture(textureArray, uv, m.diffuseTexture);
         //pathSegment.color = glm::vec3(uv, 0.);
     }
     //pathSegment.color = glm::normalize(normal);
@@ -250,7 +250,7 @@ void refraction(
     }
     else {
         ray_dir = refract_dir;
-        pathSegment.color *= m.specular.color;
+        pathSegment.colorSum *= m.specular.color;
         pathSegment.ray.origin = intersect + 0.01f * ray_dir;
     }
 

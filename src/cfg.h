@@ -12,5 +12,9 @@
 
 #define stratified_sampling 0
 
+#define DirectLightPass 1
+#define DirectLightSampleLight 1
+#define DirectLightSampleBSDF 1
+
 #define usebbox 1
 #define motion_blur 0
