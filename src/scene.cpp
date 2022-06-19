@@ -33,6 +33,12 @@ Scene::Scene(string filename) {
             }
         }
     }
+    // assign the light idx
+    for (int i = 0; i < geoms.size(); i++) {
+        if (materials[geoms[i].materialid].emittance > 0.) {
+            lightIDs.push_back(i);
+        }
+    }
 }
 
 int Scene::loadGeom(string objectid) {

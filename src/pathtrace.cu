@@ -84,6 +84,7 @@ __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
 static Scene * hst_scene = NULL;
 static glm::vec3 * dev_image = NULL;
 static Geom * dev_geoms = NULL;
+static int* dev_lightIDs = NULL;
 // add triangles
 static Triangle* dev_triangles = NULL;
 static GLTF_Model* dev_gltf_models = NULL;
@@ -125,6 +126,9 @@ void pathtraceInit(Scene *scene) {
 
   	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
   	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
+    // light IDs
+    cudaMalloc(&dev_lightIDs, scene->lightIDs.size() * sizeof(int));
+    cudaMemcpy(dev_lightIDs, scene->lightIDs.data(), scene->lightIDs.size() * sizeof(int), cudaMemcpyHostToDevice);
     // add triangles
     cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
     cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
@@ -155,6 +159,7 @@ void pathtraceFree() {
     cudaFree(dev_image);  // no-op if dev_image is null
   	cudaFree(dev_paths);
   	cudaFree(dev_geoms);
+    cudaFree(dev_lightIDs);
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
 
@@ -288,6 +293,7 @@ __global__ void computeIntersections(
 	{
 		PathSegment pathSegment = pathSegments[path_index];
 
+#if 0
 		float t;
 		glm::vec3 normal;
         glm::vec2 uv;
@@ -360,6 +366,9 @@ __global__ void computeIntersections(
 			intersections[path_index].surfaceNormal = normal;
             intersections[path_index].uv = uv;
 		}
+#else
+        SceneIntersection(pathSegment.ray, geoms, geoms_size, models, triangles, intersections[path_index]);
+#endif
 	}
 }
 
@@ -423,6 +432,7 @@ __global__ void shadeTrueMaterial(
     int num_paths,
     ShadeableIntersection* shadeableIntersections,
     PathSegment* pathSegments,
+    Geom* geoms,
     Material* materials,
     glm::vec3* textures,
     glm::vec3* dev_image
@@ -466,6 +476,15 @@ __global__ void shadeTrueMaterial(
             else {
                 // TODO normal mapping
                 glm::vec3 n = intersection.surfaceNormal;
+
+                /*UniformSampleOneLight(
+                    cur_pathSegment, 
+                    -cur_pathSegment.ray.direction,
+                    hst_scene->lightIDs.size(),
+                    dev_lightIDs,
+                    geoms,
+                    rng
+                    );*/
 
                 scatterRay(
                     cur_pathSegment,
@@ -701,6 +720,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         num_paths,
         dev_intersections,
         dev_paths,
+        dev_geoms,
         dev_materials,
         dev_textures,
         dev_image

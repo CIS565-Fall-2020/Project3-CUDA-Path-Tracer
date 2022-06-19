@@ -3,6 +3,7 @@
 #include <thrust/random.h>
 #include <thrust/remove.h>
 #include "intersections.h"
+#include <glm/gtc/epsilon.hpp>
 #include "cfg.h"
 #include "utility"
 
@@ -289,6 +290,17 @@ __host__ __device__ float powerHeuristic(float pdf1, float pdf2) {
     return pdf1 / (pdf1 + pdf2);
 }
 
+__device__ __host__
+glm::vec3 evalBsdf(
+    const glm::vec3& wow,
+    const glm::vec3& wiw,
+    const Material& m,
+    float& pdf
+) {
+    pdf = 0.;
+    return glm::vec3(0.);
+}
+
 /**
  * Scatter a ray with some probabilities according to the material properties.
  * For example, a diffuse surface scatters in a cosine-weighted hemisphere.
@@ -347,3 +359,168 @@ void scatterRay(
     
     pathSegment.remainingBounces--;
 }
+
+__host__ __device__
+bool isBlack(const glm::vec3& v, float e = 1e-6) {
+    return glm::all(glm::epsilonEqual(v, glm::vec3(0.), glm::vec3(1e-6)));
+}
+
+__device__ __host__
+glm::vec3 Light_sample_Li(const ShadeableIntersection& itsct, const glm::vec2& xi, glm::vec3& wi, float& lightPdf) {
+    return glm::vec3(0.);
+}
+
+__host__ __device__
+int SceneIntersection(
+    const Ray& ray,
+    Geom* geoms,
+    int geoms_size,
+    GLTF_Model* models,
+    Triangle* triangles,
+    ShadeableIntersection& intersection
+) {
+    float t;
+    glm::vec3 normal;
+    glm::vec2 uv;
+
+    float t_min = FLT_MAX;
+    int hit_geom_index = -1;
+    bool outside = true;
+
+    // naive parse through global geoms
+
+    for (int i = 0; i < geoms_size; i++)
+    {
+        Geom& geom = geoms[i];
+#if motion_blur
+        glm::mat4 inv_transform_cache = geom.inverseTransform;
+        glm::mat4 inv_transpose_cache = geom.invTranspose;
+        glm::vec3 new_translate = pathSegment.ray.time * geom.velocity + geom.translation;
+        glm::mat4 new_transform = dev_buildTransformationMatrix(new_translate, geom.rotation, geom.scale);
+        geom.inverseTransform = glm::inverse(new_transform);
+        // forget to update invTranspose
+        /// ty john marcao
+        geom.invTranspose = glm::inverseTranspose(new_transform);
+#endif
+        Intersection tmp_itsct{ glm::vec3(0), glm::vec3(0), glm::vec2(0) };
+        if (geom.type == CUBE)
+        {
+            t = boxIntersectionTest(geom, ray, tmp_itsct, outside);
+        }
+        else if (geom.type == SPHERE)
+        {
+            t = sphereIntersectionTest(geom, ray, tmp_itsct, outside);
+        }
+        else if (geom.type == BBOX) {
+            t = meshIntersectionTest(
+                geom,
+                models,
+                triangles,
+                ray,
+                tmp_itsct,
+                outside);
+        }
+        // TODO: add more intersection tests here... triangle? metaball? CSG?
+
+        // Compute the minimum t from the intersection tests to determine what
+        // scene geometry object was hit first.
+
+        if (t > 0.0f && t_min > t)
+        {
+            t_min = t;
+            hit_geom_index = i;
+            normal = tmp_itsct.normal;
+            uv = tmp_itsct.uv;
+        }
+
+#if motion_blur
+        geom.inverseTransform = inv_transform_cache;
+        geom.invTranspose = inv_transpose_cache;
+#endif
+    }
+
+    if (hit_geom_index == -1)
+    {
+        intersection.t = -1.0f;
+    }
+    else
+    {
+        //The ray hits something
+        intersection.t = t_min;
+        intersection.materialId = geoms[hit_geom_index].materialid;
+        intersection.surfaceNormal = normal;
+        intersection.uv = uv;
+    }
+
+    return hit_geom_index;
+}
+
+__device__ __host__
+glm::vec3 EstimateDirect(
+    const ShadeableIntersection& itsct,
+    const glm::vec3& wow,
+    Material* materials,
+    Geom& geom,
+    thrust::default_random_engine& rng) {
+
+    thrust::uniform_real_distribution<float> u01(0, 1);
+    glm::vec3 Ld(0.);
+    // sample light
+    // 
+    glm::vec3 wiw(0.);
+    float lightPdf = 0., float scatteringPdf = 0.;
+    glm::vec2 uLight(u01(rng), u01(rng));
+    glm::vec2 uScattering(u01(rng), u01(rng));
+
+    glm::vec3 Li = Light_sample_Li(itsct, uLight, wiw, lightPdf);
+
+    Material mat = materials[itsct.materialId];
+    if (lightPdf > 0. && !isBlack(Li)) {
+        glm::vec3 f(0.);
+        if (mat.isSurface) {
+            f = evalBsdf(wow, wiw, mat, scatteringPdf) * glm::abs(glm::dot(itsct.surfaceNormal, wiw));
+        }
+        else {
+            // TODO subsurface
+        }
+
+        if (!isBlack(Li)) {
+            // test occlusion 
+            bool isOccluded = false;
+
+        }
+    }
+
+
+    // sample BSDF
+
+
+    return Ld;
+}
+
+__host__ __device__
+void UniformSampleOneLight(
+    PathSegment& pathSegment,
+    const ShadeableIntersection& itsct,
+    Material* materials,
+    const glm::vec3& wow,
+    const int& nLights,
+    int *lightIDs,
+    Geom* geoms,
+    thrust::default_random_engine& rng
+) {
+    if (nLights == 0) {
+        // no lights, no energy
+        return;
+    }
+    thrust::uniform_int_distribution<int> dist(0, nLights-1);
+    int chosen_light_id = dist(rng);
+    
+    
+    pathSegment.colorSum
+        += pathSegment.colorThroughput * (float)nLights * EstimateDirect(itsct, -pathSegment.ray.direction ,materials, geoms[chosen_light_id], rng);
+}
+
+
+
+

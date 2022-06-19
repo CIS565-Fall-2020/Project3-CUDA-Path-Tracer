@@ -83,6 +83,7 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    bool isSurface = true;
 
     TextureDescriptor diffuseTexture;
     TextureDescriptor specularTexture;
