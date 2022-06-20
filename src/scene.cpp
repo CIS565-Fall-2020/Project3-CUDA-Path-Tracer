@@ -51,6 +51,8 @@ int Scene::loadGeom(string objectid) {
         Geom newGeom;
         string line;
 
+        newGeom.geom_idx = id;
+
         //load object type
         utilityCore::safeGetline(fp_in, line);
         if (!line.empty() && fp_in.good()) {

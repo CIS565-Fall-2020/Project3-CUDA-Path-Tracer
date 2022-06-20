@@ -8,6 +8,7 @@
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
 enum GeomType {
+    DELTA, // TODO tmp measure for delta light during direct light 
     SPHERE,
     CUBE,
     GLTF_MESH,
@@ -23,6 +24,8 @@ struct Ray {
 };
 
 struct Geom {
+    // geom index starting from 0
+    int geom_idx;
     enum GeomType type;
     int materialid;
     glm::vec3 translation;
@@ -33,7 +36,7 @@ struct Geom {
     glm::mat4 invTranspose;
     //motion blur 
     glm::vec3 velocity;
-    // for triangle index
+    // for gltf model index
     int mesh_idx;
 };
 

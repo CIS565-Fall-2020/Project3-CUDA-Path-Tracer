@@ -284,11 +284,15 @@ void SchlickFresnel(
     }
 }
 
-__host__ __device__ float powerHeuristic(float pdf1, float pdf2) {
-    pdf1 *= pdf1;
+__host__ __device__ float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
+    /*pdf1 *= pdf1;
     pdf2 *= pdf2;
-    return pdf1 / (pdf1 + pdf2);
+    return pdf1 / (pdf1 + pdf2);*/
+
+    float f = nf * fPdf, g = ng * gPdf;
+    return (f * f) / (f * f + g * g);
 }
+
 
 __device__ __host__
 glm::vec3 evalBsdf(
@@ -297,6 +301,23 @@ glm::vec3 evalBsdf(
     const Material& m,
     float& pdf
 ) {
+    /***
+    * wiw is given already and evaluate it
+    * **/
+    pdf = 0.;
+    return glm::vec3(0.);
+}
+
+__device__ __host__
+glm::vec3 sampleBsdf(
+    const glm::vec3& wow,
+    glm::vec3& wiw,
+    const Material& m,
+    float& pdf
+) {
+    /***
+    * need to sample a wiw
+    * **/
     pdf = 0.;
     return glm::vec3(0.);
 }
@@ -458,8 +479,10 @@ int SceneIntersection(
 __device__ __host__
 glm::vec3 EstimateDirect(
     const ShadeableIntersection& itsct,
+    const PathSegment& pathSegment,
     const glm::vec3& wow,
     Material* materials,
+    Geom* geoms, GLTF_Model* models, Triangle* triangles, 
     Geom& geom,
     thrust::default_random_engine& rng) {
 
@@ -472,6 +495,7 @@ glm::vec3 EstimateDirect(
     glm::vec2 uLight(u01(rng), u01(rng));
     glm::vec2 uScattering(u01(rng), u01(rng));
 
+    glm::vec3 itsct_p = itsct.t * pathSegment.ray.direction + pathSegment.ray.origin;
     glm::vec3 Li = Light_sample_Li(itsct, uLight, wiw, lightPdf);
 
     Material mat = materials[itsct.materialId];
@@ -486,14 +510,58 @@ glm::vec3 EstimateDirect(
 
         if (!isBlack(Li)) {
             // test occlusion 
-            bool isOccluded = false;
+            Ray r{ itsct_p, wiw };
+            ShadeableIntersection intersection;
+            int hit_geom_idx = SceneIntersection(r, geoms, hst_scene->geoms.size(), models, triangles, intersection);
+            if (hit_geom_idx != geom.geom_idx) {
+                // hit the same light
+                bool handleMedia = false;
+                if (!handleMedia) {
+                    Li = glm::vec3(0.);
+                }
+
+            }
+
+            if (!isBlack(Li)) {
+                if (geom.type == DELTA) {
+                    Ld += f * Li / lightPdf;
+                }
+                else {
+                    float weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
+                    Ld += f * Li * weight / lightPdf;
+                }
+            }
 
         }
     }
 
-
     // sample BSDF
+    if (geom.type != DELTA) {
+        glm::vec3 f(0.);
+        bool sampledSpecular = false;
+        if (mat.isSurface) {
+            f = sampleBsdf(wow, wiw, mat, scatteringPdf);
+            f *= glm::abs(glm::dot(itsct.surfaceNormal, wiw));
+            // TODO handle sampledSpecular
+        }
+        else {
+            // TODO handle subsurface
+        }
 
+        if (!isBlack(f) && scatteringPdf > 0) {
+            float weight = 1.;
+            if (!sampledSpecular) {
+                // get light pdf
+                Light_sample_Li(itsct, uLight, wiw, lightPdf);
+                if (lightPdf == 0) {
+                    return Ld;
+                }
+
+                weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
+            }
+        }
+
+    }
 
     return Ld;
 }
@@ -507,6 +575,8 @@ void UniformSampleOneLight(
     const int& nLights,
     int *lightIDs,
     Geom* geoms,
+    GLTF_Model* models,
+    Triangle* triangles,
     thrust::default_random_engine& rng
 ) {
     if (nLights == 0) {
@@ -518,7 +588,7 @@ void UniformSampleOneLight(
     
     
     pathSegment.colorSum
-        += pathSegment.colorThroughput * (float)nLights * EstimateDirect(itsct, -pathSegment.ray.direction ,materials, geoms[chosen_light_id], rng);
+        += pathSegment.colorThroughput * (float)nLights * EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials, geoms, models, triangles, geoms[chosen_light_id], rng);
 }
 
 
