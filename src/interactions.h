@@ -386,10 +386,32 @@ bool isBlack(const glm::vec3& v, float e = 1e-6) {
     return glm::all(glm::epsilonEqual(v, glm::vec3(0.), glm::vec3(1e-6)));
 }
 
+
 __device__ __host__
-glm::vec3 Light_sample_Li(const ShadeableIntersection& itsct, const glm::vec2& xi, glm::vec3& wi, float& lightPdf) {
+ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_itsct, const Geom& light_geom, const glm::vec2& xi, float& lightPdf) {
+    // sample a pos based on the light intersection position
+    if (light_geom.type == SPHERE) {
+
+    }
+
+    ShadeableIntersection shape_itsct;
+    return shape_itsct;
+}
+
+
+__device__ __host__
+glm::vec3 Light_sample_Li(const ShadeableIntersection& itsct, const Geom& light_geom,const glm::vec2& xi, glm::vec3& wi, float& lightPdf) {
+    ShadeableIntersection sampled_itsct = arealight_shape_sample(itsct, light_geom, xi, lightPdf);
+    //wi = glm::normalize(sampled_itsct.)
+
     return glm::vec3(0.);
 }
+
+__device__ __host__
+glm::vec3 Light_Le(const Material& light_mat, const Geom& geom, const glm::vec3& wi) {
+    return glm::vec3(0.);
+}
+
 
 __host__ __device__
 int SceneIntersection(
@@ -468,6 +490,7 @@ int SceneIntersection(
     {
         //The ray hits something
         intersection.t = t_min;
+        intersection.pos = getPointOnRay(ray, t_min);
         intersection.materialId = geoms[hit_geom_index].materialid;
         intersection.surfaceNormal = normal;
         intersection.uv = uv;
@@ -482,7 +505,7 @@ glm::vec3 EstimateDirect(
     const PathSegment& pathSegment,
     const glm::vec3& wow,
     Material* materials,
-    Geom* geoms, GLTF_Model* models, Triangle* triangles, 
+    Geom* geoms, int geom_size, GLTF_Model* models, Triangle* triangles,
     Geom& geom,
     thrust::default_random_engine& rng) {
 
@@ -495,8 +518,8 @@ glm::vec3 EstimateDirect(
     glm::vec2 uLight(u01(rng), u01(rng));
     glm::vec2 uScattering(u01(rng), u01(rng));
 
-    glm::vec3 itsct_p = itsct.t * pathSegment.ray.direction + pathSegment.ray.origin;
-    glm::vec3 Li = Light_sample_Li(itsct, uLight, wiw, lightPdf);
+    glm::vec3 itsct_p = itsct.pos;
+    glm::vec3 Li = Light_sample_Li(itsct, geom, uLight, wiw, lightPdf);
 
     Material mat = materials[itsct.materialId];
     if (lightPdf > 0. && !isBlack(Li)) {
@@ -512,7 +535,7 @@ glm::vec3 EstimateDirect(
             // test occlusion 
             Ray r{ itsct_p, wiw };
             ShadeableIntersection intersection;
-            int hit_geom_idx = SceneIntersection(r, geoms, hst_scene->geoms.size(), models, triangles, intersection);
+            int hit_geom_idx = SceneIntersection(r, geoms, geom_size, models, triangles, intersection);
             if (hit_geom_idx != geom.geom_idx) {
                 // hit the same light
                 bool handleMedia = false;
@@ -522,14 +545,13 @@ glm::vec3 EstimateDirect(
 
             }
 
-            if (!isBlack(Li)) {
-                if (geom.type == DELTA) {
-                    Ld += f * Li / lightPdf;
-                }
-                else {
-                    float weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
-                    Ld += f * Li * weight / lightPdf;
-                }
+            
+            if (geom.type == DELTA) {
+                Ld += f * Li / lightPdf;
+            }
+            else {
+                float weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
+                Ld += f * Li * weight / lightPdf;
             }
 
         }
@@ -546,21 +568,40 @@ glm::vec3 EstimateDirect(
         }
         else {
             // TODO handle subsurface
+
+
         }
 
         if (!isBlack(f) && scatteringPdf > 0) {
             float weight = 1.;
             if (!sampledSpecular) {
                 // get light pdf
-                Light_sample_Li(itsct, uLight, wiw, lightPdf);
+                Light_sample_Li(itsct, geom, uLight, wiw, lightPdf);
                 if (lightPdf == 0) {
                     return Ld;
                 }
-
                 weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
             }
-        }
 
+            //  <<Find intersection and compute transmittance>> 
+            glm::vec3 Tr(1.0);
+            Ray r{ itsct_p, wiw };
+            ShadeableIntersection intersection;
+            int hit_geom_idx = SceneIntersection(r, geoms, geom_size, models, triangles, intersection);
+
+            // <<Add light contribution from material sampling>> 
+            glm::vec3 Li(0.);
+            if (hit_geom_idx == -1) {
+                // TODO did not hit anything, handle infinite area light
+            }
+            else {
+                if (hit_geom_idx == geom.geom_idx) {
+                    Li = Light_Le(materials[intersection.materialId], geom, -wiw);
+                }
+
+                Ld += f * Li * Tr * weight / scatteringPdf;
+            }
+        }
     }
 
     return Ld;
@@ -575,6 +616,7 @@ void UniformSampleOneLight(
     const int& nLights,
     int *lightIDs,
     Geom* geoms,
+    int geom_size,
     GLTF_Model* models,
     Triangle* triangles,
     thrust::default_random_engine& rng
@@ -588,7 +630,7 @@ void UniformSampleOneLight(
     
     
     pathSegment.colorSum
-        += pathSegment.colorThroughput * (float)nLights * EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials, geoms, models, triangles, geoms[chosen_light_id], rng);
+        += pathSegment.colorThroughput * (float)nLights * EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials, geoms, geom_size, models, triangles, geoms[chosen_light_id], rng);
 }
 
 

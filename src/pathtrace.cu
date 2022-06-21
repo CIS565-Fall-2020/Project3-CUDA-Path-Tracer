@@ -413,7 +413,7 @@ __global__ void shadeTrueMaterial(
 
                 scatterRay(
                     cur_pathSegment,
-                    getPointOnRay(cur_pathSegment.ray, intersection.t),
+                    intersection.pos,
                     n,
                     intersection.uv,
                     material,
