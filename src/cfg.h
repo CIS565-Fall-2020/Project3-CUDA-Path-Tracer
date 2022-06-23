@@ -12,7 +12,7 @@
 
 #define stratified_sampling 0
 
-#define DirectLightPass 1
+#define DirectLightPass 0
 #define DirectLightSampleLight 1
 #define DirectLightSampleBSDF 1
 

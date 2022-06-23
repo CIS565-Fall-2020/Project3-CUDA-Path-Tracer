@@ -7,6 +7,10 @@
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
+typedef float Float;
+typedef glm::vec3 vc3;
+typedef glm::vec4 vc4;
+
 enum GeomType {
     DELTA, // TODO tmp measure for delta light during direct light 
     SPHERE,

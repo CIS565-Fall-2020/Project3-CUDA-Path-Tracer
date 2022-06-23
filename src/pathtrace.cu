@@ -222,7 +222,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-        segment.colorSum = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.colorSum = glm::vec3(0.);
+        segment.colorThroughput = glm::vec3(1.);
         
 		// TODO: implement antialiasing by jittering the ray
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
@@ -385,12 +386,12 @@ __global__ void shadeTrueMaterial(
 #if DirectLightPass == 1:
                 bool specularBounce = true; // TODO make this really specular bounce
                 if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
-                    cur_pathSegment.colorSum *= (materialColor * material.emittance);
+                    cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
                     // stop if hit a light
                     cur_pathSegment.remainingBounces = 0;
                 }
 #else
-                cur_pathSegment.color *= (materialColor * material.emittance);
+                cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
 #endif
@@ -413,13 +414,12 @@ __global__ void shadeTrueMaterial(
 
                 scatterRay(
                     cur_pathSegment,
-                    intersection.pos,
-                    n,
-                    intersection.uv,
+                    intersection,
                     material,
                     textures,
                     rng
                 );
+
             }
             
         }
@@ -428,7 +428,7 @@ __global__ void shadeTrueMaterial(
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
             // used for opacity, in which case they can indicate "no opacity".
             // This can be useful for post-processing and image compositing.
-            cur_pathSegment.colorSum = glm::vec3(0.0f);
+            cur_pathSegment.colorThroughput = glm::vec3(0.0f);
             cur_pathSegment.remainingBounces = 0;
         }
     }
