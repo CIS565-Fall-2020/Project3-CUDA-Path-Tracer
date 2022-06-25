@@ -151,11 +151,10 @@ vc3 perfectSpecularReflection(
     glm::vec3* textureArray,
     thrust::default_random_engine& rng) {
 
-    wiw = glm::reflect(wow, itsct.surfaceNormal);
-    pdf = 1.;
-    vc3 f = m.specular.color;
+    wiw = glm::reflect(-wow, itsct.surfaceNormal);
+    vc3 f = m.specular.color / glm::abs(glm::dot(wiw, itsct.surfaceNormal));
     if (m.specularTexture.valid == 1) {
-        f *= sampleTexture(textureArray, itsct.uv, m.diffuseTexture);
+        f *= sampleTexture(textureArray, itsct.uv, m.specularTexture);
     }
     pdf = 1.;
     return f;
@@ -196,16 +195,16 @@ vc3 imperfectSpecularReflection(
             cos_theta_s);
 
         // ref :: // https://stackoverflow.com/questions/20923232/how-to-rotate-a-vector-by-a-given-direction
-        glm::vec3 perfect_reflect_dir = glm::reflect(wow, itsct.surfaceNormal);
+        glm::vec3 perfect_reflect_dir = glm::reflect(-wow, itsct.surfaceNormal);
         glm::vec3 base_z = glm::normalize(perfect_reflect_dir);
         glm::vec3 base_x = glm::normalize(glm::cross(base_z, glm::vec3(0.0f, 0.0f, 1.0f)));
         glm::vec3 base_y = glm::normalize(glm::cross(base_z, base_x));
         glm::mat3 base_m = glm::mat3(base_x, base_y, base_z);
 
         wiw = base_m * local_dir;
-        vc3 f = m.specular.color;
+        vc3 f = m.specular.color / glm::abs(glm::dot(wiw, itsct.surfaceNormal));
         if (m.specularTexture.valid == 1) {
-            f *= sampleTexture(textureArray, itsct.uv, m.diffuseTexture);
+            f *= sampleTexture(textureArray, itsct.uv, m.specularTexture);
         }
         pdf = 1.;
         return f;
@@ -247,12 +246,12 @@ vc3 refraction(
     float etaB = m.indexOfRefraction;
     glm::vec3 refract_normal;
 
-    bool isEntering =  glm::dot(wow, itsct.surfaceNormal) < 0.0;
+    bool isEntering =  glm::dot(-wow, itsct.surfaceNormal) < 0.0;
     float eta = isEntering ? etaA / etaB : etaB / etaA;
     refract_normal = isEntering ? itsct.surfaceNormal : -itsct.surfaceNormal;
 
     glm::vec3 refract_dir = glm::refract(
-        wow,
+        -wow,
         refract_normal,
         eta
     );
@@ -265,7 +264,7 @@ vc3 refraction(
     }
     else {
         wiw = refract_dir;
-        f = m.specular.color;
+        f = m.specular.color / glm::abs(glm::dot(wiw, itsct.surfaceNormal));
         if (m.normalTexture.valid == 1) {
             f *= sampleTexture(textureArray, itsct.uv, m.specularTexture);
         }
@@ -359,7 +358,7 @@ __device__ __host__
 vc3 sampleBsdf(
     const ShadeableIntersection& itsct,
     const glm::vec3& wow,
-    glm::vec3& wiw,
+    vc3& wiw,
     Float& pdf,
     const Material& m,
     glm::vec3* textureArray,
@@ -432,7 +431,8 @@ void scatterRay(
     
     pathSegment.colorThroughput *= brdf * abs(glm::dot(itsct.surfaceNormal, lightIn)) / pdf;
     pathSegment.ray.direction = lightIn;
-    pathSegment.ray.origin = itsct.pos + itsct.surfaceNormal * 1e-4f;
+    pathSegment.ray.origin = itsct.pos + lightIn * 1e-3f;
+    //pathSegment.ray.origin = itsct.pos;
     pathSegment.remainingBounces--;
 }
 
@@ -749,12 +749,12 @@ void UniformSampleOneLight(
     thrust::uniform_int_distribution<int> dist(0, nLights-1);
     int chosen_light_id = dist(rng);
     
-    
-    pathSegment.colorSum
-        += pathSegment.colorThroughput * (float)nLights * EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials, 
-            geoms, geom_size, models, triangles, 
-            textureArray,
-            geoms[chosen_light_id], rng);
+    vc3 f = EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials,
+        geoms, geom_size, models, triangles,
+        textureArray,
+        geoms[chosen_light_id], rng);
+    float3 tmp_f = make_float3(f.x, f.y, f.z);
+    pathSegment.colorSum += pathSegment.colorThroughput * (float)nLights * f;
 }
 
 

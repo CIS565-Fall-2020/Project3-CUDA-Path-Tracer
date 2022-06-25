@@ -358,8 +358,13 @@ __global__ void shadeTrueMaterial(
     int num_paths,
     ShadeableIntersection* shadeableIntersections,
     PathSegment* pathSegments,
+    int *lightIDs,
+    int light_size,
     Geom* geoms,
+    int geom_size,
     Material* materials,
+    Triangle* triangles,
+    GLTF_Model* gltf_models,
     glm::vec3* textures,
     glm::vec3* dev_image
 )
@@ -403,14 +408,20 @@ __global__ void shadeTrueMaterial(
                 // TODO normal mapping
                 glm::vec3 n = intersection.surfaceNormal;
 
-                /*UniformSampleOneLight(
+                UniformSampleOneLight(
                     cur_pathSegment, 
+                    intersection,
+                    materials,
                     -cur_pathSegment.ray.direction,
-                    hst_scene->lightIDs.size(),
-                    dev_lightIDs,
+                    light_size,
+                    lightIDs,
                     geoms,
+                    geom_size,
+                    gltf_models,
+                    triangles,
+                    textures,
                     rng
-                    );*/
+                    );
 
                 scatterRay(
                     cur_pathSegment,
@@ -645,8 +656,13 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         num_paths,
         dev_intersections,
         dev_paths,
+        dev_lightIDs,
+        hst_scene->lightIDs.size(),
         dev_geoms,
+        hst_scene->gltf_models.size(),
         dev_materials,
+        dev_triangles,
+        dev_gltf_models,
         dev_textures,
         dev_image
         );
