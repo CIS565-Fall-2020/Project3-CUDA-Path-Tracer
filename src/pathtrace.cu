@@ -425,6 +425,7 @@ __global__ void shadeTrueMaterial(
                 );
 
 #endif
+#if InDirectLightPass == 1
                 scatterRay(
                     cur_pathSegment,
                     intersection,
@@ -432,6 +433,8 @@ __global__ void shadeTrueMaterial(
                     textures,
                     rng
                 );
+#endif
+                
 
             }
             

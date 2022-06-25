@@ -41,7 +41,7 @@ struct Geom {
     //motion blur 
     glm::vec3 velocity;
     // for gltf model index
-    int mesh_idx;
+    int mesh_idx = -1;
 };
 
 struct Triangle {

@@ -16,5 +16,7 @@
 #define DirectLightSampleLight 1
 #define DirectLightSampleBSDF 1
 
+#define InDirectLightPass 0
+
 #define usebbox 1
 #define motion_blur 0

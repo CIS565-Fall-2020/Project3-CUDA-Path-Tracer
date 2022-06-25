@@ -6,6 +6,7 @@
 #include <glm/gtc/epsilon.hpp>
 #include "cfg.h"
 #include "utility"
+#include <glm/gtx/norm.hpp>
 
 // CHECKITOUT
 /**
@@ -469,19 +470,19 @@ ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_
         // <<Sample sphere uniformly inside subtended cone>>
         Float radius = light_geom.scale[0];
         Float sinThetaMax2 = radius * radius / glm::distance2(ctr, light_itsct.pos);
-        Float cosThetaMax = std::sqrt(std::max((Float)0, 1 - sinThetaMax2));
+        Float cosThetaMax = glm::sqrt(glm::max((Float)0, 1 - sinThetaMax2));
         Float cosTheta = (1 - xi[0]) + xi[0] * cosThetaMax;
-        Float sinTheta = std::sqrt(std::max((Float)0, 1 - cosTheta * cosTheta));
+        Float sinTheta = glm::sqrt(glm::max((Float)0, 1 - cosTheta * cosTheta));
         Float phi = xi[1] * 2 * glm::pi<Float>();
 
         // <<Compute angle  from center of sphere to sampled point on surface>>
         Float dc = glm::distance(light_itsct.pos, ctr);
         Float ds = dc * cosTheta -
-            std::sqrt(std::max((Float)0,
+            glm::sqrt(glm::max((Float)0,
                 radius * radius - dc * dc * sinTheta * sinTheta));
         Float cosAlpha = (dc * dc + radius * radius - ds * ds) /
             (2 * dc * radius);
-        Float sinAlpha = std::sqrt(std::max((Float)0, 1 - cosAlpha * cosAlpha));
+        Float sinAlpha = glm::sqrt(glm::max((Float)0, 1 - cosAlpha * cosAlpha));
 
         // <<Compute surface normal and sampled point on sphere>> 
         vc3 nObj = SphericalDirection(sinAlpha, cosAlpha, phi,
@@ -516,9 +517,8 @@ glm::vec3 Light_Le(const ShadeableIntersection& itsct, const Geom& light_geom, c
 __device__ __host__
 glm::vec3 Light_sample_Li(const ShadeableIntersection& itsct, const Geom& light_geom, const Material& mat, const glm::vec2& xi, glm::vec3& wiw, float& lightPdf) {
     ShadeableIntersection sampled_itsct = arealight_shape_sample(itsct, light_geom, xi, lightPdf);
-    //wi = glm::normalize(sampled_itsct.)
     wiw = glm::normalize(sampled_itsct.pos - itsct.pos);
-    return Light_Le(sampled_itsct, light_geom, mat, wiw);
+    return Light_Le(sampled_itsct, light_geom, mat, -wiw);
 }
 
 __device__ __host__
@@ -633,13 +633,11 @@ glm::vec3 EstimateDirect(
     Material* materials,
     Geom* geoms, int geom_size, GLTF_Model* models, Triangle* triangles,
     glm::vec3* textureArray,
-    Geom& geom,
+    const Geom& geom,
     thrust::default_random_engine& rng) {
 
     thrust::uniform_real_distribution<float> u01(0, 1);
     glm::vec3 Ld(0.);
-    // sample light
-    // 
     glm::vec3 wiw(0.);
     float lightPdf = 0., float scatteringPdf = 0.;
     glm::vec2 uLight(u01(rng), u01(rng));
@@ -647,7 +645,12 @@ glm::vec3 EstimateDirect(
 
     glm::vec3 itsct_p = itsct.pos;
     Material mat = materials[itsct.materialId];
-    glm::vec3 Li = Light_sample_Li(itsct, geom, mat, uLight, wiw, lightPdf);
+    glm::vec3 Li = Light_sample_Li(itsct, geom, materials[geom.materialid], uLight, wiw, lightPdf);
+
+    float3 f3_light_li; float3 f3_bsdf_li;
+    float3 f3_light_f; float3 f3_bsdf_f;
+    f3_light_li = make_float3(Li.x, Li.y, Li.z);
+#if DirectLightSampleLight == 1
     if (lightPdf > 0. && !isBlack(Li)) {
         glm::vec3 f(0.);
         if (mat.isSurface) {
@@ -679,9 +682,13 @@ glm::vec3 EstimateDirect(
             }
 
         }
+        
+        f3_light_f = make_float3(f.x, f.y, f.z);
     }
+    
+#endif
 
-    // sample BSDF
+#if DirectLightSampleBSDF == 1
     if (geom.type != DELTA) {
         glm::vec3 f(0.);
         bool sampledSpecular = false;
@@ -709,7 +716,7 @@ glm::vec3 EstimateDirect(
             else {
                 float weight = 1.;
                 if (hit_geom_idx == geom.geom_idx) {
-                    Li = Light_Le(light_intersection, geom, mat, -wiw);
+                    Li = Light_Le(light_intersection, geom, materials[geom.materialid], -wiw);
                     if (!sampledSpecular) {
                         // get light pdf TODO only get pdf
                         lightPdf = light_pdf(light_intersection, itsct, geom, wiw);
@@ -722,7 +729,11 @@ glm::vec3 EstimateDirect(
                 Ld += f * Li * Tr * weight / scatteringPdf;
             }
         }
+        f3_bsdf_f = make_float3(f.x, f.y, f.z);
+        f3_bsdf_li = make_float3(Li.x, Li.y, Li.z);
     }
+    
+#endif
 
     return Ld;
 }
@@ -747,7 +758,7 @@ void UniformSampleOneLight(
         return;
     }
     thrust::uniform_int_distribution<int> dist(0, nLights-1);
-    int chosen_light_id = dist(rng);
+    int chosen_light_id = lightIDs[dist(rng)];
     
     vc3 f = EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials,
         geoms, geom_size, models, triangles,
