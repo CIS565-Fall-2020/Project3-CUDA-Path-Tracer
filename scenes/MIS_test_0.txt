@@ -1,0 +1,130 @@
+// Emissive material (light)
+MATERIAL 0
+RGB         1 1 1
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   5
+
+// White diffuse
+MATERIAL 1
+RGB         .95 .95 .95
+SPECEX      0
+SPECRGB     .95 .95 .95
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Refl Soft red 1
+MATERIAL 2
+RGB         .95 .35 .35
+SPECEX      0
+SPECRGB     .95 .95 .95
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// diffuse reflect
+MATERIAL 3
+RGB         .95 .95 .95
+SPECEX      500
+SPECRGB     .95 .95 .95
+REFL        0.2
+REFR        0.3
+REFRIOR     1.33
+EMITTANCE   0
+
+// Camera
+CAMERA
+RES         2000 1200
+FOVY        45
+ITERATIONS  5000
+DEPTH       8
+FILE        cornell
+EYE         0 5 5
+LOOKAT      0 5 0
+UP          0 1 0
+
+// Cube1
+OBJECT 0
+cube
+material 3
+TRANS       0 1 0.5
+ROTAT       0 0 0
+SCALE       12 0.5 1
+
+// Sphere1 light
+OBJECT 1
+sphere
+material 0
+TRANS       -4 6 -1.5
+ROTAT       0 0 0
+SCALE       0.5 0.5 0.5
+
+// Cube2
+OBJECT 2
+cube
+material 3
+TRANS       0 2 -1
+ROTAT       15 0 0
+SCALE       12 0.5 1
+
+// Sphere2 light
+OBJECT 3
+sphere
+material 0
+TRANS       0 6 -1.5
+ROTAT       0 0 0
+SCALE       1 1 1
+
+// Cube3
+OBJECT 4
+cube
+material 3
+TRANS       0 3 -2
+ROTAT       45 0 0
+SCALE       12 0.5 1
+
+// Sphere3
+OBJECT 5
+sphere
+material 0
+TRANS       4 6 -1.5
+ROTAT       0 0 0
+SCALE       2 2 2
+
+// Floor
+OBJECT 6
+cube
+material 1
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       20 .01 20
+
+// Back wall
+OBJECT 7
+cube
+material 1
+TRANS       0 5 -8
+ROTAT       0 90 0
+SCALE       .01 20 20
+
+// Left wall
+OBJECT 8
+cube
+material 1
+TRANS       -10 5 0
+ROTAT       0 0 0
+SCALE       .01 20 20
+
+// Right wall
+OBJECT 9
+cube
+material 1
+TRANS       10 5 0
+ROTAT       0 0 0
+SCALE       .01 20 20
