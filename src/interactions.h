@@ -316,6 +316,7 @@ vc3 evalBsdf(
     const glm::vec3& wow,
     const glm::vec3& wiw,
     const Material& m,
+    BxDFType& sampledType,
     float& pdf,
     glm::vec3* textureArray,
     thrust::default_random_engine& rng
@@ -468,7 +469,8 @@ ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_
         // TODO
 
         // <<Sample sphere uniformly inside subtended cone>>
-        Float radius = light_geom.scale[0];
+        //Float radius = light_geom.scale[0];
+        Float radius = 1.;
         Float sinThetaMax2 = radius * radius / glm::distance2(ctr, light_itsct.pos);
         Float cosThetaMax = glm::sqrt(glm::max((Float)0, 1 - sinThetaMax2));
         Float cosTheta = (1 - xi[0]) + xi[0] * cosThetaMax;
@@ -487,10 +489,12 @@ ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_
         // <<Compute surface normal and sampled point on sphere>> 
         vc3 nObj = SphericalDirection(sinAlpha, cosAlpha, phi,
             -wcX, -wcY, -wc);
-        vc3 pObj = radius * vc3(nObj.x, nObj.y, nObj.z);
+        vc3 pObj = (Float)1. * vc3(nObj.x, nObj.y, nObj.z);
 
         it.pos = multiplyMVHomo(light_geom.transform, vc4(pObj, 1.));
         it.surfaceNormal = multiplyMV(light_geom.invTranspose, vc4(pObj, 0.));
+        it.materialId = light_geom.materialid;
+        it.geom_idx = light_geom.geom_idx;
         // TODO illuminated point inside sphere 
         
         lightPdf = 1.0f / (2.0f * glm::pi<float>() * (1 - cosThetaMax));
@@ -515,10 +519,10 @@ glm::vec3 Light_Le(const ShadeableIntersection& itsct, const Geom& light_geom, c
 }
 
 __device__ __host__
-glm::vec3 Light_sample_Li(const ShadeableIntersection& itsct, const Geom& light_geom, const Material& mat, const glm::vec2& xi, glm::vec3& wiw, float& lightPdf) {
-    ShadeableIntersection sampled_itsct = arealight_shape_sample(itsct, light_geom, xi, lightPdf);
-    wiw = glm::normalize(sampled_itsct.pos - itsct.pos);
-    return Light_Le(sampled_itsct, light_geom, mat, -wiw);
+glm::vec3 Light_sample_Li(const ShadeableIntersection& given_itsct, ShadeableIntersection& light_itsct, const Geom& light_geom, const Material& mat, const glm::vec2& xi, glm::vec3& wiw, float& lightPdf) {
+    light_itsct = arealight_shape_sample(given_itsct, light_geom, xi, lightPdf);
+    wiw = glm::normalize(light_itsct.pos - given_itsct.pos);
+    return Light_Le(light_itsct, light_geom, mat, -wiw);
 }
 
 __device__ __host__
@@ -620,7 +624,9 @@ int SceneIntersection(
         intersection.materialId = geoms[hit_geom_index].materialid;
         intersection.surfaceNormal = normal;
         intersection.uv = uv;
+        
     }
+    intersection.geom_idx = hit_geom_index;
 
     return hit_geom_index;
 }
@@ -645,16 +651,19 @@ glm::vec3 EstimateDirect(
 
     glm::vec3 itsct_p = itsct.pos;
     Material mat = materials[itsct.materialId];
-    glm::vec3 Li = Light_sample_Li(itsct, geom, materials[geom.materialid], uLight, wiw, lightPdf);
+    ShadeableIntersection sampled_light_itsct;
+    glm::vec3 Li = Light_sample_Li(itsct, sampled_light_itsct, geom, materials[geom.materialid], uLight, wiw, lightPdf);
 
-    float3 f3_light_li; float3 f3_bsdf_li;
+    float3 sampled_li_pos = make_float3(sampled_light_itsct.pos.x, sampled_light_itsct.pos.y, sampled_light_itsct.pos.z);
+    float3 f3_light_li; float3 f3_light_li2; float3 f3_bsdf_li;
     float3 f3_light_f; float3 f3_bsdf_f;
     f3_light_li = make_float3(Li.x, Li.y, Li.z);
 #if DirectLightSampleLight == 1
     if (lightPdf > 0. && !isBlack(Li)) {
         glm::vec3 f(0.);
+        BxDFType sampledType;
         if (mat.isSurface) {
-            f = evalBsdf(itsct, wow, wiw, mat, scatteringPdf, textureArray, rng) * glm::abs(glm::dot(itsct.surfaceNormal, wiw));
+            f = evalBsdf(itsct, wow, wiw, mat, sampledType, scatteringPdf, textureArray, rng) * glm::abs(glm::dot(itsct.surfaceNormal, wiw));
         }
         else {
             // TODO subsurface
@@ -662,17 +671,21 @@ glm::vec3 EstimateDirect(
 
         if (!isBlack(Li)) {
             // test occlusion 
-            Ray r{ itsct_p, wiw };
+            Ray r{ sampled_light_itsct.pos - 1e-2f * wiw, -wiw };
             ShadeableIntersection intersection;
             int hit_geom_idx = SceneIntersection(r, geoms, geom_size, models, triangles, intersection);
-            if (hit_geom_idx != geom.geom_idx) {
-                // hit the same light
+            if (hit_geom_idx == -1 || glm::distance2(intersection.pos, itsct.pos) > 1e-4) {
+                // not hit the same light
                 bool handleMedia = false;
-                if (!handleMedia) {
+                /*if (!handleMedia) {
                     Li = glm::vec3(0.);
-                }
+                }*/
+                Li *= handleMedia;
 
             }
+            float3 it1 = make_float3(intersection.pos.x, intersection.pos.y, intersection.pos.z);
+            float3 it2 = make_float3(itsct.pos.x, itsct.pos.y, itsct.pos.z);
+
             if (geom.type == DELTA) {
                 Ld += f * Li / lightPdf;
             }
@@ -682,7 +695,7 @@ glm::vec3 EstimateDirect(
             }
 
         }
-        
+        f3_light_li2 = make_float3(Li.x, Li.y, Li.z);
         f3_light_f = make_float3(f.x, f.y, f.z);
     }
     
@@ -704,7 +717,7 @@ glm::vec3 EstimateDirect(
         if (!isBlack(f) && scatteringPdf > 0) {
             //  <<Find intersection and compute transmittance>> 
             glm::vec3 Tr(1.0);
-            Ray r{ itsct_p, wiw };
+            Ray r{ itsct_p + 1e-3f * wiw, wiw };
             ShadeableIntersection light_intersection;
             int hit_geom_idx = SceneIntersection(r, geoms, geom_size, models, triangles, light_intersection);
 
@@ -723,14 +736,15 @@ glm::vec3 EstimateDirect(
                         if (lightPdf == 0) {
                             return Ld;
                         }
-                        weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
+                        weight = powerHeuristic(1., scatteringPdf, 1., lightPdf);
                     }
                 }
                 Ld += f * Li * Tr * weight / scatteringPdf;
             }
+            f3_bsdf_f = make_float3(f.x, f.y, f.z);
+            f3_bsdf_li = make_float3(Li.x, Li.y, Li.z);
         }
-        f3_bsdf_f = make_float3(f.x, f.y, f.z);
-        f3_bsdf_li = make_float3(Li.x, Li.y, Li.z);
+       
     }
     
 #endif

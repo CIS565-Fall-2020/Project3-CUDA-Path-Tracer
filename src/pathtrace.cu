@@ -664,7 +664,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         dev_lightIDs,
         hst_scene->lightIDs.size(),
         dev_geoms,
-        hst_scene->gltf_models.size(),
+        hst_scene->geoms.size(),
         dev_materials,
         dev_triangles,
         dev_gltf_models,
