@@ -8,6 +8,7 @@
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
 typedef float Float;
+typedef glm::vec2 vc2;
 typedef glm::vec3 vc3;
 typedef glm::vec4 vc4;
 
@@ -80,6 +81,16 @@ struct TextureDescriptor
     TextureDescriptor() : valid(-1), type(0), index(-1), width(0), height(0), repeat(glm::vec2(1.f)){};
 };
 
+enum MicroDistributionType {
+    Flat = 0,
+    TrowbridgeReitz = 1
+};
+
+struct MicroDistribution {
+    enum MicroDistributionType type;
+    vc2 alpha;
+};
+
 struct Material {
     glm::vec3 color;
     struct {
@@ -91,6 +102,7 @@ struct Material {
     float indexOfRefraction;
     float emittance;
     bool isSurface = true;
+    MicroDistribution dist{Flat, vc2(0.)};
 
     TextureDescriptor diffuseTexture;
     TextureDescriptor specularTexture;

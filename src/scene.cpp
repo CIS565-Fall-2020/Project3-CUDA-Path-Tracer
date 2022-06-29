@@ -914,6 +914,13 @@ int Scene::loadMaterial(string materialid) {
             {
                 newMaterial.normalTexture = loadTexture(tokens[1], false);
             }
+            else if (strcmp(tokens[0].c_str(), "MICROTYPE") == 0)
+            {
+                newMaterial.dist.type = static_cast<MicroDistributionType>(atof(tokens[1].c_str()));
+            }
+            else if (strcmp(tokens[0].c_str(), "ALPHAS") == 0) {
+                newMaterial.dist.alpha = vc2( atof(tokens[1].c_str()), atof(tokens[2].c_str()) );
+            }
 
             utilityCore::safeGetline(fp_in, line);
         }

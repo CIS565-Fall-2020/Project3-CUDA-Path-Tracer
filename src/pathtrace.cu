@@ -433,6 +433,8 @@ __global__ void shadeTrueMaterial(
                     textures,
                     rng
                 );
+#else:
+                cur_pathSegment.remainingBounces = 0;
 #endif
                 
 
@@ -675,7 +677,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             iterationComplete = true;
         }
 
-         // TODO: should be based off stream compaction results.
+         // Done: end based off stream compaction results.
         dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_paths + num_paths, parition_not_end());
         if (dev_path_end == dev_paths) {
             iterationComplete = true;

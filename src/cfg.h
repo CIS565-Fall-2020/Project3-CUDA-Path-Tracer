@@ -14,7 +14,7 @@
 
 #define DirectLightPass 1
 #define DirectLightSampleLight 1
-#define DirectLightSampleBSDF 0
+#define DirectLightSampleBSDF 1
 
 #define InDirectLightPass 1
 

@@ -7,6 +7,7 @@
 #include "cfg.h"
 #include "utility"
 #include <glm/gtx/norm.hpp>
+#include "bsdf.h"
 
 // CHECKITOUT
 /**
@@ -213,7 +214,7 @@ vc3 imperfectSpecularReflection(
 }
 
 __host__ __device__
-vc3 diffuseReflection(
+vc3 LambertBRDF(
     vc3& wiw,
     Float& pdf,
     const ShadeableIntersection& itsct,
@@ -227,9 +228,6 @@ vc3 diffuseReflection(
     }
     pdf = glm::dot(itsct.surfaceNormal, wiw) / glm::pi<Float>();
     return f;
-    //pathSegment.color = glm::normalize(normal);
-   // pathSegment.ray.origin = intersect + pathSegment.ray.direction * 0.01f;
-    // pathSegment.ray.origin = itsct.pos + itsct.surfaceNormal * 0.01f;
 }
 
 __host__ __device__
@@ -374,7 +372,7 @@ vc3 sampleBsdf(
     
     vc3 brdf;
     if (p > m.hasReflective + m.hasRefractive) {
-        brdf = diffuseReflection(wiw, pdf, itsct, m, textureArray, rng);
+        brdf = LambertBRDF(wiw, pdf, itsct, m, textureArray, rng);
     }
     else if (m.hasReflective > 0 && m.hasRefractive > 0) {
         // fresnel
