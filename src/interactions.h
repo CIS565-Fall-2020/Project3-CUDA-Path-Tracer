@@ -7,8 +7,9 @@
 #include "cfg.h"
 #include "utility"
 #include <glm/gtx/norm.hpp>
-#include "bsdf.h"
+#include "microface.h"
 #include "cudaUtils.cuh"
+#include <stdlib.h>
 
 // CHECKITOUT
 /**
@@ -318,13 +319,14 @@ vc3 sampleBsdf(
     * **/
     thrust::uniform_real_distribution<float> u01(0, 1);
     float p = u01(rng);
-    
+    int t = static_cast<int>(m.dist.type);
     vc3 brdf;
     if (p > m.hasReflective + m.hasRefractive) {
         if (m.dist.type == Flat) {
             brdf = LambertBRDF(wiw, pdf, itsct, m, textureArray, rng);
         }
         else if (m.dist.type == TrowbridgeReitz) {
+            //printf("t: %d\n", t);
             brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, pdf, textureArray, rng);
         }
         

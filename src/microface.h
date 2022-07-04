@@ -9,23 +9,28 @@
 __host__ __device__
 Float sinPhi(const vc3& a, const vc3& normal) {
 	// x / sinTheta
-	Float sinTheta = sqrt(thrust::max((Float)0, 1 - glm::dot(a, normal) * glm::dot(a, normal)));
+	Float sinTheta = glm::sqrt(glm::max((Float)0, 1 - glm::dot(a, normal) * glm::dot(a, normal)));
 
 	vc3 x, y;
 	CoordinateSys(normal, x, y);
+	Float tmp = glm::dot(a, y);
 
-	return (sinTheta == 0) ? 1 : glm::clamp(glm::dot(a, y) / sinTheta, -1.f, 1.f);
+	return (sinTheta == 0) ? 0 : glm::clamp(glm::dot(a, y) / sinTheta, -1.f, 1.f);
 }
 
 __host__ __device__
 Float cosPhi(const vc3& a, const vc3& normal) {
 	// x / sinTheta
-	Float sinTheta = sqrt(thrust::max((Float)0, 1 - glm::dot(a, normal) * glm::dot(a, normal)));
+	float3 f3_a = make_float3(a.x, a.y, a.z);
+	float3 f3_n = make_float3(normal.x, normal.y, normal.z);
+
+	Float sinTheta = glm::sqrt(glm::max((Float)0, (Float)1 - glm::dot(a, normal) * glm::dot(a, normal)));
 	
 	vc3 x, y;
 	CoordinateSys(normal, x, y);
+	Float tmp = glm::dot(a, x);
 
-	return (sinTheta == 0) ? 1 : glm::clamp(glm::dot(a, x) / sinTheta, -1.f, 1.f);
+	return (sinTheta == 0) ? (Float)1 : glm::clamp(glm::dot(a, x) / sinTheta, -1.f, 1.f);
 }
 
 __host__ __device__
@@ -43,45 +48,41 @@ vc3 distribution_sample_wh(const MicroDistribution& distrib, const vc3& wo, cons
 	// Samples the distribution of microfacet normals to generate one
 	// about which to reflect wo to create a wi.
 
-	if (distrib.type == TrowbridgeReitz) {
+	//if (distrib.type == TrowbridgeReitz) {
 		vc3 wh;
 		float cosTheta = 0, phi = (2 * glm::pi<Float>()) * xi[1];
 		if (distrib.alpha.x == distrib.alpha.y) {
 			float tanTheta2 = distrib.alpha.x * distrib.alpha.x * xi[0] / (1.0f - xi[0]);
-			cosTheta = 1 / sqrt(1 + tanTheta2);
+			cosTheta = 1 / glm::sqrt(1 + tanTheta2);
 		}
 		else {
 			phi =
-				atan(distrib.alpha.y / distrib.alpha.x * tan(2 * glm::pi<Float>() * xi[1] + .5f * glm::pi<Float>()));
+				glm::atan(distrib.alpha.y / distrib.alpha.x * tan(2 * glm::pi<Float>() * xi[1] + .5f * glm::pi<Float>()));
 			if (xi[1] > .5f) phi += glm::pi<Float>();
 			float sinPhi = sin(phi), cosPhi = cos(phi);
 			const float alphax2 = distrib.alpha.x * distrib.alpha.x, alphay2 = distrib.alpha.y * distrib.alpha.y;
 			const float alpha2 =
 				1 / (cosPhi * cosPhi / alphax2 + sinPhi * sinPhi / alphay2);
 			float tanTheta2 = alpha2 * xi[0] / (1 - xi[0]);
-			cosTheta = 1 / sqrt(1 + tanTheta2);
+			cosTheta = 1 / glm::sqrt(1 + tanTheta2);
 		}
 		float sinTheta =
-			sqrt(max((float)0., (float)1. - cosTheta * cosTheta));
+			glm::sqrt(glm::max((float)0., (float)1. - cosTheta * cosTheta));
 
-		wh = vc3(sinTheta * cos(phi), sinTheta * sin(phi),
+		wh = vc3(sinTheta * glm::cos(phi), sinTheta * glm::sin(phi),
 			cosTheta);
 		if (!SameHemiSphere(wo, wh)) wh = -wh;
 
 		return wh;
-	}
-	
-
-	
-
-	return vc3(0.);
+	//}
+	//return vc3(0.);
 }
 
 __host__ __device__
 Float Lambda(const MicroDistribution& distrib, const vc3& wh, const vc3& normal) {
 	// Shadowing - masking functions, which measures 
 	// invisible masked microfacet area per visible microfacet area.
-	if (distrib.type == TrowbridgeReitz) {
+	//if (distrib.type == TrowbridgeReitz) {
 		Float cosTheta = glm::dot(wh, normal);
 		Float cos2Theta = cosTheta * cosTheta;
 		Float tan2Theta = thrust::max(0., 1. - cos2Theta) / cos2Theta;
@@ -89,18 +90,20 @@ Float Lambda(const MicroDistribution& distrib, const vc3& wh, const vc3& normal)
 		if (isfinite(absTanTheta)) return 0.;
 
 		// Compute alpha for direction w
+		Float cos_phi = cosPhi(wh, normal);
+		Float sin_phi = sinPhi(wh, normal);
 		Float alpha =
-			sqrt(cosPhi(wh, normal) * cosPhi(wh, normal) * distrib.alpha.x * distrib.alpha.x + sinPhi(wh, normal) * sinPhi(wh, normal) * distrib.alpha.y * distrib.alpha.y);
+			sqrt(cos_phi * cos_phi * distrib.alpha.x * distrib.alpha.x + sin_phi * sin_phi * distrib.alpha.y * distrib.alpha.y);
 		Float alpha2Tan2Theta = (alpha * absTanTheta) * (alpha * absTanTheta);
 		return (-1 + sqrt(1.f + alpha2Tan2Theta)) / 2;
-	}
-	return 0;
+	/*}
+	return 0;*/
 }
 
 __host__ __device__
 Float distribution_D(const MicroDistribution& distrib, const vc3& wh, const vc3& normal) {
 	// normal disribution
-	if (distrib.type == TrowbridgeReitz) {
+	/*if (distrib.type == TrowbridgeReitz) {*/
 		Float cosTheta = glm::dot(wh, normal);
 		Float cos2Theta = cosTheta * cosTheta;
 		Float tan2Theta = thrust::max(0., 1. - cos2Theta) / cos2Theta;
@@ -108,12 +111,16 @@ Float distribution_D(const MicroDistribution& distrib, const vc3& wh, const vc3&
 			return (Float)0.;
 		}
 		Float cos4Theta = cos2Theta * cos2Theta;
-		Float e = (cosPhi(wh, normal) * cosPhi(wh, normal) / (distrib.alpha.x * distrib.alpha.x) +
-			sinPhi(wh, normal) * sinPhi(wh, normal) / (distrib.alpha.y * distrib.alpha.y)) / tan2Theta;
+
+		float c = cosPhi(wh, normal);
+		float s = sinPhi(wh, normal);
+		Float e = (c * c / (distrib.alpha.x * distrib.alpha.x) +
+			s * s / (distrib.alpha.y * distrib.alpha.y)) / tan2Theta;
+		printf("wh: %f, %f, %f, n: %f, %f, %f;  c: %d, s: %d, e: %d\n",wh.x, wh.y, wh.z, normal.x, normal.y, normal.z, c, s, e);
 
 		return 1. / (glm::pi<Float>() * distrib.alpha.x * distrib.alpha.y * cos4Theta * (1 + e) * (1 + e));
-	}
-	return 0.;
+	/*}
+	return 0.;*/
 }
 
 __host__ __device__
@@ -123,7 +130,9 @@ Float distribution_pdf(const MicroDistribution& distrib, const vc3& wo, const vc
 
 __host__ __device__
 Float distribution_G(const MicroDistribution& distrib, const vc3& wo, const vc3& wi, const vc3& normal) {
-	return 1. / (1. + Lambda(distrib, wo, normal) + Lambda(distrib, wi, normal));
+	Float l1 = Lambda(distrib, wo, normal);
+	Float l2 = Lambda(distrib, wo, normal);
+	return 1. / (1. + l1 + l2);
 }
 
 __host__ __device__
@@ -135,10 +144,16 @@ vc3 microfaceBRDF_f(
 	Float cosThetaO = glm::dot(wo, itsct.surfaceNormal), cosThetaI = glm::dot(wi, itsct.surfaceNormal);
 	vc3 wh = wo + wi;
 	// Handle degenerate cases for microfacet reflection
-	/*if (cosThetaI == 0 || cosThetaO == 0) return Color3f(0.f);
-	if (wh.x == 0 && wh.y == 0 && wh.z == 0) return Color3f(0.f);*/
+	if (cosThetaI == 0 || cosThetaO == 0) return vc3(0.f);
+	if (glm::length2(wh) < 1e-4f) return vc3(0.f);
+
+	
+	float3 f3_wo = make_float3(wo.x, wo.y, wo.z);
+	float3 f3_wi = make_float3(wi.x, wi.y, wi.z);
+	float3 f3_n = make_float3(itsct.surfaceNormal.x, itsct.surfaceNormal.y, itsct.surfaceNormal.z);
 
 	wh = glm::normalize(wh);
+	float3 f3_wh = make_float3(wh.x, wh.y, wh.z);
 	vc3 F = fresnel_evalulate(glm::dot(wi, wh));
 	Float D = distribution_D(mat.dist, wh, itsct.surfaceNormal);
 	Float G = distribution_G(mat.dist, wo, wi, itsct.surfaceNormal);
