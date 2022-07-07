@@ -43,6 +43,8 @@ public:
     ~Scene();
 
     std::vector<Geom> geoms;
+    std::vector<int> lightIDs; // each int represent a geom id that has emissive material
+
     std::vector<Triangle> triangles;
     std::vector<GLTF_Model> gltf_models;
 

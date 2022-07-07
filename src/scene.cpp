@@ -33,6 +33,12 @@ Scene::Scene(string filename) {
             }
         }
     }
+    // assign the light idx
+    for (int i = 0; i < geoms.size(); i++) {
+        if (materials[geoms[i].materialid].emittance > 0.) {
+            lightIDs.push_back(i);
+        }
+    }
 }
 
 int Scene::loadGeom(string objectid) {
@@ -44,6 +50,8 @@ int Scene::loadGeom(string objectid) {
         std::cout << "Loading Geom " << id << "..." << endl;
         Geom newGeom;
         string line;
+
+        newGeom.geom_idx = id;
 
         //load object type
         utilityCore::safeGetline(fp_in, line);
@@ -905,6 +913,13 @@ int Scene::loadMaterial(string materialid) {
             else if (strcmp(tokens[0].c_str(), "TEX_NORMAL") == 0)
             {
                 newMaterial.normalTexture = loadTexture(tokens[1], false);
+            }
+            else if (strcmp(tokens[0].c_str(), "MICROTYPE") == 0)
+            {
+                newMaterial.dist.type = static_cast<MicroDistributionType>(atof(tokens[1].c_str()));
+            }
+            else if (strcmp(tokens[0].c_str(), "ALPHAS") == 0) {
+                newMaterial.dist.alpha = vc2( atof(tokens[1].c_str()), atof(tokens[2].c_str()) );
             }
 
             utilityCore::safeGetline(fp_in, line);

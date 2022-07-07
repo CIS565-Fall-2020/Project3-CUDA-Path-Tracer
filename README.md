@@ -29,17 +29,22 @@ In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's
 
 ##### BxDF 
 
-- [x]  Diffuse
+- [x] Diffuse
 - [x] Specular
   - [x] perfect Specular
   - [x] imperfect Specular
 - [x] Refraction
   - [x] Schlick Fresnel approximate 
+- [ ] Micro-face 
+  - [x] Reflection
+  - [ ] Transmission
+
 
 ##### Better Sample
 
 - [x] stratified sampling ( Results not obvious though )
 - [x] Anti-aliasing 
+- [x] Multiple Importance Sampling
 
 ##### Visual effects
 
@@ -112,6 +117,17 @@ Here I implement the anti-aliasing by randomly jitter the ray shot from camera.
 As you can see, the **left** is anti-aliasing, which a smoother edge than the right one.
 
 ![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/master/img/compare_jitter.png)
+
+#### Multiple Importance Sampling
+
+Here showed three surfaces ranging from very smooth (top) to very rough (bottom) illuminated by spherical light sources of decreasing size and rendered with different sampling techniques
+
+As explained in [PBRT 14.3.1](https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Direct_Lighting), sampling the `BSDF` is more effective for highly specular materials and large light sources, while sampling the light source is better on  small sources and rough materials
+
+| MIS                | ![](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/MIS.png) |
+| ------------------ | ------------------------------------------------------------ |
+| Sample `BSDF` only | ![](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/sample_bsdf.png) |
+| Sample Light only  | ![](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/sample_light.png) |
 
 
 

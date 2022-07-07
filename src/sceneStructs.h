@@ -7,7 +7,13 @@
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
+typedef float Float;
+typedef glm::vec2 vc2;
+typedef glm::vec3 vc3;
+typedef glm::vec4 vc4;
+
 enum GeomType {
+    DELTA, // TODO tmp measure for delta light during direct light 
     SPHERE,
     CUBE,
     GLTF_MESH,
@@ -23,6 +29,8 @@ struct Ray {
 };
 
 struct Geom {
+    // geom index starting from 0
+    int geom_idx;
     enum GeomType type;
     int materialid;
     glm::vec3 translation;
@@ -33,8 +41,8 @@ struct Geom {
     glm::mat4 invTranspose;
     //motion blur 
     glm::vec3 velocity;
-    // for triangle index
-    int mesh_idx;
+    // for gltf model index
+    int mesh_idx = -1;
 };
 
 struct Triangle {
@@ -73,6 +81,16 @@ struct TextureDescriptor
     TextureDescriptor() : valid(-1), type(0), index(-1), width(0), height(0), repeat(glm::vec2(1.f)){};
 };
 
+enum MicroDistributionType {
+    Flat = 0,
+    TrowbridgeReitz = 1
+};
+
+struct MicroDistribution {
+    enum MicroDistributionType type;
+    vc2 alpha;
+};
+
 struct Material {
     glm::vec3 color;
     struct {
@@ -83,6 +101,8 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    bool isSurface = true;
+    MicroDistribution dist{Flat, vc2(0.)};
 
     TextureDescriptor diffuseTexture;
     TextureDescriptor specularTexture;
@@ -113,7 +133,8 @@ struct RenderState {
 
 struct PathSegment {
 	Ray ray;
-	glm::vec3 color;
+	glm::vec3 colorSum;
+    glm::vec3 colorThroughput;
 	int pixelIndex;
 	int remainingBounces;
 };
@@ -123,8 +144,18 @@ struct PathSegment {
 // 2) BSDF evaluation: generate a new ray
 struct ShadeableIntersection {
   float t;
+  glm::vec3 pos;
   glm::vec3 surfaceNormal;
   int materialId;
-
+  int geom_idx = -1;
   glm::vec2 uv;
+};
+
+enum BxDFType {
+    BSDF_REFLECTION = 1 << 0,   // This BxDF handles rays that are reflected off surfaces
+    BSDF_TRANSMISSION = 1 << 1, // This BxDF handles rays that are transmitted through surfaces
+    BSDF_DIFFUSE = 1 << 2,      // This BxDF represents diffuse energy scattering, which is uniformly random
+    BSDF_GLOSSY = 1 << 3,       // This BxDF represents glossy energy scattering, which is biased toward certain directions
+    BSDF_SPECULAR = 1 << 4,     // This BxDF handles specular energy scattering, which has no element of randomness
+    BSDF_ALL = BSDF_DIFFUSE | BSDF_GLOSSY | BSDF_SPECULAR | BSDF_REFLECTION | BSDF_TRANSMISSION
 };

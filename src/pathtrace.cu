@@ -84,6 +84,7 @@ __global__ void sendImageToPBO(uchar4* pbo, glm::ivec2 resolution,
 static Scene * hst_scene = NULL;
 static glm::vec3 * dev_image = NULL;
 static Geom * dev_geoms = NULL;
+static int* dev_lightIDs = NULL;
 // add triangles
 static Triangle* dev_triangles = NULL;
 static GLTF_Model* dev_gltf_models = NULL;
@@ -125,6 +126,9 @@ void pathtraceInit(Scene *scene) {
 
   	cudaMalloc(&dev_geoms, scene->geoms.size() * sizeof(Geom));
   	cudaMemcpy(dev_geoms, scene->geoms.data(), scene->geoms.size() * sizeof(Geom), cudaMemcpyHostToDevice);
+    // light IDs
+    cudaMalloc(&dev_lightIDs, scene->lightIDs.size() * sizeof(int));
+    cudaMemcpy(dev_lightIDs, scene->lightIDs.data(), scene->lightIDs.size() * sizeof(int), cudaMemcpyHostToDevice);
     // add triangles
     cudaMalloc(&dev_triangles, scene->triangles.size() * sizeof(Triangle));
     cudaMemcpy(dev_triangles, scene->triangles.data(), scene->triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
@@ -155,6 +159,7 @@ void pathtraceFree() {
     cudaFree(dev_image);  // no-op if dev_image is null
   	cudaFree(dev_paths);
   	cudaFree(dev_geoms);
+    cudaFree(dev_lightIDs);
   	cudaFree(dev_materials);
   	cudaFree(dev_intersections);
 
@@ -217,7 +222,8 @@ __global__ void generateRayFromCamera(Camera cam, int iter, int traceDepth, Path
 		PathSegment & segment = pathSegments[index];
 
 		segment.ray.origin = cam.position;
-        segment.color = glm::vec3(1.0f, 1.0f, 1.0f);
+        segment.colorSum = glm::vec3(0.);
+        segment.colorThroughput = glm::vec3(1.);
         
 		// TODO: implement antialiasing by jittering the ray
         thrust::default_random_engine rng = makeSeededRandomEngine(iter, index, 0);
@@ -288,78 +294,7 @@ __global__ void computeIntersections(
 	{
 		PathSegment pathSegment = pathSegments[path_index];
 
-		float t;
-		glm::vec3 normal;
-        glm::vec2 uv;
-
-		float t_min = FLT_MAX;
-		int hit_geom_index = -1;
-		bool outside = true;
-
-		// naive parse through global geoms
-
-		for (int i = 0; i < geoms_size; i++)
-		{
-			Geom & geom = geoms[i];
-#if motion_blur
-            glm::mat4 inv_transform_cache = geom.inverseTransform;
-            glm::mat4 inv_transpose_cache = geom.invTranspose;
-            glm::vec3 new_translate = pathSegment.ray.time * geom.velocity + geom.translation;
-            glm::mat4 new_transform = dev_buildTransformationMatrix(new_translate, geom.rotation, geom.scale);
-            geom.inverseTransform = glm::inverse(new_transform);
-            // forget to update invTranspose
-            /// ty john marcao
-            geom.invTranspose = glm::inverseTranspose(new_transform);
-#endif
-            Intersection tmp_itsct{glm::vec3(0), glm::vec3(0), glm::vec2(0) };
-			if (geom.type == CUBE)
-			{
-				t = boxIntersectionTest(geom, pathSegment.ray, tmp_itsct, outside);
-			}
-			else if (geom.type == SPHERE)
-			{
-				t = sphereIntersectionTest(geom, pathSegment.ray, tmp_itsct, outside);
-			}
-            else if (geom.type == BBOX) {     
-                t = meshIntersectionTest(
-                    geom,
-                    models,
-                    triangles,
-                    pathSegment.ray,
-                    tmp_itsct,
-                    outside);
-            }
-			// TODO: add more intersection tests here... triangle? metaball? CSG?
-
-			// Compute the minimum t from the intersection tests to determine what
-			// scene geometry object was hit first.
-
-            if (t > 0.0f && t_min > t)
-            {
-                t_min = t;
-                hit_geom_index = i;
-                normal = tmp_itsct.normal;
-                uv = tmp_itsct.uv;
-            }
-
-#if motion_blur
-            geom.inverseTransform = inv_transform_cache;
-            geom.invTranspose = inv_transpose_cache;
-#endif
-		}
-
-		if (hit_geom_index == -1)
-		{
-			intersections[path_index].t = -1.0f;
-		}
-		else
-		{
-			//The ray hits something
-			intersections[path_index].t = t_min;
-			intersections[path_index].materialId = geoms[hit_geom_index].materialid;
-			intersections[path_index].surfaceNormal = normal;
-            intersections[path_index].uv = uv;
-		}
+        SceneIntersection(pathSegment.ray, geoms, geoms_size, models, triangles, intersections[path_index]);
 	}
 }
 
@@ -396,33 +331,40 @@ __global__ void shadeFakeMaterial (
 
       // If the material indicates that the object was a light, "light" the ray
       if (material.emittance > 0.0f) {
-        pathSegments[idx].color *= (materialColor * material.emittance);
+        pathSegments[idx].colorSum *= (materialColor * material.emittance);
       }
       // Otherwise, do some pseudo-lighting computation. This is actually more
       // like what you would expect from shading in a rasterizer like OpenGL.
       // TODO: replace this! you should be able to start with basically a one-liner
       else {
         float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
-        pathSegments[idx].color *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
-        pathSegments[idx].color *= u01(rng); // apply some noise because why not
+        pathSegments[idx].colorSum *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
+        pathSegments[idx].colorSum *= u01(rng); // apply some noise because why not
       }
     // If there was no intersection, color the ray black.
     // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
     // used for opacity, in which case they can indicate "no opacity".
     // This can be useful for post-processing and image compositing.
     } else {
-      pathSegments[idx].color = glm::vec3(0.0f);
+      pathSegments[idx].colorSum = glm::vec3(0.0f);
     }
   }
 }
 
 #pragma region myMaterial
 __global__ void shadeTrueMaterial(
-    int iter
-    , int num_paths
-    , ShadeableIntersection* shadeableIntersections
-    , PathSegment* pathSegments
-    , Material* materials,
+    int iter,
+    int max_depth,
+    int num_paths,
+    ShadeableIntersection* shadeableIntersections,
+    PathSegment* pathSegments,
+    int *lightIDs,
+    int light_size,
+    Geom* geoms,
+    int geom_size,
+    Material* materials,
+    Triangle* triangles,
+    GLTF_Model* gltf_models,
     glm::vec3* textures,
     glm::vec3* dev_image
 )
@@ -446,10 +388,18 @@ __global__ void shadeTrueMaterial(
 
             // If the material indicates that the object was a light, "light" the ray
             if (material.emittance > 0.0f) {
-
-                cur_pathSegment.color *= (materialColor * material.emittance);
+#if DirectLightPass == 1:
+                bool specularBounce = true; // TODO make this really specular bounce
+                if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
+                    cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
+                    // stop if hit a light
+                    cur_pathSegment.remainingBounces = 0;
+                }
+#else
+                cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
+#endif
             }
             // Otherwise, do some pseudo-lighting computation. This is actually more
             // like what you would expect from shading in a rasterizer like OpenGL.
@@ -457,27 +407,46 @@ __global__ void shadeTrueMaterial(
             else {
                 // TODO normal mapping
                 glm::vec3 n = intersection.surfaceNormal;
+                
+#if DirectLightPass == 1
+                UniformSampleOneLight(
+                    cur_pathSegment,
+                    intersection,
+                    materials,
+                    -cur_pathSegment.ray.direction,
+                    light_size,
+                    lightIDs,
+                    geoms,
+                    geom_size,
+                    gltf_models,
+                    triangles,
+                    textures,
+                    rng
+                );
 
+#endif
+#if InDirectLightPass == 1
                 scatterRay(
                     cur_pathSegment,
-                    getPointOnRay(cur_pathSegment.ray, intersection.t),
-                    n,
-                    intersection.uv,
+                    intersection,
                     material,
                     textures,
                     rng
                 );
+#else:
+                cur_pathSegment.remainingBounces = 0;
+#endif
+                
+
             }
+            
+        }
+        else {
             // If there was no intersection, color the ray black.
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
             // used for opacity, in which case they can indicate "no opacity".
             // This can be useful for post-processing and image compositing.
-        }
-        else {
-            /*if (depth == 1) {
-                cur_pathSegment.color = glm::vec3(0.0f);
-            }*/
-            cur_pathSegment.color = glm::vec3(0.0f);
+            cur_pathSegment.colorThroughput = glm::vec3(0.0f);
             cur_pathSegment.remainingBounces = 0;
         }
     }
@@ -494,7 +463,7 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 	if (index < nPaths)
 	{
 		PathSegment iterationPath = iterationPaths[index];
-		image[iterationPath.pixelIndex] += iterationPath.color;
+		image[iterationPath.pixelIndex] += iterationPath.colorSum;
 	}
 }
 
@@ -690,10 +659,17 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         #endif
         shadeTrueMaterial<<<numblocksPathSegmentTracing, blockSize1d>>> (
         iter,
+        traceDepth,
         num_paths,
         dev_intersections,
         dev_paths,
+        dev_lightIDs,
+        hst_scene->lightIDs.size(),
+        dev_geoms,
+        hst_scene->geoms.size(),
         dev_materials,
+        dev_triangles,
+        dev_gltf_models,
         dev_textures,
         dev_image
         );
@@ -701,7 +677,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             iterationComplete = true;
         }
 
-         // TODO: should be based off stream compaction results.
+         // Done: end based off stream compaction results.
         dev_path_end = thrust::stable_partition(thrust::device, dev_paths, dev_paths + num_paths, parition_not_end());
         if (dev_path_end == dev_paths) {
             iterationComplete = true;
