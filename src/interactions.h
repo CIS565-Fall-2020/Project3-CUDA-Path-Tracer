@@ -326,8 +326,14 @@ vc3 sampleBsdf(
             brdf = LambertBRDF(wiw, pdf, itsct, m, textureArray, rng);
         }
         else if (m.dist.type == TrowbridgeReitz) {
-            //printf("t: %d\n", t);
-            brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, pdf, textureArray, rng);
+            brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, pdf, textureArray, rng); 
+            if (!isfinite(brdf.x) || !isfinite(brdf.y) || !isfinite(brdf.z)) {
+                printf("brdf infinite or Nan\n");
+            }
+
+            if (!isfinite(pdf)) {
+                printf("pdf infinite or Nan\n");
+            }
         }
         
     }
@@ -490,6 +496,7 @@ Float light_pdf(
         return glm::distance2(light_itsct.pos, ref_itsct.pos) / (glm::abs(glm::dot(light_itsct.surfaceNormal, (-wiw))) * area);
     }
     else if (light_geom.type == CUBE) {
+        // TODO
         return 0.f;
     }
     else {
@@ -608,11 +615,6 @@ glm::vec3 EstimateDirect(
     Material mat = materials[itsct.materialId];
     ShadeableIntersection sampled_light_itsct;
     glm::vec3 Li = Light_sample_Li(itsct, sampled_light_itsct, geom, materials[geom.materialid], uLight, wiw, lightPdf);
-
-    float3 sampled_li_pos = make_float3(sampled_light_itsct.pos.x, sampled_light_itsct.pos.y, sampled_light_itsct.pos.z);
-    float3 f3_light_li; float3 f3_light_li2; float3 f3_bsdf_li;
-    float3 f3_light_f; float3 f3_bsdf_f;
-    f3_light_li = make_float3(Li.x, Li.y, Li.z);
 #if DirectLightSampleLight == 1
     if (lightPdf > 0. && !isBlack(Li)) {
         glm::vec3 f(0.);
@@ -632,26 +634,20 @@ glm::vec3 EstimateDirect(
             if (hit_geom_idx == -1 || glm::distance2(intersection.pos, itsct.pos) > 1e-4) {
                 // not hit the same light
                 bool handleMedia = false;
-                /*if (!handleMedia) {
-                    Li = glm::vec3(0.);
-                }*/
                 Li *= handleMedia;
-
             }
             float3 it1 = make_float3(intersection.pos.x, intersection.pos.y, intersection.pos.z);
             float3 it2 = make_float3(itsct.pos.x, itsct.pos.y, itsct.pos.z);
 
+            float weight = 1.;
             if (geom.type == DELTA) {
                 Ld += f * Li / lightPdf;
             }
             else {
-                float weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
+                weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
                 Ld += f * Li * weight / lightPdf;
             }
-
         }
-        f3_light_li2 = make_float3(Li.x, Li.y, Li.z);
-        f3_light_f = make_float3(f.x, f.y, f.z);
     }
     
 #endif
@@ -678,11 +674,11 @@ glm::vec3 EstimateDirect(
 
             // <<Add light contribution from material sampling>> 
             glm::vec3 Li(0.);
+            float weight = 1.;
             if (hit_geom_idx == -1) {
                 // TODO did not hit anything, handle infinite area light
             }
             else {
-                float weight = 1.;
                 if (hit_geom_idx == geom.geom_idx) {
                     Li = Light_Le(light_intersection, geom, materials[geom.materialid], -wiw);
                     if (!sampledSpecular) {
@@ -694,10 +690,8 @@ glm::vec3 EstimateDirect(
                         weight = powerHeuristic(1., scatteringPdf, 1., lightPdf);
                     }
                 }
-                Ld += f * Li * Tr * weight / scatteringPdf;
-            }
-            f3_bsdf_f = make_float3(f.x, f.y, f.z);
-            f3_bsdf_li = make_float3(Li.x, Li.y, Li.z);
+            }           
+            Ld += f * Li * Tr * weight / scatteringPdf;
         }
        
     }
@@ -728,12 +722,10 @@ void UniformSampleOneLight(
     }
     thrust::uniform_int_distribution<int> dist(0, nLights-1);
     int chosen_light_id = lightIDs[dist(rng)];
-    
     vc3 f = EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials,
         geoms, geom_size, models, triangles,
         textureArray,
         geoms[chosen_light_id], rng);
-    float3 tmp_f = make_float3(f.x, f.y, f.z);
     pathSegment.colorSum += pathSegment.colorThroughput * (float)nLights * f;
 }
 

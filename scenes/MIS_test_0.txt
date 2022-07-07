@@ -27,10 +27,8 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
-MICROTYPE   1
-ALPHAS	    0.2 0.2		
 
-// specular
+//  mirror smooth
 MATERIAL 3
 RGB         .95 .95 .95
 SPECEX      5000
@@ -40,9 +38,9 @@ REFR        0.
 REFRIOR     1.
 EMITTANCE   0
 MICROTYPE   1
-ALPHAS	    0.2 0.2	
+ALPHAS	    0.01 0.01
 
-// specular
+//  mirror medium
 MATERIAL 4
 RGB         .95 .95 .95
 SPECEX      2048
@@ -52,9 +50,9 @@ REFR        0.
 REFRIOR     1.
 EMITTANCE   0
 MICROTYPE   1
-ALPHAS	    0.4 0.4
+ALPHAS	    0.1 0.1
 
-// specular
+// mirror rough
 MATERIAL 5
 RGB         .95 .95 .95
 SPECEX      256
@@ -64,7 +62,7 @@ REFR        0.
 REFRIOR     1.
 EMITTANCE   0
 MICROTYPE   1
-ALPHAS	    0.8 0.8
+ALPHAS	    0.2 0.2
 
 // Camera
 CAMERA
@@ -85,7 +83,7 @@ TRANS       0 1 0
 ROTAT       30 0 0
 SCALE       12 0.5 1.5
 
-// Sphere1 light
+// Small sphere light
 OBJECT 1
 sphere
 material 0
@@ -117,7 +115,7 @@ TRANS       0 4.5 -4
 ROTAT       80 0 0
 SCALE       12 0.5 2
 
-// Sphere3
+// Biggest sphere
 OBJECT 5
 sphere
 material 0

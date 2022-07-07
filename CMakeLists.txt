@@ -77,6 +77,8 @@ set(headers
     src/utilities.h
     src/PerformanceTimer.h
     src/cfg.h
+    src/microface.h
+    src/cudaUtils.cuh
     external/include/raytrace/gltf-loader.h
     )
 

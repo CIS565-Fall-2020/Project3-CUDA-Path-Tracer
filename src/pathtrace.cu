@@ -407,7 +407,7 @@ __global__ void shadeTrueMaterial(
             else {
                 // TODO normal mapping
                 glm::vec3 n = intersection.surfaceNormal;
-
+                
 #if DirectLightPass == 1
                 UniformSampleOneLight(
                     cur_pathSegment,
