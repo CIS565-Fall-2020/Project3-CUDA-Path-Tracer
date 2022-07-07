@@ -124,10 +124,10 @@ Here showed three surfaces ranging from very smooth (top) to very rough (bottom)
 
 As explained in [PBRT 14.3.1](https://pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Direct_Lighting), sampling the `BSDF` is more effective for highly specular materials and large light sources, while sampling the light source is better on  small sources and rough materials
 
-| MIS                | https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/MIS.png |
+| MIS                | ![](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/MIS.png) |
 | ------------------ | ------------------------------------------------------------ |
-| Sample `BSDF` only | https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/sample_bsdf.png |
-| Sample Light only  | https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/sample_light.png |
+| Sample `BSDF` only | ![](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/sample_bsdf.png) |
+| Sample Light only  | ![](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/sample_light.png) |
 
 
 
