@@ -6,6 +6,7 @@
 #include <iostream>
 #include "glm/glm.hpp"
 #include "utilities.h"
+#include "bvh.h"
 #include "sceneStructs.h"
 #include <glm/gtx/normal.hpp>
 
@@ -42,11 +43,21 @@ public:
     Scene(string filename);
     ~Scene();
 
+    int maxPrimsInNode = 64;
+
+    void buildAccelerationStructure();
+    BVHBuildNode* recurBVHbuild(int start, int end, int& totalNodes, std::vector<Primitive>& orderedPrims);
+    int flattenBVHTree(BVHBuildNode* node, int& offset);
+
     std::vector<Geom> geoms;
     std::vector<int> lightIDs; // each int represent a geom id that has emissive material
 
     std::vector<Triangle> triangles;
     std::vector<GLTF_Model> gltf_models;
+
+    std::vector<Primitive> primitives;
+    std::vector<BVHprimitiveInfo> primitivesInfo;
+    std::vector<LinearBVHNode> LBVHnodes;
 
     std::vector<Material> materials;
 

@@ -13,17 +13,9 @@ CUDA Path Tracer
 
 Thanks to [FLARE LAB](http://faculty.sist.shanghaitech.edu.cn/faculty/liuxp/flare/index.html) for this ferocious monster.
 
-##### Cmake change
-
-Add 
-
-1. [PerformanceTimer.h](https://github.com/Jack12xl/Project2-Stream-Compaction/blob/master/src/csvfile.hpp) : Measure performance by system time clock. 
-2. [cfg.h](https://github.com/Jack12xl/Project2-Stream-Compaction/blob/master/stream_compaction/radixSort.h),  as a configure
-3. add ray tracing load example from [tiny_gltf](https://github.com/syoyo/tinygltf)
-
 #### Intro
 
-In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's still under construction and more features will come soon.
+Yet another Path tracer written in CUDA.
 
 ### Current feature
 
@@ -55,6 +47,7 @@ In this project, we try to implement the [ray tracing]() algorithm on CUDA. It's
 
 - [x] Load GLTF based on tiny_gltf ( kind of buggy though)
   - [x] bounding box per mesh
+  - [x] Linear BVH
 
 ##### Speed Optimization
 
@@ -159,21 +152,17 @@ Here we implement the glTF loading function, which can load the glTF format mesh
 
 ##### Bounding box
 
-Though the loading is not that correct, still we implement the bounding box that works just fine. A bounding box is created to do ray intersection culling. Which could avoid unnecessary ray hit.
+A bounding box is created to do ray intersection culling. Which could avoid unnecessary ray-triangle intersection.
 
-For the scene showed above(kirby in Cornell).
+**Linear BVH**(to opimize)
 
-|                                    | With bbox | without bbox |
-| ---------------------------------- | --------- | ------------ |
-| Elapsed time(ms) in each iteration | 326.1     | 476.9        |
-
-
+Constructed on CPU(Static scene, so we only construct once), traverse on GPU. Currently, traversing with BVH is even slower than the **bounding box** method. Through profiling with **Nsight Compute**, the throughput is very low(`23.67%`). Maybe it's due to the warp-divergence(caused by `for loop` and `if`) when traversing the tree.
 
 ### First bounce cache
 
-Basically, first bounce cache is a time-space trade-off that use memory to store the first intersection results for further use  instead of calculating intersections at each iterations.
+Basically, first bounce cache is a time-space trade-off that using memory to store the first intersection results, then in further iterations when `depth == 1`read them(instead of calculating.)
 
-Here shows the results based on my implementation.
+##### Here shows the results
 
 ![alt text](https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/First_bounce_cache.svg)
 

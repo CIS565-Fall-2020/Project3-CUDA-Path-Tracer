@@ -89,6 +89,9 @@ static int* dev_lightIDs = NULL;
 static Triangle* dev_triangles = NULL;
 static GLTF_Model* dev_gltf_models = NULL;
 
+static Primitive* dev_primitives = NULL;
+static LinearBVHNode* dev_BVH_nodes = NULL;
+
 static Material * dev_materials = NULL;
 static PathSegment * dev_paths = NULL;
 static ShadeableIntersection * dev_intersections = NULL;
@@ -135,6 +138,12 @@ void pathtraceInit(Scene *scene) {
     // and gltf models
     cudaMalloc(&dev_gltf_models, scene->gltf_models.size() * sizeof(GLTF_Model));
     cudaMemcpy(dev_gltf_models, scene->gltf_models.data(), scene->gltf_models.size() * sizeof(GLTF_Model), cudaMemcpyHostToDevice);
+    // primitives for BVH intersection
+    cudaMalloc(&dev_primitives, scene->primitives.size() * sizeof(Primitive));
+    cudaMemcpy(dev_primitives, scene->primitives.data(), scene->primitives.size() * sizeof(Primitive), cudaMemcpyHostToDevice);
+    // linear/compact bvh nodes on gpu
+    cudaMalloc(&dev_BVH_nodes, scene->LBVHnodes.size() * sizeof(LinearBVHNode));
+    cudaMemcpy(dev_BVH_nodes, scene->LBVHnodes.data(), scene->LBVHnodes.size() * sizeof(LinearBVHNode), cudaMemcpyHostToDevice);
 
   	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
@@ -278,14 +287,12 @@ glm::mat4 dev_buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotatio
 // Generating new rays is handled in your shader(s).
 // Feel free to modify the code below.
 __global__ void computeIntersections(
-	int depth
-	, int num_paths
-	, PathSegment * pathSegments
-	, Geom * geoms
-	, int geoms_size
-	, ShadeableIntersection * intersections,
-    GLTF_Model* models = dev_gltf_models,
-    Triangle* triangles = dev_triangles
+	int depth,
+    int num_paths,
+    PathSegment * pathSegments,
+    ShadeableIntersection * intersections,
+    Geom* geoms, int geoms_size, GLTF_Model* models = dev_gltf_models, Triangle* triangles = dev_triangles,
+    Primitive* primitives = dev_primitives, LinearBVHNode* LBVHnodes = dev_BVH_nodes
 	)
 {
 	int path_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -294,8 +301,24 @@ __global__ void computeIntersections(
 	{
 		PathSegment pathSegment = pathSegments[path_index];
 
+#if RAY_SCENE_INTERSECTION == BRUTE_FORCE
         SceneIntersection(pathSegment.ray, geoms, geoms_size, models, triangles, intersections[path_index]);
-	}
+#else if RAY_SCENE_INTERSECTION == HBVH
+        int prim_idx = SceneIntersection(pathSegment.ray, primitives, LBVHnodes, intersections[path_index]);
+       /* if (prim_idx >= 0) {
+            if (primitives[prim_idx].type == TRIANGLE) {
+                vc3 p = getPointOnRay(pathSegment.ray, intersections[path_index].t);
+                printf("intersect triangle with t: %f, at pos %f, %f, %f, with mat id: %d, remain bounce: %d\n", 
+                    intersections[path_index].t, 
+                    intersections[path_index].vtx.pos.x, intersections[path_index].vtx.pos.y, intersections[path_index].vtx.pos.z,
+                    intersections[path_index].materialId,
+                    pathSegment.remainingBounces
+                );
+            }
+        }*/
+        
+#endif
+    }
 }
 
 // LOOK: "fake" shader demonstrating what you might do with the info in
@@ -337,7 +360,7 @@ __global__ void shadeFakeMaterial (
       // like what you would expect from shading in a rasterizer like OpenGL.
       // TODO: replace this! you should be able to start with basically a one-liner
       else {
-        float lightTerm = glm::dot(intersection.surfaceNormal, glm::vec3(0.0f, 1.0f, 0.0f));
+        float lightTerm = glm::dot(intersection.vtx.normal, glm::vec3(0.0f, 1.0f, 0.0f));
         pathSegments[idx].colorSum *= (materialColor * lightTerm) * 0.3f + ((1.0f - intersection.t * 0.02f) * materialColor) * 0.7f;
         pathSegments[idx].colorSum *= u01(rng); // apply some noise because why not
       }
@@ -365,6 +388,7 @@ __global__ void shadeTrueMaterial(
     Material* materials,
     Triangle* triangles,
     GLTF_Model* gltf_models,
+    Primitive* primitives, LinearBVHNode* LBVHnodes,
     glm::vec3* textures,
     glm::vec3* dev_image
 )
@@ -384,7 +408,6 @@ __global__ void shadeTrueMaterial(
 
             Material material = materials[intersection.materialId];
             glm::vec3 materialColor = material.color;
-
 
             // If the material indicates that the object was a light, "light" the ray
             if (material.emittance > 0.0f) {
@@ -406,7 +429,7 @@ __global__ void shadeTrueMaterial(
             // TODO: replace this! you should be able to start with basically a one-liner
             else {
                 // TODO normal mapping
-                glm::vec3 n = intersection.surfaceNormal;
+                glm::vec3 n = intersection.vtx.normal;
                 
 #if DirectLightPass == 1
                 UniformSampleOneLight(
@@ -420,6 +443,7 @@ __global__ void shadeTrueMaterial(
                     geom_size,
                     gltf_models,
                     triangles,
+                    primitives, LBVHnodes,
                     textures,
                     rng
                 );
@@ -571,12 +595,11 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
 #if cache_first_bounce
         if (iter == 1 && depth == 0) {
             computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
-                depth
-                , num_paths
-                , dev_paths
-                , dev_geoms
-                , hst_scene->geoms.size()
-                , dev_first_intersections_cache
+                depth,
+                num_paths,
+                dev_paths,
+                dev_first_intersections_cache,
+                dev_geoms, hst_scene->geoms.size()
                 );
             checkCUDAError("no caching first bounce trace one bounce");
             //cudaDeviceSynchronize();
@@ -589,36 +612,28 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
             else {
                 // can not cache the rest depth bounce
                 computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
-                    depth
-                    , num_paths
-                    , dev_paths
-                    , dev_geoms
-                    , hst_scene->geoms.size()
-                    , dev_intersections
+                    depth,
+                    num_paths,
+                    dev_paths,
+                    dev_intersections,
+                    dev_geoms, hst_scene->geoms.size()
                     );
                 checkCUDAError("no caching first bounce trace one bounce");
                 //cudaDeviceSynchronize();
             }
         }
 #else
-        computeIntersections << <numblocksPathSegmentTracing, blockSize1d >> > (
-            depth
-            , num_paths
-            , dev_paths
-            , dev_geoms
-            , hst_scene->geoms.size()
-            , dev_intersections
+        computeIntersections <<<numblocksPathSegmentTracing, blockSize1d >>>(
+            depth,
+            num_paths,
+            dev_paths,
+            dev_intersections,
+            dev_geoms, hst_scene->geoms.size()
             );
         checkCUDAError("no caching first bounce trace one bounce");
-        //cudaDeviceSynchronize();
+         //cudaDeviceSynchronize();
 #endif // cache_first_bounce
-
-        
-       
         depth++;
-
-
-        // TODO:
         // --- Shading Stage ---
         // Shade path segments based on intersections and generate new rays by
         // evaluating the BSDF.
@@ -670,6 +685,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         dev_materials,
         dev_triangles,
         dev_gltf_models,
+        dev_primitives, dev_BVH_nodes,
         dev_textures,
         dev_image
         );

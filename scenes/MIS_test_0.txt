@@ -1,6 +1,6 @@
 // Emissive material (light)
 MATERIAL 0
-RGB         1 1 1
+RGB         0.6 0 0
 SPECEX      0
 SPECRGB     0 0 0
 REFL        0
@@ -64,9 +64,29 @@ EMITTANCE   0
 MICROTYPE   1
 ALPHAS	    0.2 0.2
 
+// Emissive material (light)
+MATERIAL 6
+RGB         0 0.6 0
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   2
+
+// Emissive material (light)
+MATERIAL 7
+RGB         0 0 0.6
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   2
+
 // Camera
 CAMERA
-RES         2000 1200
+RES         1024 768
 FOVY        45
 ITERATIONS  5000
 DEPTH       8
@@ -102,7 +122,7 @@ SCALE       12 0.5 1.5
 // Sphere2 light
 OBJECT 3
 sphere
-material 0
+material 6
 TRANS       0 6 0.2
 ROTAT       0 0 0
 SCALE       1 1 1
@@ -118,7 +138,7 @@ SCALE       12 0.5 2
 // Biggest sphere
 OBJECT 5
 sphere
-material 0
+material 7
 TRANS       4 6 0.2
 ROTAT       0 0 0
 SCALE       2 2 2

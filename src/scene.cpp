@@ -33,12 +33,322 @@ Scene::Scene(string filename) {
             }
         }
     }
+
     // assign the light idx
+#if RAY_SCENE_INTERSECTION == BRUTE_FORCE
+
     for (int i = 0; i < geoms.size(); i++) {
         if (materials[geoms[i].materialid].emittance > 0.) {
             lightIDs.push_back(i);
         }
     }
+
+#elif RAY_SCENE_INTERSECTION == HBVH
+    this->buildAccelerationStructure();
+    // TODO assign for HBVH
+    for (int i = 0; i < primitives.size(); i++) {
+        if (materials[primitives[i].materialid].emittance > 0.) {
+            lightIDs.push_back(i);
+        }
+    }
+#endif
+
+#if buildAccelerationStructure == HBVH:
+    this->buildAccelerationStructure();
+#endif
+}
+
+void Scene::buildAccelerationStructure()
+{
+
+    // count primitive size
+    int primitive_size = 0;
+    for (const Geom& g : geoms) {
+        if (g.type == BBOX) {
+            primitive_size += gltf_models[g.mesh_idx].triangle_count;
+        }
+        else {
+            primitive_size ++;
+        }
+    }
+    std::cout << "We have " << primitive_size << " primitives" << std::endl;
+    // set primitives size
+    primitivesInfo = std::vector<BVHprimitiveInfo>(primitive_size);
+    primitives.resize(primitive_size);
+
+    int idx = 0; // index of each primitives
+    // init primitives
+    for (int i = 0; i < geoms.size(); i ++) {
+        const Geom& g = geoms[i];
+        if (g.type == BBOX) {
+            // put the triange into priminfos
+            int t_s = gltf_models[g.mesh_idx].triangle_idx;
+            int c = gltf_models[g.mesh_idx].triangle_count;
+            for (int tri_idx = t_s; tri_idx < t_s + c; tri_idx++) {
+                aabbBounds aabb;
+                // tri to world
+                Triangle cur_triangle = triangles[tri_idx];
+
+                // bbox transform is not our input transform
+                const Geom& parent_g = this->gltf_models[g.mesh_idx].self_geom;
+
+                vc4 tri_v0 = parent_g.geomT.transform * glm::vec4(cur_triangle.v0, 1.f);
+                vc4 tri_v1 = parent_g.geomT.transform * glm::vec4(cur_triangle.v1, 1.f);
+                vc4 tri_v2 = parent_g.geomT.transform * glm::vec4(cur_triangle.v2, 1.f);
+                
+                Triangle w_tri{
+                    vc3(tri_v0 / tri_v0.w),
+                    vc3(tri_v1 / tri_v1.w),
+                    vc3(tri_v2 / tri_v2.w),
+                    glm::normalize(glm::vec3(parent_g.geomT.invTranspose * glm::vec4(cur_triangle.n0, 0.f))),
+                    glm::normalize(glm::vec3(parent_g.geomT.invTranspose * glm::vec4(cur_triangle.n1, 0.f))),
+                    glm::normalize(glm::vec3(parent_g.geomT.invTranspose * glm::vec4(cur_triangle.n2, 0.f))),
+                    cur_triangle.uv0,
+                    cur_triangle.uv1,
+                    cur_triangle.uv2,
+                    glm::normalize(glm::vec3(parent_g.geomT.invTranspose * glm::vec4(cur_triangle.norm, 0.f)))
+                };
+
+                geometry::aabbForTriangle(aabb, triangles[tri_idx]);
+
+                primitivesInfo[idx] = BVHprimitiveInfo(aabb, idx);
+
+                Primitive p;
+                p.triangle = w_tri;
+                p.type = TRIANGLE;
+                p.materialid = parent_g.materialid;
+                p.geom_idx = parent_g.geom_idx;
+                primitives[idx] = p;
+
+                idx++;
+            }
+        }
+        else {
+            aabbBounds aabb;
+            geometry::aabbForImplicit(aabb, g);
+            primitivesInfo[idx] = BVHprimitiveInfo(aabb, idx);
+            Primitive p;
+            p.trans = g.geomT;
+            p.type = g.type;
+            p.materialid = g.materialid;
+            primitives[idx] = p;
+
+            idx++;
+        }
+    }
+
+    /*{
+        for (const Primitive& p : this->primitives) {
+            std::cout << "p translation " << p.trans.translation.x << " " << p.trans.translation.y << std::endl;
+            std::cout << "scale " << p.trans.scale.x << " " << p.trans.scale.y << std::endl;
+        }
+    }*/
+
+    int totalNodes = 0;
+    std::vector<Primitive> orderedPrims;
+    BVHBuildNode* root;
+    root = this->recurBVHbuild(0, this->primitives.size(), totalNodes, orderedPrims);
+
+    primitives.swap(orderedPrims);
+
+    LBVHnodes.resize(totalNodes);
+    int offset = 0;
+    this->flattenBVHTree(root, offset);
+    {
+        std::cout << "Print flattened BVH tree" << std::endl;
+        std::cout << "totalNodes: " << totalNodes << std::endl;
+        /*int toVisitOffset = 0, currentNodeIndex = 0;
+        int nodesToVisit[64];
+        while (true) {
+            const LinearBVHNode* node = &LBVHnodes[currentNodeIndex];
+
+            std::cout << "BVH node aabb min: " <<
+                node->bounds.bmin.x << " " <<
+                node->bounds.bmin.y << " " <<
+                node->bounds.bmin.z << " " <<
+                "max: " << 
+                node->bounds.bmax.x << " " <<
+                node->bounds.bmax.y << " " <<
+                node->bounds.bmax.z << " " <<
+                std::endl;
+            if (node->nPrimitives > 0) {
+                std::cout << "this node has primitives with geom idx: ";
+                for (int i = 0; i < node->nPrimitives; ++i) {
+                    std::cout << primitives[node->primitivesOffset + i].geom_idx << " ";
+                }
+                std::cout << std::endl;
+
+                if (toVisitOffset == 0) break;
+                currentNodeIndex = nodesToVisit[--toVisitOffset];
+            }
+            else {
+
+            }
+        }*/
+    }
+}
+
+BVHBuildNode* Scene::recurBVHbuild(int start, int end, int& totalNodes, std::vector<Primitive>& orderedPrims)
+{
+    // TOCHECK
+    BVHBuildNode* node = new BVHBuildNode();
+    totalNodes++;
+    aabbBounds whole_scene_bbox;
+    for (int i = start; i < end; i++) {
+        whole_scene_bbox = geometry::bbUnion(whole_scene_bbox, this->primitivesInfo[i].bound);
+    }
+
+    int nPrimitives = end - start;
+    if (nPrimitives == 1) {
+        int firstPrimOffset = orderedPrims.size();
+        for (int i = start; i < end; ++i) {
+            int primNum = this->primitivesInfo[i].primitiveNum;
+            orderedPrims.push_back(primitives[primNum]);
+        }
+        node->InitLeaf(firstPrimOffset, nPrimitives, whole_scene_bbox);
+    }
+    else {
+        //<< Compute bound of primitive centroids, choose split dimension dim >>
+        aabbBounds centroidBounds;
+        for (int i = start; i < end; ++i)
+            centroidBounds = geometry::bbUnion(centroidBounds, primitivesInfo[i].centroid);
+        int dim = centroidBounds.MaximumExtent();
+        //<< Partition primitives into two sets and build children >>
+        int mid = (start + end) / 2;
+        //If all of the centroid points are at the same position
+        if (centroidBounds.bmax[dim] == centroidBounds.bmin[dim]) {
+            //<< Create leaf BVHBuildNode >> 
+            int firstPrimOffset = orderedPrims.size();
+            for (int i = start; i < end; ++i) {
+                int primNum = primitivesInfo[i].primitiveNum;
+                orderedPrims.push_back(primitives[primNum]);
+            }
+            node->InitLeaf(firstPrimOffset, nPrimitives, whole_scene_bbox);
+            return node;
+        }
+        else {
+            //<< Partition primitives based on splitMethod >>
+            // Use SAH
+            if (nPrimitives <= 4) {
+                //<< Partition primitives into equally sized subsets >>
+                    mid = (start + end) / 2;
+                std::nth_element(&primitivesInfo[start], &primitivesInfo[mid],
+                    &primitivesInfo[end - 1] + 1,
+                    [dim](const BVHprimitiveInfo& a, const BVHprimitiveInfo& b) {
+                    return a.centroid[dim] < b.centroid[dim];
+                });
+            }
+            else {
+                // TOCHECK
+                //<< Allocate BucketInfo for SAH partition buckets >>
+                constexpr int nBuckets = 12;
+                
+                BucketInfo buckets[nBuckets];
+
+                //<< Initialize BucketInfo for SAH partition buckets >>
+                // just put them in each bucket
+                for (int i = start; i < end; ++i) {
+                    int b = nBuckets *
+                        centroidBounds.Offset(primitivesInfo[i].centroid)[dim];
+                    if (b == nBuckets) b = nBuckets - 1;
+                    buckets[b].count++;
+                    buckets[b].bounds = geometry::bbUnion(buckets[b].bounds, primitivesInfo[i].bound);
+                    
+                    //printf("%d bucket: %d\n", i, b);
+                }
+
+                //<< Compute costs for splitting after each bucket >>
+                // essentially find cost for each kind of split(based on bucket)
+                Float cost[nBuckets - 1];
+                for (int i = 0; i < nBuckets - 1; ++i) {
+                    aabbBounds b0, b1;
+                    int count0 = 0, count1 = 0;
+                    for (int j = 0; j <= i; ++j) {
+                        b0 = geometry::bbUnion(b0, buckets[j].bounds);
+                        count0 += buckets[j].count;
+                    }
+                    for (int j = i + 1; j < nBuckets; ++j) {
+                        b1 = geometry::bbUnion(b1, buckets[j].bounds);
+                        count1 += buckets[j].count;
+                    }
+                    // traverse cost is 1/8, estimated intersection cost to 1, relatively: 1:8
+                    cost[i] = .125f + (count0 * b0.SurfaceArea() +
+                        count1 * b1.SurfaceArea()) / whole_scene_bbox.SurfaceArea();
+                    //printf("cost%d: %f, c0: %d, c1: %d", i, cost[i], count0, count1);
+
+                }
+                //printf("\n");
+
+                //<< Find bucket to split at that minimizes SAH metric >>=
+                Float minCost = cost[0];
+                int minCostSplitBucket = 0;
+                for (int i = 1; i < nBuckets - 1; ++i) {
+                    if (cost[i] < minCost) {
+                        minCost = cost[i];
+                        minCostSplitBucket = i;
+                    }
+                }
+
+                //<< Either create leaf or split primitives at selected SAH bucket >>=
+                // leaf cost = nPrimitives * 1
+                Float leafCost = nPrimitives;
+                if (nPrimitives > maxPrimsInNode || minCost < leafCost) {
+                    BVHprimitiveInfo* pmid = std::partition(
+                        &primitivesInfo[start],
+                        &primitivesInfo[end - 1] + 1,
+                        [=](const BVHprimitiveInfo& pi) {
+                        int b = nBuckets * centroidBounds.Offset(pi.centroid)[dim];
+                        if (b == nBuckets) b = nBuckets - 1;
+                        return b <= minCostSplitBucket;
+                    });
+                    mid = pmid - &primitivesInfo[0];
+                }
+                else {
+                    //<< Create leaf BVHBuildNode >>
+                    int firstPrimOffset = orderedPrims.size();
+                    for (int i = start; i < end; ++i) {
+                        int primNum = primitivesInfo[i].primitiveNum;
+                        orderedPrims.push_back(primitives[primNum]);
+                    }
+                    node->InitLeaf(firstPrimOffset, nPrimitives, whole_scene_bbox);
+                    return node;
+
+                }
+
+                /*for (int i = 0; i < 11; i++) {
+                    printf("cost %d: %f  ", i, cost[i]);
+                }
+                printf("\n");*/
+            }
+
+            
+            //printf("start: %d, mid: %d, end:  %d\n", start, mid, end);
+            node->InitInterior(dim, 
+                recurBVHbuild(start, mid, totalNodes, orderedPrims),
+                recurBVHbuild(mid, end, totalNodes, orderedPrims));
+        }
+    }
+    return node;
+}
+
+int Scene::flattenBVHTree(BVHBuildNode* node, int& offset)
+{
+    // store in depth first order
+    LinearBVHNode* linearNode = &LBVHnodes[offset];
+    linearNode->bounds = node->bounds;
+    int myoffset = offset++;
+    if (node->nPrimitives > 0) {
+        linearNode->primitivesOffset = node->firstPrimOffset;
+        linearNode->nPrimitives = node->nPrimitives;
+    }
+    else {
+        // internal flattened BVH node
+        linearNode->axis = node->splitAxis;
+        linearNode->nPrimitives = 0;
+        this->flattenBVHTree(node->children[0], offset);
+        linearNode->secondChildOffset = flattenBVHTree(node->children[1], offset);
+    }
+    return myoffset;
 }
 
 int Scene::loadGeom(string objectid) {
@@ -87,11 +397,11 @@ int Scene::loadGeom(string objectid) {
 
             //load tranformations
             if (strcmp(tokens[0].c_str(), "TRANS") == 0) {
-                newGeom.translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                newGeom.geomT.translation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             } else if (strcmp(tokens[0].c_str(), "ROTAT") == 0) {
-                newGeom.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                newGeom.geomT.rotation = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             } else if (strcmp(tokens[0].c_str(), "SCALE") == 0) {
-                newGeom.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
+                newGeom.geomT.scale = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
             // or path for gltf-mesh
             //PATH should put to last
@@ -100,17 +410,18 @@ int Scene::loadGeom(string objectid) {
                 
             }
             // motion blur
+#if motion_blur == 1:
             else if (strcmp(tokens[0].c_str(), "VELO") == 0) {
                 newGeom.velocity = glm::vec3(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
             }
-
+#endif
             utilityCore::safeGetline(fp_in, line);
         }
 
-        newGeom.transform = utilityCore::buildTransformationMatrix(
-                newGeom.translation, newGeom.rotation, newGeom.scale);
-        newGeom.inverseTransform = glm::inverse(newGeom.transform);
-        newGeom.invTranspose = glm::inverseTranspose(newGeom.transform);
+        newGeom.geomT.transform = utilityCore::buildTransformationMatrix(
+                newGeom.geomT.translation, newGeom.geomT.rotation, newGeom.geomT.scale);
+        newGeom.geomT.inverseTransform = glm::inverse(newGeom.geomT.transform);
+        newGeom.geomT.invTranspose = glm::inverseTranspose(newGeom.geomT.transform);
         
         if (newGeom.type == GLTF_MESH) {
             this->loadGLTFMesh(cur_path, newGeom);
@@ -587,7 +898,7 @@ bool Scene::myGLTFloader(
             loadedMesh.pivot_xform[3][2] = bCenter.z;
             loadedMesh.pivot_xform[3][3] = 1.0f;
 
-            // TODO handle materials
+            // TOCHECK handle materials
             for (size_t i{ 0 }; i < loadedMesh.faces.size(); ++i)
                 loadedMesh.material_ids.push_back(materials.at(0).id);
 
@@ -729,9 +1040,9 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
                 // assign bounding box
                 //TODO check correctness for this
 
-                glm::vec3 w_v0 = glm::vec3(parent_geom.transform * glm::vec4(cur_triangle.v0, 1.f));
-                glm::vec3 w_v1 = glm::vec3(parent_geom.transform * glm::vec4(cur_triangle.v1, 1.f));
-                glm::vec3 w_v2 = glm::vec3(parent_geom.transform * glm::vec4(cur_triangle.v2, 1.f));
+                glm::vec3 w_v0 = glm::vec3(parent_geom.geomT.transform * glm::vec4(cur_triangle.v0, 1.f));
+                glm::vec3 w_v1 = glm::vec3(parent_geom.geomT.transform * glm::vec4(cur_triangle.v1, 1.f));
+                glm::vec3 w_v2 = glm::vec3(parent_geom.geomT.transform * glm::vec4(cur_triangle.v2, 1.f));
 
                 minVal_vec = glm::min(minVal_vec, w_v0);
                 minVal_vec = glm::min(minVal_vec, w_v1);
@@ -758,17 +1069,17 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
             cur_bbox.translation = cur_bbox.translation + parent_geom.translation;*/
             //cur_bbox.rotation = parent_geom.rotation;
-            cur_bbox.scale = maxVal_vec - minVal_vec;
-            cur_bbox.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
-            cur_bbox.rotation = glm::vec3(0);
+            cur_bbox.geomT.scale = maxVal_vec - minVal_vec;
+            cur_bbox.geomT.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
+            cur_bbox.geomT.rotation = glm::vec3(0);
 
-            cur_bbox.transform = utilityCore::buildTransformationMatrix(
-                cur_bbox.translation,
-                cur_bbox.rotation,
-                cur_bbox.scale);
+            cur_bbox.geomT.transform = utilityCore::buildTransformationMatrix(
+                cur_bbox.geomT.translation,
+                cur_bbox.geomT.rotation,
+                cur_bbox.geomT.scale);
 
-            cur_bbox.inverseTransform = glm::inverse(cur_bbox.transform);
-            cur_bbox.invTranspose = glm::inverseTranspose(cur_bbox.transform);
+            cur_bbox.geomT.inverseTransform = glm::inverse(cur_bbox.geomT.transform);
+            cur_bbox.geomT.invTranspose = glm::inverseTranspose(cur_bbox.geomT.transform);
             // use this to index gltf_models
             cur_bbox.mesh_idx = this->gltf_models.size();
             this->geoms.emplace_back(cur_bbox);

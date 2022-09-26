@@ -65,6 +65,7 @@ include_directories(${EXTERNAL}/include/raytrace)
 #include_directories(scenes)
 
 set(headers
+    src/bvh.h
     src/main.h
     src/image.h
     src/interactions.h
@@ -83,12 +84,14 @@ set(headers
     )
 
 set(sources
+    src/bvh.cpp
     src/main.cpp
     src/stb.cpp
     src/image.cpp
     src/glslUtility.cpp
     src/pathtrace.cu
     src/scene.cpp
+    src/sceneStructs.cpp
     src/preview.cpp
     src/utilities.cpp
     #external/include/raytrace/gltf-loader.cc

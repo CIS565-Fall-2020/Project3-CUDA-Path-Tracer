@@ -111,8 +111,10 @@ Float distribution_D(const MicroDistribution& distrib, const vc3& wh, const vc3&
 		Float cos2Theta = cosTheta * cosTheta;
 		Float tan2Theta = glm::max(0., 1. - cos2Theta) / cos2Theta;
 		if (!isfinite(tan2Theta)) { // handle infinity and Nan 
+#if _DEBUG
 			printf("meet infinite: wh: %f, %f, %f, n: %f, %f, %f\n", wh.x, wh.y, wh.z, normal.x, normal.y, normal.z);
 			printf("cosTheta: %f, 2theta: %f, tan: %f\n", cosTheta, cos2Theta, tan2Theta);
+#endif
 			return (Float)0.;
 		}
 		Float cos4Theta = cos2Theta * cos2Theta;
@@ -120,16 +122,18 @@ Float distribution_D(const MicroDistribution& distrib, const vc3& wh, const vc3&
 		float c = cosPhi(wh, normal);
 		float s = sinPhi(wh, normal);
 		Float e = (c * c / (distrib.alpha.x * distrib.alpha.x) +
-			s * s / (distrib.alpha.y * distrib.alpha.y)) * tan2Theta;
+				   s * s / (distrib.alpha.y * distrib.alpha.y)
+				) * tan2Theta;
 
-		return 1. / (glm::pi<Float>() * distrib.alpha.x * distrib.alpha.y * cos4Theta * (1 + e) * (1 + e));
+		Float D = 1. / (glm::pi<Float>() * distrib.alpha.x * distrib.alpha.y * cos4Theta * (1 + e) * (1 + e));
+		return D;
 	}
 	return 0.;
 }
 
 __host__ __device__
 Float distribution_pdf(const MicroDistribution& distrib, const vc3& wo, const vc3& wh, const vc3& normal) {
-	return distribution_D(distrib, wh, normal) * glm::abs(glm::dot(wh, normal)) ;
+	return distribution_D(distrib, wh, normal) * glm::abs(glm::dot(wh, normal));
 }
 
 __host__ __device__
@@ -145,26 +149,21 @@ vc3 microfaceBRDF_f(
 	const ShadeableIntersection& itsct,
 	const Material& mat,
 	glm::vec3* textureArray) {
-	Float cosThetaO = glm::dot(wo, itsct.surfaceNormal), cosThetaI = glm::dot(wi, itsct.surfaceNormal);
+	Float cosThetaO = glm::dot(wo, itsct.vtx.normal), cosThetaI = glm::dot(wi, itsct.vtx.normal);
 	vc3 wh = wo + wi;
 	// Handle degenerate cases for microfacet reflection
 	if (cosThetaI == 0 || cosThetaO == 0) return vc3(0.f);
 	if (glm::length2(wh) < 1e-4f) return vc3(0.f);
 
-	
-	float3 f3_wo = make_float3(wo.x, wo.y, wo.z);
-	float3 f3_wi = make_float3(wi.x, wi.y, wi.z);
-	float3 f3_n = make_float3(itsct.surfaceNormal.x, itsct.surfaceNormal.y, itsct.surfaceNormal.z);
-
 	wh = glm::normalize(wh);
 	float3 f3_wh = make_float3(wh.x, wh.y, wh.z);
 	vc3 F = fresnel_evalulate(glm::dot(wi, wh));
-	Float D = distribution_D(mat.dist, wh, itsct.surfaceNormal);
-	Float G = distribution_G(mat.dist, wo, wi, itsct.surfaceNormal);
+	Float D = distribution_D(mat.dist, wh, itsct.vtx.normal);
+	Float G = distribution_G(mat.dist, wo, wi, itsct.vtx.normal);
 
 	vc3 c = mat.color;
 	if (mat.diffuseTexture.valid == 1) {
-		c *= sampleTexture(textureArray, itsct.uv, mat.diffuseTexture);
+		c *= sampleTexture(textureArray, itsct.vtx.uv, mat.diffuseTexture);
 	}
 
 	// printf("microF: D: %f, G: %f, cosThetaI: %f, cosThetaO: %f\n", D, G, cosThetaI, cosThetaO);
@@ -190,17 +189,28 @@ vc3 microfaceBRDF_sample_f(
 	Float& pdf, 
 	vc3* textureArray,
 	thrust::default_random_engine& rng) {
+	/// <summary>
+	/// Pdf == 0 if not on the same hemisphere
+	/// </summary>
+	/// <param name="wo"></param>
+	/// <param name="wi"></param>
+	/// <param name="itsct"></param>
+	/// <param name="mat"></param>
+	/// <param name="pdf"></param>
+	/// <param name="textureArray"></param>
+	/// <param name="rng"></param>
+	/// <returns> return microface brdf </returns>
 	thrust::uniform_real_distribution<float> u01(0, 1);
 	vc2 xi(u01(rng), u01(rng));
-	vc3 wh = distribution_sample_wh(mat.dist, wo, itsct.surfaceNormal, xi);
+	vc3 wh = distribution_sample_wh(mat.dist, wo, itsct.vtx.normal, xi);
 	wi = glm::reflect(-wo, wh);
 	// test if on the sample hemisphere
-	if (!SameHemiSphere(wi, wo, itsct.surfaceNormal)) {
+	if (!SameHemiSphere(wi, wo, itsct.vtx.normal)) {
+		pdf = Float(0);
 		return vc3(0.);
 	}
 	float3 f_wh = make_float3(wh.x, wh.y, wh.z);
-	// printf("sample f wh: %f, %f, %f, n: %f, %f, %f\n", wh.x, wh.y, wh.z, itsct.surfaceNormal.x, itsct.surfaceNormal.y, itsct.surfaceNormal.z);
-	pdf = distribution_pdf(mat.dist, wo, wh, itsct.surfaceNormal) / (4. * glm::dot(wo, wh));
+	pdf = distribution_pdf(mat.dist, wo, wh, itsct.vtx.normal) / (4. * glm::dot(wo, wh) + 1e-6);
 	return microfaceBRDF_f(wo, wi, itsct, mat, textureArray);
 }
 

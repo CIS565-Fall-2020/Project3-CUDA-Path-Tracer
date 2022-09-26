@@ -4,6 +4,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include "glm/glm.hpp"
+#include "utilities.h"
+#include <limits>
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
 
@@ -25,7 +27,16 @@ struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
 
-    float time;
+    float time = 1e6;;
+};
+
+struct GeomTransform {
+    glm::vec3 translation;
+    glm::vec3 rotation;
+    glm::vec3 scale;
+    glm::mat4 transform;
+    glm::mat4 inverseTransform;
+    glm::mat4 invTranspose;
 };
 
 struct Geom {
@@ -33,16 +44,38 @@ struct Geom {
     int geom_idx;
     enum GeomType type;
     int materialid;
-    glm::vec3 translation;
-    glm::vec3 rotation;
-    glm::vec3 scale;
-    glm::mat4 transform;
-    glm::mat4 inverseTransform;
-    glm::mat4 invTranspose;
+    GeomTransform geomT;
     //motion blur 
+#if motion_blur == 1:
     glm::vec3 velocity;
+#endif
     // for gltf model index
     int mesh_idx = -1;
+};
+
+struct aabbBounds {
+    aabbBounds();
+    aabbBounds(const vc3& a, const vc3& b) : bmin(a), bmax(b) {};
+    int MaximumExtent() const;
+    vc3 Offset(const vc3& p) const;
+    Float SurfaceArea() const;
+    vc3 bmin;
+    vc3 bmax;
+};
+
+struct BVHprimitiveInfo {
+    BVHprimitiveInfo() = default;
+    BVHprimitiveInfo(const aabbBounds& bd, const int primitiveNum) : bound(bd), centroid((Float)0.5 * bd.bmax + (Float)0.5 * bd.bmin), primitiveNum(primitiveNum) {};
+    aabbBounds bound;
+    vc3 centroid;
+    int primitiveNum;
+    // int idx; // triangle or geom index
+    // enum GeomType type;
+};
+
+struct BucketInfo {
+    int count = 0;
+    aabbBounds bounds;
 };
 
 struct Triangle {
@@ -67,6 +100,36 @@ struct GLTF_Model {
     // to index from triangleslist
     int triangle_idx;
     int triangle_count;
+};
+
+struct Primitive { // the geom info
+    Primitive() {};
+    Primitive(const Primitive& other) {
+        std::memcpy(this, &other, sizeof(Primitive));
+    }
+    ~Primitive() {};
+    Primitive& operator=(const Primitive& other) {
+        if (other.type == TRIANGLE) {
+            this->triangle = other.triangle;
+        }
+        else {
+            this->trans = other.trans;
+        }
+
+        this->type = other.type;
+        this->materialid = other.materialid;
+        this->geom_idx = other.geom_idx;
+        return *this;
+    }
+
+    union {
+        GeomTransform trans;
+        Triangle triangle;
+    };
+
+    enum GeomType type;
+    int materialid;
+    int geom_idx;
 };
 
 //ref: https://github.com/mmerchante/CUDA-Path-tracer
@@ -139,16 +202,32 @@ struct PathSegment {
 	int remainingBounces;
 };
 
+struct Vertex
+{
+    glm::vec3 pos;
+    glm::vec3 normal;
+    glm::vec2 uv;
+
+    //Intersection() : uv(glm::vec2(-1.)) {};
+};
+
 // Use with a corresponding PathSegment to do:
 // 1) color contribution computation
 // 2) BSDF evaluation: generate a new ray
 struct ShadeableIntersection {
   float t;
-  glm::vec3 pos;
-  glm::vec3 surfaceNormal;
   int materialId;
   int geom_idx = -1;
-  glm::vec2 uv;
+  Vertex vtx;
+};
+
+enum BxDFType {
+    BSDF_REFLECTION = 1 << 0,   // This BxDF handles rays that are reflected off surfaces
+    BSDF_TRANSMISSION = 1 << 1, // This BxDF handles rays that are transmitted through surfaces
+    BSDF_DIFFUSE = 1 << 2,      // This BxDF represents diffuse energy scattering, which is uniformly random
+    BSDF_GLOSSY = 1 << 3,       // This BxDF represents glossy energy scattering, which is biased toward certain directions
+    BSDF_SPECULAR = 1 << 4,     // This BxDF handles specular energy scattering, which has no element of randomness
+    BSDF_ALL = BSDF_DIFFUSE | BSDF_GLOSSY | BSDF_SPECULAR | BSDF_REFLECTION | BSDF_TRANSMISSION
 };
 
 enum BxDFType {
