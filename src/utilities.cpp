@@ -163,6 +163,23 @@ void geometry::aabbForImplicit(aabbBounds& aabb, const Geom& geom)
         }
         aabb = aabbForVertex(verts, 8);
     }
+    else if (geom.type == PLANE) {
+        vc3 verts[8]{
+               {  0.5f,  0.5f,  0.01f },
+               {  0.5f,  0.5f, -0.01f },
+               {  0.5f, -0.5f,  0.01f },
+               {  0.5f, -0.5f, -0.01f },
+               { -0.5f,  0.5f,  0.01f },
+               { -0.5f,  0.5f, -0.01f },
+               { -0.5f, -0.5f,  0.01f },
+               { -0.5f, -0.5f, -0.01f }
+        };
+        for (int i = 0; i < 8; i++) {
+            vc4 tmp = geom.geomT.transform * vc4(verts[i], 1.0f);
+            verts[i] = vc3(tmp / tmp.w);
+        }
+        aabb = aabbForVertex(verts, 8);
+    }
 }
 
 void geometry::aabbForTriangle(aabbBounds& aabb, const Triangle& geom)

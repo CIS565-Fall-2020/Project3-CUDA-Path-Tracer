@@ -221,6 +221,33 @@ __host__ __device__ float sphereIntersectionTest(
     return glm::length(r.origin - itsct.pos);
 }
 
+__host__ __device__ Float planeIntersectionTest(
+    const GeomTransform& plane,
+    const Ray& r,
+    Vertex& itsct,
+    bool& outside) {
+    Float t = -1;
+
+    Ray q;
+    q.origin = multiplyMVHomo(plane.inverseTransform, vc4(r.origin, 1.0f));
+    q.direction = glm::normalize(multiplyMV(plane.inverseTransform, vc4(r.direction, 0.0f)));
+
+    Float local_t = -q.origin.z / q.direction.z;
+    if (q.direction.z != 0 && local_t > (Float)0) {
+        vc3 p = getPointOnRay(q, local_t);
+        bool isInSquare = glm::all(glm::lessThan(glm::abs(vc2(p)), vc2(0.5)));
+        if (isInSquare) {
+            itsct.pos = multiplyMVHomo(plane.transform, vc4(p, 1.f));
+            itsct.normal = glm::normalize(multiplyMV(plane.invTranspose, glm::vec4(vc3(0, 0, 1.), 0.f)));
+            itsct.normal *= (-2 * (glm::dot(itsct.normal, r.direction) > 0) + 1); // reverse the normal
+            itsct.uv = vc2(0.5) + vc2(p);
+            outside = true;
+            t = glm::length(r.origin - itsct.pos);
+        }
+    }
+    return t;
+}
+
 __host__ __device__ float triangleIntersectionTest(
     const Triangle& triangle,
     const Geom& supp_geom,
@@ -373,6 +400,9 @@ __host__ __device__ Float primitiveRayIntersectionTest(
         }else if (p.type == SPHERE) {
             t = sphereIntersectionTest(p.trans, r, v, outside);
             //printf("hit sphere translation: %d, %d, with t%d\n", p.trans.translation.x, p.trans.translation.y, t);
+        }
+        else if (p.type == PLANE) {
+            t = planeIntersectionTest(p.trans, r, v, outside);
         }
     }
     if (t > 0) {

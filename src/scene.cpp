@@ -373,6 +373,10 @@ int Scene::loadGeom(string objectid) {
                 std::cout << "Creating new cube..." << endl;
                 newGeom.type = CUBE;
             }
+            else if (strcmp(line.c_str(), "plane") == 0) {
+                std::cout << "Creating new plane..." << endl;
+                newGeom.type = PLANE;
+            }
             // Jack12
             else if (strcmp(line.c_str(), "gltf_mesh") == 0) {
                 std::cout << "Creating new gltf mesh..." << endl;

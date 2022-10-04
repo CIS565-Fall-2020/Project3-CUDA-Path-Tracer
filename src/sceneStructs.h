@@ -16,6 +16,7 @@ typedef glm::vec4 vc4;
 
 enum GeomType {
     DELTA, // TODO tmp measure for delta light during direct light 
+    PLANE,
     SPHERE,
     CUBE,
     GLTF_MESH,
@@ -219,15 +220,6 @@ struct ShadeableIntersection {
   int materialId;
   int geom_idx = -1;
   Vertex vtx;
-};
-
-enum BxDFType {
-    BSDF_REFLECTION = 1 << 0,   // This BxDF handles rays that are reflected off surfaces
-    BSDF_TRANSMISSION = 1 << 1, // This BxDF handles rays that are transmitted through surfaces
-    BSDF_DIFFUSE = 1 << 2,      // This BxDF represents diffuse energy scattering, which is uniformly random
-    BSDF_GLOSSY = 1 << 3,       // This BxDF represents glossy energy scattering, which is biased toward certain directions
-    BSDF_SPECULAR = 1 << 4,     // This BxDF handles specular energy scattering, which has no element of randomness
-    BSDF_ALL = BSDF_DIFFUSE | BSDF_GLOSSY | BSDF_SPECULAR | BSDF_REFLECTION | BSDF_TRANSMISSION
 };
 
 enum BxDFType {

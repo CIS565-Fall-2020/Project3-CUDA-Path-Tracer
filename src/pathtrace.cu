@@ -302,7 +302,15 @@ __global__ void computeIntersections(
 		PathSegment pathSegment = pathSegments[path_index];
 
 #if RAY_SCENE_INTERSECTION == BRUTE_FORCE
-        SceneIntersection(pathSegment.ray, geoms, geoms_size, models, triangles, intersections[path_index]);
+        int prim_idx = SceneIntersection(pathSegment.ray, geoms, geoms_size, models, triangles, intersections[path_index]);
+        /*if (prim_idx != - 1 && geoms[prim_idx].type == PLANE) {
+            printf("intersect PLANE with t: %f, at pos %f, %f, %f, with mat id: %d, remain bounce: %d\n",
+                intersections[path_index].t,
+                intersections[path_index].vtx.pos.x, intersections[path_index].vtx.pos.y, intersections[path_index].vtx.pos.z,
+                intersections[path_index].materialId,
+                pathSegment.remainingBounces
+            );
+        }*/
 #else if RAY_SCENE_INTERSECTION == HBVH
         int prim_idx = SceneIntersection(pathSegment.ray, primitives, LBVHnodes, intersections[path_index]);
        /* if (prim_idx >= 0) {
@@ -460,8 +468,6 @@ __global__ void shadeTrueMaterial(
 #else:
                 cur_pathSegment.remainingBounces = 0;
 #endif
-                
-
             }
             
         }

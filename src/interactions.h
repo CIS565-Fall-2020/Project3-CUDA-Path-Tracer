@@ -394,11 +394,9 @@ void scatterRay(
     Float pdf;
 
     brdf = sampleBsdf(itsct, -pathSegment.ray.direction, lightIn, pdf, m, textureArray, rng);
-    
     pathSegment.colorThroughput *= brdf * abs(glm::dot(itsct.vtx.normal, lightIn)) / pdf;
     pathSegment.ray.direction = lightIn;
     pathSegment.ray.origin = itsct.vtx.pos + lightIn * 1e-3f;
-    //pathSegment.ray.origin = itsct.pos;
     pathSegment.remainingBounces--;
 }
 
@@ -415,18 +413,27 @@ vc3 SphericalDirection(Float sinTheta, Float cosTheta,
         sinTheta * std::sin(phi) * y + cosTheta * z;
 }
 
+__host__ __device__
+vc3 UniformSampleSphere(const vc2& u) {
+    Float z = 1 - 2 * u[0];
+    Float r = glm::sqrt(glm::max((Float)0, (Float)1 - z * z));
+    Float phi = 2 * glm::pi<Float>() * u[1];
+    return vc3(r * glm::cos(phi), r * glm::sin(phi), z);
+}
+
 
 __device__ __host__
-ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_itsct, const Geom& light_geom, const glm::vec2& xi, float& lightPdf) {
+ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& given_itsct, const Geom& light_geom, const glm::vec2& xi, float& lightPdf) {
     // sample a pos based on the light intersection position
     
     ShadeableIntersection it;
     if (light_geom.type == SPHERE) {
+#if 1
         // sample pos on sphere visible on the given point
         
         // coordinate sys for sphere sampling
         glm::vec3 ctr = multiplyMVHomo(light_geom.geomT.transform, glm::vec4(0., 0., 0., 1.));
-        glm::vec3 wc = glm::normalize(ctr - light_itsct.vtx.pos);
+        glm::vec3 wc = glm::normalize(ctr - given_itsct.vtx.pos);
         glm::vec3 wcX, wcY;
         CoordinateSys(wc, wcX, wcY);
         // <<Sample uniformly on sphere if  is inside it>>
@@ -435,14 +442,14 @@ ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_
         // <<Sample sphere uniformly inside subtended cone>>
         //Float radius = light_geom.scale[0];
         Float radius = 1.;
-        Float sinThetaMax2 = radius * radius / glm::distance2(ctr, light_itsct.vtx.pos);
+        Float sinThetaMax2 = radius * radius / glm::distance2(ctr, given_itsct.vtx.pos);
         Float cosThetaMax = glm::sqrt(glm::max((Float)0, 1 - sinThetaMax2));
         Float cosTheta = (1 - xi[0]) + xi[0] * cosThetaMax;
         Float sinTheta = glm::sqrt(glm::max((Float)0, 1 - cosTheta * cosTheta));
         Float phi = xi[1] * 2 * glm::pi<Float>();
 
         // <<Compute angle  from center of sphere to sampled point on surface>>
-        Float dc = glm::distance(light_itsct.vtx.pos, ctr);
+        Float dc = glm::distance(given_itsct.vtx.pos, ctr);
         Float ds = dc * cosTheta -
             glm::sqrt(glm::max((Float)0,
                 radius * radius - dc * dc * sinTheta * sinTheta));
@@ -456,24 +463,37 @@ ShadeableIntersection arealight_shape_sample(const ShadeableIntersection& light_
         vc3 pObj = (Float)1. * vc3(nObj.x, nObj.y, nObj.z);
 
         it.vtx.pos = multiplyMVHomo(light_geom.geomT.transform, vc4(pObj, 1.));
-        it.vtx.normal = multiplyMV(light_geom.geomT.invTranspose, vc4(pObj, 0.));
-        it.materialId = light_geom.materialid;
-        it.geom_idx = light_geom.geom_idx;
+        it.vtx.normal = glm::normalize(multiplyMV(light_geom.geomT.invTranspose, vc4(pObj, 0.)));
+        
         // TODO illuminated point inside sphere 
         
-        lightPdf = 1.0f / (2.0f * glm::pi<float>() * (1 - cosThetaMax));
+        lightPdf = 1.0f / (2.0f * glm::pi<Float>() * (1 - cosThetaMax));
+#else
+        vc3 p_loc = UniformSampleSphere(xi);
+        it.vtx.normal = glm::normalize(multiplyMV(light_geom.geomT.invTranspose, glm::vec4(p_loc, 0.)));
+        it.vtx.pos = multiplyMVHomo(light_geom.geomT.transform, vc4(p_loc, 1.));
+
+        lightPdf = 1.0f / (4.0f * glm::pi<Float>());
+#endif
+
     }
-    else if (light_geom.type == GeomType::CUBE) {
-        // TODO Sample cube
+    else if (light_geom.type == GeomType::PLANE) {
+        it.vtx.pos = multiplyMVHomo(light_geom.geomT.transform, vc4(xi - vc2(0.5), 0., 1.));
+        it.vtx.normal = glm::normalize(multiplyMV(light_geom.geomT.invTranspose, glm::vec4(0., 0., 1., 0.)));
+        it.vtx.normal *= (2 * glm::dot((given_itsct.vtx.pos - it.vtx.pos), it.vtx.normal) > 0 - 1);
+        /*printf("light normal: (%f, %f, %f)\n", it.vtx.normal.x, it.vtx.normal.y, it.vtx.normal.z);*/
+        // Plane is treat as two face 
+        lightPdf = Float(1) / (2 * light_geom.geomT.scale[0] * light_geom.geomT.scale[1]);
     }
-    
+    it.materialId = light_geom.materialid;
+    it.geom_idx = light_geom.geom_idx;
     return it;
 }
 
 __device__ __host__
 glm::vec3 Light_Le(const ShadeableIntersection& itsct, const Geom& light_geom, const Material& mat, const glm::vec3& wiw) {
 
-    if (light_geom.type == SPHERE || light_geom.type == CUBE) {
+    if (light_geom.type == SPHERE || light_geom.type == CUBE || light_geom.type == PLANE) {
         return glm::dot(itsct.vtx.normal, wiw) > 0.f ? mat.color * mat.emittance : vc3(0.);
     }
     else {
@@ -484,6 +504,17 @@ glm::vec3 Light_Le(const ShadeableIntersection& itsct, const Geom& light_geom, c
 
 __device__ __host__
 glm::vec3 Light_sample_Li(const ShadeableIntersection& given_itsct, ShadeableIntersection& light_itsct, const Geom& light_geom, const Material& mat, const glm::vec2& xi, glm::vec3& wiw, float& lightPdf) {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="given_itsct"></param>
+    /// <param name="light_itsct"></param>
+    /// <param name="light_geom"></param>
+    /// <param name="mat"></param>
+    /// <param name="xi"></param>
+    /// <param name="wiw"> from given intersection to sampled direction </param>
+    /// <param name="lightPdf"></param>
+    /// <returns></returns>
     light_itsct = arealight_shape_sample(given_itsct, light_geom, xi, lightPdf);
     wiw = glm::normalize(light_itsct.vtx.pos - given_itsct.vtx.pos);
     return Light_Le(light_itsct, light_geom, mat, -wiw);
@@ -501,6 +532,10 @@ Float light_pdf(
     else if (light_geom.type == CUBE) {
         // TODO
         return 0.f;
+    }
+    else if (light_geom.type == PLANE) {
+        Float area = 2 * light_geom.geomT.scale[0] * light_geom.geomT.scale[1];
+        return glm::distance2(light_itsct.vtx.pos, ref_itsct.vtx.pos) / (glm::abs(glm::dot(light_itsct.vtx.normal, (-wiw))) * area);
     }
     else {
         return 1.;
@@ -619,6 +654,10 @@ int SceneIntersection(
         {
             t = sphereIntersectionTest(geom.geomT, ray, tmp_itsct, outside);
         }
+        else if (geom.type == PLANE)
+        {
+            t = planeIntersectionTest(geom.geomT, ray, tmp_itsct, outside);
+        }
         else if (geom.type == BBOX) {
             t = meshIntersectionTest(
                 geom,
@@ -695,16 +734,17 @@ glm::vec3 EstimateDirect(
 
     thrust::uniform_real_distribution<float> u01(0, 1);
     glm::vec3 Ld(0.);
-    glm::vec3 wiw(0.);
+    glm::vec3 wiw(0.); 
     float lightPdf = 0., float scatteringPdf = 0.;
     glm::vec2 uLight(u01(rng), u01(rng));
     glm::vec2 uScattering(u01(rng), u01(rng));
-
+    // the to-be-estimated pos
     glm::vec3 itsct_p = itsct.vtx.pos;
     Material mat = materials[itsct.materialId];
     ShadeableIntersection sampled_light_itsct;
     glm::vec3 Li = Light_sample_Li(itsct, sampled_light_itsct, light_geom, materials[light_geom.materialid], uLight, wiw, lightPdf);
 #if DirectLightSampleLight == 1
+    //printf("Li: (%f, %f, %f), lightPdf: %f\n", Li.x, Li.y, Li.z, lightPdf);
     if (lightPdf > 0. && !isBlack(Li)) {
         glm::vec3 f(0.);
         BxDFType sampledType;
@@ -717,15 +757,22 @@ glm::vec3 EstimateDirect(
 
         if (!isBlack(Li)) {
             // test occlusion 
-            Ray r{ sampled_light_itsct.vtx.pos - 1e-2f * wiw, -wiw };
-            ShadeableIntersection intersection;
+            // from given intersection to sampled light direction
+            Ray r{ sampled_light_itsct.vtx.pos - 1e-3f * wiw, -wiw };
+            ShadeableIntersection intersection; // possible intersection between light and given obj
 #if RAY_SCENE_INTERSECTION == BRUTE_FORCE
             int hit_geom_idx = SceneIntersection(r, geoms, geom_size, models, triangles, intersection);
 #elif RAY_SCENE_INTERSECTION == HBVH
             int hit_geom_idx = SceneIntersection(r, primitives, LBVHnodes, intersection);
 #endif
+            /*printf("sampled light pos (%f, %f, %f), wiw: (%f, %f, %f), ray origin: (%f, %f, %f)\n", 
+                sampled_light_itsct.vtx.pos.x, sampled_light_itsct.vtx.pos.y, sampled_light_itsct.vtx.pos.z,
+                wiw.x, wiw.y, wiw.z,
+                r.origin.x, r.origin.y, r.origin.z
+                );
+            printf("hit geom idx %d\n", hit_geom_idx);*/
             if (hit_geom_idx == -1 || glm::distance2(intersection.vtx.pos, itsct.vtx.pos) > 1e-4) {
-                // not hit the same light
+                // not hit the same light || has occulsion between
                 bool handleMedia = false;
                 Li *= handleMedia;
             }
@@ -765,22 +812,34 @@ glm::vec3 EstimateDirect(
             glm::vec3 Tr(1.0);
             Ray r{ itsct_p + 1e-3f * wiw, wiw };
             ShadeableIntersection light_intersection;
+            // TOCHECK add bvh intersection
+#if RAY_SCENE_INTERSECTION == BRUTE_FORCE
             int hit_geom_idx = SceneIntersection(r, geoms, geom_size, models, triangles, light_intersection);
-
+#elif RAY_SCENE_INTERSECTION == HBVH
+            int hit_geom_idx = SceneIntersection(r, primitives, LBVHnodes, light_intersection);
+#endif
+            /*printf("hit geom idx %d, sampled light pos (%f, %f, %f), wiw: (%f, %f, %f), ray origin: (%f, %f, %f)\n",
+                hit_geom_idx,
+                sampled_light_itsct.vtx.pos.x, sampled_light_itsct.vtx.pos.y, sampled_light_itsct.vtx.pos.z,
+                wiw.x, wiw.y, wiw.z,
+                r.origin.x, r.origin.y, r.origin.z
+                );*/
             // <<Add light contribution from material sampling>> 
             glm::vec3 Li(0.);
             float weight = 1.;
+            bool hit_light = false;
             if (hit_geom_idx == -1) {
                 // TODO did not hit anything, handle infinite area light
             }
             else {
 #if RAY_SCENE_INTERSECTION == BRUTE_FORCE
-                bool hit_light = (hit_geom_idx == light_geom.geom_idx);
+                hit_light = (hit_geom_idx == light_geom.geom_idx);
 #elif RAY_SCENE_INTERSECTION == HBVH
-                bool hit_light = (primitives[hit_geom_idx].geom_idx == light_geom.geom_idx);
+                hit_light = (primitives[hit_geom_idx].geom_idx == light_geom.geom_idx);
 #endif
                 if (hit_light) {
                     Li = Light_Le(light_intersection, light_geom, materials[light_geom.materialid], -wiw);
+                    
                     if (!sampledSpecular) {
                         // get light pdf TODO only get pdf
                         lightPdf = light_pdf(light_intersection, itsct, light_geom, wiw);
@@ -790,8 +849,13 @@ glm::vec3 EstimateDirect(
                         weight = powerHeuristic(1., scatteringPdf, 1., lightPdf);
                     }
                 }
-            }           
+            }    
+            
             Ld += f * Li * Tr * weight / scatteringPdf;
+            /*if (hit_light) {
+                printf("Ld: (%f, %f, %f), f: (%f, %f, %f), lightPdf: %f, weight: %f\n",Ld.x, Ld.y, Ld.z, f.x, f.y, f.z, lightPdf, weight);
+            }*/
+            
         }
        
     }

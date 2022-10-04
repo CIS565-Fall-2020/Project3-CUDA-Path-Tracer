@@ -55,19 +55,11 @@ Yet another Path tracer written in CUDA.
 - [x] First bounce cache
 - [x] contiguous memory shuffle by material sort
 
-##### [BSDF]()
+#### Demo Gallery
 
-Basic kernel to represent the physical lighting attribute of each material.
+![alt text](https://github.com/Jack12xl/public_file/raw/master/CIS565-GPU/PathTracer/cornell_box_v002.png)
 
 Since I'm not good at setting up fascinating scenes, here I borrow scenes settings from [jmrcao](https://github.com/jmarcao) as a fast test for my algorithm. Thanks **jmrcao**!
-
-diffuse ball
-
-<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell.2020-09-30_03-21-12z.5000samp.png" height="400px"></a> 
-
-##### Perfect specular reflection
-
-<a href="https://github.com/Jack12xl/Project0-Getting-Started/tree/master/images"><img src="https://github.com/Jack12xl/Project3-CUDA-Path-Tracer/blob/mid-submit/img/cornell_2020-09-30_08-17-02z_5000samp_32depth.png" height="400px"></a> 
 
 ##### Imperfect specular
 
