@@ -4,6 +4,7 @@
 #include "scene.h"
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
+#include "cudahelper.h"
 
 void pathtraceInit(Scene *scene);
 void pathtraceFree();

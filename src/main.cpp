@@ -46,7 +46,6 @@ int main(int argc, char** argv) {
     //std::cout << "Current dir: "<< argv[0] << std::endl;
 
     const char *sceneFile = argv[1];
-
     // Load scene file
     scene = new Scene(sceneFile);
     // Set up camera stuff from loaded path tracer settings
@@ -74,7 +73,8 @@ int main(int argc, char** argv) {
 
     // Initialize CUDA and GL components
     init();
-
+    // cuda memory operation should be after init()!
+    scene->setDeviceEnvMap();
     initDeviceTexture(scene);
     // GLFW main loop
     mainLoop();

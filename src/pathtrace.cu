@@ -22,35 +22,10 @@
 #include <device_launch_parameters.h>
 #include "cfg.h"
 
-#define ERRORCHECK 1
-
-#define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
-
-
 #pragma region feature_parameter
 //# define camera_jittering 1 // camera antialiasing
 
 #pragma endregion
-void checkCUDAErrorFn(const char *msg, const char *file, int line) {
-#if ERRORCHECK
-    cudaDeviceSynchronize();
-    cudaError_t err = cudaGetLastError();
-    if (cudaSuccess == err) {
-        return;
-    }
-
-    fprintf(stderr, "CUDA error");
-    if (file) {
-        fprintf(stderr, " (%s:%d)", file, line);
-    }
-    fprintf(stderr, ": %s: %s\n", msg, cudaGetErrorString(err));
-#  ifdef _WIN32
-    getchar();
-#  endif
-    exit(EXIT_FAILURE);
-#endif
-}
 
 __host__ __device__
 thrust::default_random_engine makeSeededRandomEngine(int iter, int index, int depth) {
@@ -124,6 +99,7 @@ void pathtraceInit(Scene *scene) {
 
     cudaMalloc(&dev_image, pixelcount * sizeof(glm::vec3));
     cudaMemset(dev_image, 0, pixelcount * sizeof(glm::vec3));
+    checkCUDAError("malloc device images\n");
 
   	cudaMalloc(&dev_paths, pixelcount * sizeof(PathSegment));
 
@@ -141,16 +117,17 @@ void pathtraceInit(Scene *scene) {
     // primitives for BVH intersection
     cudaMalloc(&dev_primitives, scene->primitives.size() * sizeof(Primitive));
     cudaMemcpy(dev_primitives, scene->primitives.data(), scene->primitives.size() * sizeof(Primitive), cudaMemcpyHostToDevice);
+    checkCUDAError("malloc device primitives \n");
     // linear/compact bvh nodes on gpu
     cudaMalloc(&dev_BVH_nodes, scene->LBVHnodes.size() * sizeof(LinearBVHNode));
     cudaMemcpy(dev_BVH_nodes, scene->LBVHnodes.data(), scene->LBVHnodes.size() * sizeof(LinearBVHNode), cudaMemcpyHostToDevice);
-
+    checkCUDAError("malloc device bvh nodes\n");
   	cudaMalloc(&dev_materials, scene->materials.size() * sizeof(Material));
   	cudaMemcpy(dev_materials, scene->materials.data(), scene->materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
-
+    checkCUDAError("malloc device material\n");
   	cudaMalloc(&dev_intersections, pixelcount * sizeof(ShadeableIntersection));
   	cudaMemset(dev_intersections, 0, pixelcount * sizeof(ShadeableIntersection));
-
+    checkCUDAError("malloc device intersections\n");
     // TODO: initialize any extra device memeory you need
 #if cache_first_bounce
     cudaMalloc(&dev_first_intersections_cache, pixelcount * sizeof(ShadeableIntersection));
@@ -169,7 +146,9 @@ void pathtraceFree() {
   	cudaFree(dev_paths);
   	cudaFree(dev_geoms);
     cudaFree(dev_lightIDs);
+    checkCUDAError("Free device light ids");
   	cudaFree(dev_materials);
+    checkCUDAError("Free device materials");
   	cudaFree(dev_intersections);
 
     cudaFree(dev_triangles);
@@ -389,8 +368,9 @@ __global__ void shadeTrueMaterial(
     int num_paths,
     ShadeableIntersection* shadeableIntersections,
     PathSegment* pathSegments,
-    int *lightIDs,
+    int* lightIDs,
     int light_size,
+    int env_light_id_idx,
     Geom* geoms,
     int geom_size,
     Material* materials,
@@ -407,6 +387,7 @@ __global__ void shadeTrueMaterial(
         ShadeableIntersection intersection = shadeableIntersections[idx];
         PathSegment& cur_pathSegment = pathSegments[idx];
         
+        bool specularBounce = (cur_pathSegment.prevBxdf & BSDF_SPECULAR) != 0;
         if (intersection.t > 0.0f) { // if the intersection exists...
             // Set up the RNG
             // LOOK: this is how you use thrust's RNG! Please look at
@@ -420,7 +401,6 @@ __global__ void shadeTrueMaterial(
             // If the material indicates that the object was a light, "light" the ray
             if (material.emittance > 0.0f) {
 #if DirectLightPass == 1:
-                bool specularBounce = true; // TODO make this really specular bounce
                 if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
                     cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
                     // stop if hit a light
@@ -431,6 +411,7 @@ __global__ void shadeTrueMaterial(
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
 #endif
+                cur_pathSegment.prevBxdf = BxDFType::BSDF_NULL;
             }
             // Otherwise, do some pseudo-lighting computation. This is actually more
             // like what you would expect from shading in a rasterizer like OpenGL.
@@ -447,6 +428,7 @@ __global__ void shadeTrueMaterial(
                     -cur_pathSegment.ray.direction,
                     light_size,
                     lightIDs,
+                    env_light_id_idx,
                     geoms,
                     geom_size,
                     gltf_models,
@@ -476,7 +458,24 @@ __global__ void shadeTrueMaterial(
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
             // used for opacity, in which case they can indicate "no opacity".
             // This can be useful for post-processing and image compositing.
-            cur_pathSegment.colorThroughput = glm::vec3(0.0f);
+            if (env_light_id_idx == NULL_PRIMITIVE) {
+                cur_pathSegment.colorThroughput = glm::vec3(0.0f);
+            }
+            else {
+                // TODO add environment light
+                //if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
+                //    
+                //}
+                int env_light_id = lightIDs[env_light_id_idx];
+#if RAY_SCENE_INTERSECTION == BRUTE_FORCE
+                GeomTransform t = geoms[env_light_id].geomT;
+                int mat_id = geoms[env_light_id].materialid;
+#elif RAY_SCENE_INTERSECTION == HBVH
+                GeomTransform t = primitives[env_light_id].geomT;
+                int mat_id = primitives[env_light_id].materialid;
+#endif // RAY_SCENE_INTERSECTION == BRUTE_FORCE
+                cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * env_Light_Le(t, cur_pathSegment.ray.direction, materials[mat_id], textures);
+            }
             cur_pathSegment.remainingBounces = 0;
         }
     }
@@ -493,7 +492,17 @@ __global__ void finalGather(int nPaths, glm::vec3 * image, PathSegment * iterati
 	if (index < nPaths)
 	{
 		PathSegment iterationPath = iterationPaths[index];
-		image[iterationPath.pixelIndex] += iterationPath.colorSum;
+#if _DEBUG
+        vc3 c = iterationPath.colorSum;
+        if (isfinite(c.x) && isfinite(c.y) && isfinite(c.z)) {
+            image[iterationPath.pixelIndex] += c;
+        }
+        else {
+            printf("pixel index : %d meet nan or infinite value: (%f, %f, %f)\n", iterationPath.pixelIndex, c.x, c.y, c.z);
+        }
+#else
+        image[iterationPath.pixelIndex] += iterationPath.colorSum;
+#endif
 	}
 }
 
@@ -686,6 +695,7 @@ void pathtrace(uchar4 *pbo, int frame, int iter) {
         dev_paths,
         dev_lightIDs,
         hst_scene->lightIDs.size(),
+        hst_scene->environmentLightID_idx,
         dev_geoms,
         hst_scene->geoms.size(),
         dev_materials,
@@ -776,8 +786,8 @@ void initDeviceTexture(Scene* scene)
 
     for (Material& m : scene->materials)
     {
-        if (m.diffuseTexture.index >= 0)
-            m.diffuseTexture.index = offsetList[m.diffuseTexture.index];
+        if (m.baseColorTexture.index >= 0)
+            m.baseColorTexture.index = offsetList[m.baseColorTexture.index];
 
         if (m.specularTexture.index >= 0)
             m.specularTexture.index = offsetList[m.specularTexture.index];
@@ -786,5 +796,5 @@ void initDeviceTexture(Scene* scene)
             m.normalTexture.index = offsetList[m.normalTexture.index];
     }
 
-    checkCUDAError("initializeDeviceTextures");
+    checkCUDAError("initializeDeviceTextures end");
 }

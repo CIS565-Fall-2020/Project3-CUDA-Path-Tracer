@@ -51,6 +51,9 @@ public:
 
     std::vector<Geom> geoms;
     std::vector<int> lightIDs; // each int represent a geom id that has emissive material
+    int environmentLightID_idx = NULL_PRIMITIVE;
+
+    void setDeviceEnvMap();
 
     std::vector<Triangle> triangles;
     std::vector<GLTF_Model> gltf_models;
@@ -63,6 +66,9 @@ public:
 
     std::vector<Texture*> textures;
     std::unordered_map<string, Texture*> textureMap; // avoid repeated texture
+
+    std::vector<Float> sampler_pdf;
+    std::vector<Float> sampler_cdf;
 
     RenderState state;
 };

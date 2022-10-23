@@ -3,7 +3,7 @@
 #include <cstring>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/string_cast.hpp>
-
+#include "cfg.h"
 #include <tiny_gltf.h>
 
 
@@ -36,10 +36,12 @@ Scene::Scene(string filename) {
 
     // assign the light idx
 #if RAY_SCENE_INTERSECTION == BRUTE_FORCE
-
     for (int i = 0; i < geoms.size(); i++) {
         if (materials[geoms[i].materialid].emittance > 0.) {
             lightIDs.push_back(i);
+            if (geoms[i].type == GeomType::INFINITE_SHAPE) {
+                this->environmentLightID_idx = lightIDs.size() - 1;
+            }
         }
     }
 
@@ -49,12 +51,11 @@ Scene::Scene(string filename) {
     for (int i = 0; i < primitives.size(); i++) {
         if (materials[primitives[i].materialid].emittance > 0.) {
             lightIDs.push_back(i);
+            if (geoms[i].type == GeomType::INFINITE_SHAPE) {
+                this->environmentLightID_idx = lightIDs.size() - 1;
+            }
         }
     }
-#endif
-
-#if buildAccelerationStructure == HBVH:
-    this->buildAccelerationStructure();
 #endif
 }
 
@@ -351,6 +352,28 @@ int Scene::flattenBVHTree(BVHBuildNode* node, int& offset)
     return myoffset;
 }
 
+void Scene::setDeviceEnvMap()
+{
+    //<< Compute scalar - valued image img from environment map >>
+    if (this->environmentLightID_idx != NULL_PRIMITIVE) {
+        int env_light_id = this->lightIDs[this->environmentLightID_idx];
+        Material& light_mat = materials[geoms[env_light_id].materialid];
+        int width = light_mat.baseColorTexture.width, height = light_mat.baseColorTexture.height;
+        Float filter = (Float)1 / std::max(width, height);
+        std::unique_ptr<Float[]> img(new Float[width * height]);
+        for (int v = 0; v < height; ++v) {
+            Float vp = (Float)v / (Float)height;
+            Float sinTheta = std::sin(PI * Float(v + .5f) / Float(height));
+            for (int u = 0; u < width; ++u) {
+                Float up = (Float)u / (Float)width;
+                img[u + v * width] = Math::luminance(this->textures[light_mat.baseColorTexture.index]->pixels[u + v * width]);
+                img[u + v * width] *= sinTheta;
+            }
+        }
+        light_mat.envMapSampler = Distribution2D(img.get(), width, height);
+    }
+}
+
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
@@ -377,10 +400,13 @@ int Scene::loadGeom(string objectid) {
                 std::cout << "Creating new plane..." << endl;
                 newGeom.type = PLANE;
             }
-            // Jack12
             else if (strcmp(line.c_str(), "gltf_mesh") == 0) {
                 std::cout << "Creating new gltf mesh..." << endl;
                 newGeom.type = GLTF_MESH;
+            }
+            else if (strcmp(line.c_str(), "infinite") == 0) {
+                std::cout << "Creating an infinite shape..." << endl;
+                newGeom.type = INFINITE_SHAPE;
             }
 
         }
@@ -1219,7 +1245,7 @@ int Scene::loadMaterial(string materialid) {
             }
             else if (strcmp(tokens[0].c_str(), "TEX_DIFFUSE") == 0)
             {
-                newMaterial.diffuseTexture = loadTexture(tokens[1], false);
+                newMaterial.baseColorTexture = loadTexture(tokens[1], false);
             }
             else if (strcmp(tokens[0].c_str(), "TEX_SPECULAR") == 0)
             {
@@ -1228,6 +1254,11 @@ int Scene::loadMaterial(string materialid) {
             else if (strcmp(tokens[0].c_str(), "TEX_NORMAL") == 0)
             {
                 newMaterial.normalTexture = loadTexture(tokens[1], false);
+            }
+            else if (strcmp(tokens[0].c_str(), "ENV_MAP") == 0)
+            {
+                // TODO store 
+                newMaterial.baseColorTexture = loadTexture(tokens[1], false);
             }
             else if (strcmp(tokens[0].c_str(), "MICROTYPE") == 0)
             {

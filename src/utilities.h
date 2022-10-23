@@ -8,11 +8,18 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cuda.h>
 
 #include "sceneStructs.h"
 
+typedef float Float;
+typedef glm::vec2 vc2;
+typedef glm::vec3 vc3;
+typedef glm::vec4 vc4;
+
 #define PI                3.1415926535897932384626422832795028841971f
 #define TWO_PI            6.2831853071795864769252867665590057683943f
+#define InvPI             1.f / PI
 #define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476f
 #define EPSILON           0.00001f
 
@@ -40,4 +47,21 @@ namespace geometry {
     extern void aabbForImplicit(aabbBounds& aabb, const Geom& geom);
     extern void aabbForTriangle(aabbBounds& aabb, const Triangle& geom);
     extern aabbBounds aabbForVertex(glm::vec3* verts, int num);
+}
+
+namespace Math {
+    __host__ __device__ inline Float SphericalTheta(const vc3& v) {
+        return glm::acos(glm::clamp(v.z, (Float)-1, (Float)1));
+    }
+
+    __host__ __device__ inline Float SphericalPhi(const vc3& v) {
+        Float p = glm::atan(v.y, v.x);
+        return (p < 0) ? (p + 2 * PI) : p;
+    }
+
+    __host__ __device__ inline float luminance(const glm::vec3& color) {
+        // For the sRGB colorspace, the relative luminance of a color is defined as L = 0.2126 * R + 0.7152 * G + 0.0722 * B
+        const glm::vec3 T(.2126f, .7152f, .0722f);
+        return glm::dot(color, T);
+    }
 }

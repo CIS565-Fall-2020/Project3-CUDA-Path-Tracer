@@ -6,8 +6,10 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include <limits>
+#include "sampler.h"
 
 #define BACKGROUND_COLOR (glm::vec3(0.0f))
+#define NULL_PRIMITIVE -1
 
 typedef float Float;
 typedef glm::vec2 vc2;
@@ -16,6 +18,7 @@ typedef glm::vec4 vc4;
 
 enum GeomType {
     DELTA, // TODO tmp measure for delta light during direct light 
+    INFINITE_SHAPE, // infinite light
     PLANE,
     SPHERE,
     CUBE,
@@ -155,7 +158,15 @@ struct MicroDistribution {
     vc2 alpha;
 };
 
+enum MaterialModelType {
+    Lambertion = 0,
+    Light = 1,
+    MetalFlow = 1,
+    Disney = 2
+};
+
 struct Material {
+    MaterialModelType m_model_type = MaterialModelType::Lambertion;
     glm::vec3 color;
     struct {
         float exponent;
@@ -168,9 +179,10 @@ struct Material {
     bool isSurface = true;
     MicroDistribution dist{Flat, vc2(0.)};
 
-    TextureDescriptor diffuseTexture;
+    TextureDescriptor baseColorTexture;
     TextureDescriptor specularTexture;
     TextureDescriptor normalTexture;
+    Distribution2D envMapSampler;
 };
 
 struct Camera {
@@ -201,6 +213,7 @@ struct PathSegment {
     glm::vec3 colorThroughput;
 	int pixelIndex;
 	int remainingBounces;
+    int prevBxdf;
 };
 
 struct Vertex
@@ -223,6 +236,7 @@ struct ShadeableIntersection {
 };
 
 enum BxDFType {
+    BSDF_NULL = 0,
     BSDF_REFLECTION = 1 << 0,   // This BxDF handles rays that are reflected off surfaces
     BSDF_TRANSMISSION = 1 << 1, // This BxDF handles rays that are transmitted through surfaces
     BSDF_DIFFUSE = 1 << 2,      // This BxDF represents diffuse energy scattering, which is uniformly random

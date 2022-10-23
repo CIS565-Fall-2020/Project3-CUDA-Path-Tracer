@@ -80,7 +80,7 @@ REFRIOR     0
 EMITTANCE   0
 TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\model\kirby_plush\textures\Material_0_baseColor.jpeg
 
-// lines
+// checkers
 MATERIAL 8
 RGB         1. 1. 1.
 SPECEX      0
@@ -89,7 +89,7 @@ REFL        0
 REFR        0
 REFRIOR     0
 EMITTANCE   0
-TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\scenes\cornell_v002\lines.png
+TEX_DIFFUSE C:\Users\jack1\Documents\Project\Project3-CUDA-Path-Tracer\scenes\Tex\checker.png
 
 // debug color
 MATERIAL 9

@@ -11,6 +11,7 @@
 #include "cudaUtils.cuh"
 #include <stdlib.h>
 #include "bvh.h"
+#include "sampler.h"
 
 // CHECKITOUT
 /**
@@ -30,7 +31,7 @@ void StratifiedSample1D(
     
     for (int i = 0; i < nSamples; i++) {
         float delta = jitter ? u01(rng) : 0.5f;
-        samp[i] = min( (i + delta) * invNsamples, (float)0x1.fffffep-1);
+        samp[i] = glm::min( (i + delta) * invNsamples, (float)0x1.fffffep-1);
     }
 }
 
@@ -48,8 +49,8 @@ void StratifiedSample2D(
     for (int i = 0; i < nSamples; i++) {
         float jx = jitter ? u01(rng) : 0.5f;
         float jy = jitter ? u01(rng) : 0.5f;
-        samp[i].x = min((i + jx) * d, 1.0f - EPSILON);
-        samp[i].y = min((i + jy) * d, 1.0f - EPSILON);
+        samp[i].x = glm::min((i + jx) * d, 1.0f - EPSILON);
+        samp[i].y = glm::min((i + jy) * d, 1.0f - EPSILON);
     }
 }
 
@@ -113,6 +114,7 @@ vc3 imperfectSpecularReflection(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
+    int& bxdf,
     vc3* textureArray,
     thrust::default_random_engine& rng) {
     
@@ -163,14 +165,16 @@ vc3 LambertBRDF(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
+    int& bxdf,
     glm::vec3* textureArray,
     thrust::default_random_engine& rng) {
     vc3 f = m.color / glm::pi<Float>();
     wiw = calculateRandomDirectionInHemisphere(itsct.vtx.normal, rng);
-    if (m.diffuseTexture.valid == 1) {
-        f *= sampleTexture(textureArray, itsct.vtx.uv, m.diffuseTexture);
+    if (m.baseColorTexture.valid == 1) {
+        f *= sampleTexture(textureArray, itsct.vtx.uv, m.baseColorTexture);
     }
     pdf = glm::dot(itsct.vtx.normal, wiw) / glm::pi<Float>();
+    bxdf |= BxDFType::BSDF_DIFFUSE;
     return f;
 }
 
@@ -181,6 +185,7 @@ vc3 refraction(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
+    int& bxdf,
     vc3* textureArray,
     thrust::default_random_engine& rng
 ) {
@@ -204,15 +209,16 @@ vc3 refraction(
         // internal reflection
         // TODO
         f = perfectSpecularReflection(wiw, wow, pdf, itsct, m, textureArray, rng);
+        bxdf = BxDFType::BSDF_SPECULAR | BxDFType::BSDF_REFLECTION;
     }
     else {
         wiw = refract_dir;
         f = m.specular.color / glm::abs(glm::dot(wiw, itsct.vtx.normal));
-        if (m.normalTexture.valid == 1) {
+        if (m.specularTexture.valid == 1) {
             f *= sampleTexture(textureArray, itsct.vtx.uv, m.specularTexture);
         }
         pdf = 1.;
-        //pathSegment.ray.origin = intersect + 0.01f * ray_dir;
+        bxdf = BxDFType::BSDF_SPECULAR | BxDFType::BSDF_TRANSMISSION;
     }
     return f;
 
@@ -225,6 +231,7 @@ vc3 SchlickFresnel(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
+    int& bxdf,
     vc3* textureArray,
     thrust::default_random_engine& rng
 ) {
@@ -240,10 +247,10 @@ vc3 SchlickFresnel(
     float R_theta = R_0 + (1 - R_0) * powf( (1 - cos_theta), 5.0f);
 
     if (R_theta < u01(rng)) {
-        return refraction(wiw, wow, pdf, itsct, m, textureArray, rng);
+        return refraction(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
     }
     else {
-        return imperfectSpecularReflection(wiw, wow, pdf, itsct, m, textureArray, rng);
+        return imperfectSpecularReflection(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
     }
 }
 
@@ -279,8 +286,8 @@ vc3 evalBsdf(
             // diffuse on cos sample
             Float cosIn = glm::max(glm::dot(itsct.vtx.normal, wiw), 0.0f);
             f = cosIn * m.color;
-            if (m.diffuseTexture.valid == 1) {
-                f *= sampleTexture(textureArray, itsct.vtx.uv, m.diffuseTexture);
+            if (m.baseColorTexture.valid == 1) {
+                f *= sampleTexture(textureArray, itsct.vtx.uv, m.baseColorTexture);
             }
             pdf = cosIn / glm::pi<Float>();
         }
@@ -313,6 +320,7 @@ vc3 sampleBsdf(
     vc3& wiw,
     Float& pdf,
     const Material& m,
+    int& bxdf,
     glm::vec3* textureArray,
     thrust::default_random_engine& rng
 ) {
@@ -325,10 +333,10 @@ vc3 sampleBsdf(
     vc3 brdf;
     if (p > m.hasReflective + m.hasRefractive) {
         if (m.dist.type == Flat) {
-            brdf = LambertBRDF(wiw, pdf, itsct, m, textureArray, rng);
+            brdf = LambertBRDF(wiw, pdf, itsct, m, bxdf, textureArray, rng);
         }
         else if (m.dist.type == TrowbridgeReitz) {
-            brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, pdf, textureArray, rng);
+            brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, bxdf, pdf, textureArray, rng);
 #if _DEBUG
             if (!isfinite(brdf.x) || !isfinite(brdf.y) || !isfinite(brdf.z)) {
                 printf("brdf infinite or Nan\n");
@@ -343,14 +351,14 @@ vc3 sampleBsdf(
     }
     else if (m.hasReflective > 0 && m.hasRefractive > 0) {
         // fresnel
-        brdf = SchlickFresnel(wiw, wow, pdf, itsct, m, textureArray, rng);
+        brdf = SchlickFresnel(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
     }
     else if (p > m.hasRefractive) {
-        brdf = imperfectSpecularReflection(wiw, wow, pdf, itsct, m, textureArray, rng);
+        brdf = imperfectSpecularReflection(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
     }
     else {
         // refractive under construction
-        brdf = refraction(wiw, wow, pdf, itsct, m, textureArray, rng);
+        brdf = refraction(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
     }
     return brdf;
 }
@@ -393,7 +401,7 @@ void scatterRay(
     vc3 lightIn;
     Float pdf;
 
-    brdf = sampleBsdf(itsct, -pathSegment.ray.direction, lightIn, pdf, m, textureArray, rng);
+    brdf = sampleBsdf(itsct, -pathSegment.ray.direction, lightIn, pdf, m, pathSegment.prevBxdf, textureArray, rng);
     pathSegment.colorThroughput *= brdf * abs(glm::dot(itsct.vtx.normal, lightIn)) / pdf;
     pathSegment.ray.direction = lightIn;
     pathSegment.ray.origin = itsct.vtx.pos + lightIn * 1e-3f;
@@ -503,7 +511,27 @@ glm::vec3 Light_Le(const ShadeableIntersection& itsct, const Geom& light_geom, c
 }
 
 __device__ __host__
-glm::vec3 Light_sample_Li(const ShadeableIntersection& given_itsct, ShadeableIntersection& light_itsct, const Geom& light_geom, const Material& mat, const glm::vec2& xi, glm::vec3& wiw, float& lightPdf) {
+glm::vec3 env_Light_Le(const GeomTransform& lightTransform, const vc3& rayDir, const Material& mat, vc3* textureArray) {
+    vc3 w = glm::normalize( multiplyMV( lightTransform.inverseTransform, vc4(rayDir, 0.)));
+    vc2 st(Math::SphericalPhi(w) * InvPI * 0.5, Math::SphericalTheta(w) * InvPI);
+
+    vc3 f = mat.color * mat.emittance;
+    if (mat.baseColorTexture.valid == 1) {
+        f *= sampleTexture(textureArray, st, mat.baseColorTexture);
+    }
+    //printf("env light sample uv: (%f, %f), color: (%f, %f, %f), tex valid: %d\n", st.x, st.y, f.x, f.y, f.z, mat.baseColorTexture.valid);
+    return f;
+}
+
+//__device__ __host__
+//vc3 env_light_sample_Li() {
+//
+//}
+
+__device__ __host__
+glm::vec3 Light_sample_Li(
+    const ShadeableIntersection& given_itsct, ShadeableIntersection& light_itsct, const Geom& light_geom, const Material& mat, const glm::vec2& xi, glm::vec3& wiw, float& lightPdf,
+    vc3* textureArray) {
     /// <summary>
     /// 
     /// </summary>
@@ -515,14 +543,66 @@ glm::vec3 Light_sample_Li(const ShadeableIntersection& given_itsct, ShadeableInt
     /// <param name="wiw"> from given intersection to sampled direction </param>
     /// <param name="lightPdf"></param>
     /// <returns></returns>
-    light_itsct = arealight_shape_sample(given_itsct, light_geom, xi, lightPdf);
-    wiw = glm::normalize(light_itsct.vtx.pos - given_itsct.vtx.pos);
-    return Light_Le(light_itsct, light_geom, mat, -wiw);
+    
+    // TODO infinite light
+    if (light_geom.type != INFINITE_SHAPE) {
+        light_itsct = arealight_shape_sample(given_itsct, light_geom, xi, lightPdf);
+        wiw = glm::normalize(light_itsct.vtx.pos - given_itsct.vtx.pos);
+        return Light_Le(light_itsct, light_geom, mat, -wiw);
+    }
+    else {
+        // <<Find (u, v) sample coordinates in infinite light texture>>
+        Float mapPdf;
+        vc2 uv = mat.envMapSampler.SampleContinuous(xi, mapPdf);
+        if (mapPdf == 0) return vc3(0);
+
+        //<< Convert infinite light sample point to direction >>
+        Float theta = uv[1] * PI, phi = uv[0] * 2 * PI;
+        Float cosTheta = glm::cos(theta), sinTheta = glm::sin(theta);
+        Float sinPhi = glm::sin(phi), cosPhi = glm::cos(phi);
+        wiw = multiplyMV(
+            light_geom.geomT.transform,
+            vc4(sinTheta * cosPhi, sinTheta * sinPhi,
+                cosTheta, 1));
+
+        //<< Compute PDF for sampled infinite light direction >>
+        lightPdf = mapPdf / (2 * PI * PI * sinTheta);
+        if (sinTheta == 0) lightPdf = 0;
+        // TODO set radius and light_itsct
+        const Float world_radius = 233.0f;
+
+        vc3 f = mat.color * mat.emittance;
+        if (mat.baseColorTexture.valid == 1) {
+            f *= sampleTexture(textureArray, uv, mat.baseColorTexture);
+        }
+
+        light_itsct.vtx = { given_itsct.vtx.pos + 2 * world_radius * wiw, vc3(0.), uv };
+        light_itsct.materialId = light_geom.materialid;
+        light_itsct.geom_idx = light_geom.geom_idx;
+
+        return f;
+    }
+    
+    
 }
+
+__device__ __host__ __forceinline__
+Float env_light_pdf(const Geom& light_geom, const Material& light_mat, const glm::vec3& wiw) {
+    vc3 wi = glm::normalize(multiplyMV(light_geom.geomT.inverseTransform, vc4(wiw, 1.0)));
+    Float theta = Math::SphericalTheta(wi), phi = Math::SphericalPhi(wi);
+    Float sinTheta = glm::sin(theta);
+    if (sinTheta == 0) return 0;
+    // TOCHECK
+    return light_mat.envMapSampler.Pdf(
+        vc2(phi / (2 * PI), theta / (PI))
+    ) / (2 * PI * PI * sinTheta);
+}
+
 
 __device__ __host__
 Float light_pdf(
     const ShadeableIntersection& light_itsct, const ShadeableIntersection& ref_itsct,
+    const Material& light_mat,
     const Geom& light_geom, const glm::vec3& wiw) {
     // area light
     if (light_geom.type == SPHERE) {
@@ -536,6 +616,10 @@ Float light_pdf(
     else if (light_geom.type == PLANE) {
         Float area = 2 * light_geom.geomT.scale[0] * light_geom.geomT.scale[1];
         return glm::distance2(light_itsct.vtx.pos, ref_itsct.vtx.pos) / (glm::abs(glm::dot(light_itsct.vtx.normal, (-wiw))) * area);
+    }
+    else if (light_geom.type == INFINITE_SHAPE) {
+        // TOCHECK
+        return env_light_pdf(light_geom, light_mat, wiw);
     }
     else {
         return 1.;
@@ -714,7 +798,7 @@ glm::vec3 EstimateDirect(
     Geom* geoms, int geom_size, GLTF_Model* models, Triangle* triangles,
     Primitive* primitives, LinearBVHNode* LBVHnodes,
     glm::vec3* textureArray,
-    const Geom& light_geom,
+    const Geom& light_geom, const int& env_light_id,
     thrust::default_random_engine& rng) {
     /// <summary>
     /// Estimate direct light given the light
@@ -729,6 +813,7 @@ glm::vec3 EstimateDirect(
     /// <param name="triangles"></param>
     /// <param name="textureArray"></param>
     /// <param name="light_geom"> the geom of the light </param>
+    /// <param name="env_light_id"></param>
     /// <param name="rng"></param>
     /// <returns></returns>
 
@@ -740,9 +825,9 @@ glm::vec3 EstimateDirect(
     glm::vec2 uScattering(u01(rng), u01(rng));
     // the to-be-estimated pos
     glm::vec3 itsct_p = itsct.vtx.pos;
-    Material mat = materials[itsct.materialId];
+    const Material& mat = materials[itsct.materialId];
     ShadeableIntersection sampled_light_itsct;
-    glm::vec3 Li = Light_sample_Li(itsct, sampled_light_itsct, light_geom, materials[light_geom.materialid], uLight, wiw, lightPdf);
+    glm::vec3 Li = Light_sample_Li(itsct, sampled_light_itsct, light_geom, materials[light_geom.materialid], uLight, wiw, lightPdf, textureArray);
 #if DirectLightSampleLight == 1
     //printf("Li: (%f, %f, %f), lightPdf: %f\n", Li.x, Li.y, Li.z, lightPdf);
     if (lightPdf > 0. && !isBlack(Li)) {
@@ -771,7 +856,7 @@ glm::vec3 EstimateDirect(
                 r.origin.x, r.origin.y, r.origin.z
                 );
             printf("hit geom idx %d\n", hit_geom_idx);*/
-            if (hit_geom_idx == -1 || glm::distance2(intersection.vtx.pos, itsct.vtx.pos) > 1e-4) {
+            if (hit_geom_idx == NULL_PRIMITIVE || glm::distance2(intersection.vtx.pos, itsct.vtx.pos) > 1e-4) {
                 // not hit the same light || has occulsion between
                 bool handleMedia = false;
                 Li *= handleMedia;
@@ -795,11 +880,13 @@ glm::vec3 EstimateDirect(
 #endif
 
 #if DirectLightSampleBSDF == 1
+    //<< Account for light contributions along sampled direction wi >>
     if (light_geom.type != DELTA) {
         glm::vec3 f(0.);
         bool sampledSpecular = false;
         if (mat.isSurface) {
-            f = sampleBsdf(itsct, wow, wiw, scatteringPdf, mat, textureArray, rng);
+            int bxdf;
+            f = sampleBsdf(itsct, wow, wiw, scatteringPdf, mat, bxdf, textureArray, rng);
             f *= glm::abs(glm::dot(itsct.vtx.normal, wiw));
             // TODO handle sampledSpecular
         }
@@ -826,10 +913,23 @@ glm::vec3 EstimateDirect(
                 );*/
             // <<Add light contribution from material sampling>> 
             glm::vec3 Li(0.);
-            float weight = 1.;
+            Float weight = 1.;
             bool hit_light = false;
-            if (hit_geom_idx == -1) {
-                // TODO did not hit anything, handle infinite area light
+            
+            if (hit_geom_idx == NULL_PRIMITIVE) {
+                // TODO get from env light id
+                if (env_light_id != NULL_PRIMITIVE) {
+                    const Material& light_mat = materials[geoms[env_light_id].materialid];
+                    // TOCHECK did not hit anything, handle infinite area light
+                    if (light_geom.type == GeomType::INFINITE_SHAPE) {
+                        Li = env_Light_Le(light_geom.geomT, wiw, light_mat, textureArray);
+                        lightPdf = env_light_pdf(light_geom, light_mat, wiw);
+                        weight = powerHeuristic(1., scatteringPdf, 1., lightPdf);
+
+                        //printf("Sample bsdf Li: (%f, %f, %f), lightPdf: %f, weight: %f\n",Li.x, Li.y, Li.z, lightPdf, weight);
+                    }
+                }
+                
             }
             else {
 #if RAY_SCENE_INTERSECTION == BRUTE_FORCE
@@ -838,11 +938,12 @@ glm::vec3 EstimateDirect(
                 hit_light = (primitives[hit_geom_idx].geom_idx == light_geom.geom_idx);
 #endif
                 if (hit_light) {
+                    const Material& light_mat = materials[light_intersection.materialId];
                     Li = Light_Le(light_intersection, light_geom, materials[light_geom.materialid], -wiw);
                     
                     if (!sampledSpecular) {
                         // get light pdf TODO only get pdf
-                        lightPdf = light_pdf(light_intersection, itsct, light_geom, wiw);
+                        lightPdf = light_pdf(light_intersection, itsct, light_mat, light_geom, wiw);
                         if (lightPdf == 0) {
                             return Ld;
                         }
@@ -871,8 +972,7 @@ void UniformSampleOneLight(
     const ShadeableIntersection& itsct,
     Material* materials,
     const glm::vec3& wow,
-    const int& nLights,
-    int *lightIDs,
+    const int& nLights, int* lightIDs, const int& env_lightID_idx,
     Geom* geoms, int geom_size, GLTF_Model* models, Triangle* triangles,
     Primitive* primitives, LinearBVHNode* LBVHnodes,
     vc3* textureArray,
@@ -884,14 +984,12 @@ void UniformSampleOneLight(
     }
     thrust::uniform_int_distribution<int> dist(0, nLights-1);
     int chosen_light_id = lightIDs[dist(rng)];
+    int env_light_id = env_lightID_idx != -1 ? lightIDs[env_lightID_idx] : NULL_PRIMITIVE;
     vc3 f = EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials,
         geoms, geom_size, models, triangles,
         primitives, LBVHnodes,
         textureArray,
-        geoms[chosen_light_id], rng);
+        geoms[chosen_light_id], env_light_id,
+        rng);
     pathSegment.colorSum += pathSegment.colorThroughput * (float)nLights * f;
 }
-
-
-
-

@@ -80,6 +80,8 @@ set(headers
     src/cfg.h
     src/microface.h
     src/cudaUtils.cuh
+    src/sampler.h
+    src/cudahelper.h
     external/include/raytrace/gltf-loader.h
     )
 
@@ -94,6 +96,8 @@ set(sources
     src/sceneStructs.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/sampler.cpp
+    src/cudahelper.cpp
     #external/include/raytrace/gltf-loader.cc
     )
 

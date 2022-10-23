@@ -162,8 +162,8 @@ vc3 microfaceBRDF_f(
 	Float G = distribution_G(mat.dist, wo, wi, itsct.vtx.normal);
 
 	vc3 c = mat.color;
-	if (mat.diffuseTexture.valid == 1) {
-		c *= sampleTexture(textureArray, itsct.vtx.uv, mat.diffuseTexture);
+	if (mat.baseColorTexture.valid == 1) {
+		c *= sampleTexture(textureArray, itsct.vtx.uv, mat.baseColorTexture);
 	}
 
 	// printf("microF: D: %f, G: %f, cosThetaI: %f, cosThetaO: %f\n", D, G, cosThetaI, cosThetaO);
@@ -186,6 +186,7 @@ vc3 microfaceBRDF_sample_f(
 	const vc3& wo, vc3& wi,
 	const ShadeableIntersection& itsct,
 	const Material& mat,
+	int& bxdf,
 	Float& pdf, 
 	vc3* textureArray,
 	thrust::default_random_engine& rng) {
@@ -209,7 +210,7 @@ vc3 microfaceBRDF_sample_f(
 		pdf = Float(0);
 		return vc3(0.);
 	}
-	float3 f_wh = make_float3(wh.x, wh.y, wh.z);
+	bxdf = BxDFType::BSDF_GLOSSY | BxDFType::BSDF_REFLECTION;
 	pdf = distribution_pdf(mat.dist, wo, wh, itsct.vtx.normal) / (4. * glm::dot(wo, wh) + 1e-6);
 	return microfaceBRDF_f(wo, wi, itsct, mat, textureArray);
 }
