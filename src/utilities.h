@@ -47,6 +47,13 @@ namespace geometry {
     extern void aabbForImplicit(aabbBounds& aabb, const Geom& geom);
     extern void aabbForTriangle(aabbBounds& aabb, const Triangle& geom);
     extern aabbBounds aabbForVertex(glm::vec3* verts, int num);
+
+    __device__ inline vc3 normalMapping(const vc3& tangent_normal, const vc3& origin_normal) {
+        glm::vec3 t = (glm::abs(tangent_normal.x) > 0.9999f) ? vc3(0.f, 1.f, 0.f) : vc3(1.f, 0.f, 0.f);
+        glm::vec3 b = glm::normalize(glm::cross(tangent_normal, t));
+        t = glm::cross(b, tangent_normal);
+        return glm::mat3(t, b, tangent_normal) * origin_normal;
+    }
 }
 
 namespace Math {

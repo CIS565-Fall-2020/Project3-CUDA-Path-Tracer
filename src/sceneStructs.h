@@ -159,14 +159,14 @@ struct MicroDistribution {
 };
 
 enum MaterialModelType {
-    Lambertion = 0,
+    SpecularGlossy = 0,
     Light = 1,
     MetalFlow = 1,
     Disney = 2
 };
 
 struct Material {
-    MaterialModelType m_model_type = MaterialModelType::Lambertion;
+    MaterialModelType m_model_type = MaterialModelType::SpecularGlossy;
     glm::vec3 color;
     struct {
         float exponent;

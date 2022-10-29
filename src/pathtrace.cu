@@ -395,7 +395,7 @@ __global__ void shadeTrueMaterial(
             thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
             thrust::uniform_real_distribution<float> u01(0, 1);
 
-            Material material = materials[intersection.materialId];
+            const Material& material = materials[intersection.materialId];
             glm::vec3 materialColor = material.color;
 
             // If the material indicates that the object was a light, "light" the ray
@@ -417,9 +417,12 @@ __global__ void shadeTrueMaterial(
             // like what you would expect from shading in a rasterizer like OpenGL.
             // TODO: replace this! you should be able to start with basically a one-liner
             else {
-                // TODO normal mapping
-                glm::vec3 n = intersection.vtx.normal;
-                
+                vc3& n = intersection.vtx.normal;
+
+                if (material.normalTexture.valid == 1) {
+                    vc3 tangent_normal = glm::normalize((Float)2 * sampleTexture(textures, intersection.vtx.uv, material.normalTexture) - (Float)1);
+                    n = geometry::normalMapping(tangent_normal, n);
+                }
 #if DirectLightPass == 1
                 UniformSampleOneLight(
                     cur_pathSegment,

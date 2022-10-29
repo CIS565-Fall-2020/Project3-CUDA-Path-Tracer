@@ -13,7 +13,6 @@ Float sinPhi(const vc3& a, const vc3& normal) {
 
 	vc3 x, y;
 	CoordinateSys(normal, x, y);
-	Float tmp = glm::dot(a, y);
 
 	return (sinTheta == 0) ? 0 : glm::clamp(glm::dot(a, y) / sinTheta, -1.f, 1.f);
 }
@@ -21,9 +20,6 @@ Float sinPhi(const vc3& a, const vc3& normal) {
 __host__ __device__
 Float cosPhi(const vc3& a, const vc3& normal) {
 	// x / sinTheta
-	float3 f3_a = make_float3(a.x, a.y, a.z);
-	float3 f3_n = make_float3(normal.x, normal.y, normal.z);
-
 	Float sinTheta = glm::sqrt(glm::max((Float)0, (Float)1 - glm::dot(a, normal) * glm::dot(a, normal)));
 	
 	vc3 x, y;
