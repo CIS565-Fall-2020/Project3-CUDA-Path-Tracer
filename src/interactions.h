@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include "bvh.h"
 #include "sampler.h"
+#include "disney.h"
 
 // CHECKITOUT
 /**
@@ -54,38 +55,24 @@ void StratifiedSample2D(
     }
 }
 
-// cosine weighted
-__host__ __device__
-glm::vec3 calculateRandomDirectionInHemisphere(
-        glm::vec3 normal, thrust::default_random_engine &rng) {
-    
-    
-    
-#if stratified_sampling
-    const int nsamples = 256;
-    thrust::uniform_real_distribution<float> u01(0, nsamples);
-    
-    glm::vec2 samp[nsamples];
-    StratifiedSample2D(rng, samp, nsamples, true);
-    int idx = int(u01(rng));
-    float up = sqrt(samp[idx].x); // cos(theta)
-    float over = sqrt(1 - up * up); // sin(theta)
-    idx = int(u01(rng));
-    float around = samp[idx].y * TWO_PI;
-#else
-    thrust::uniform_real_distribution<float> u01(0, 1);
-    float up = sqrt(u01(rng)); // cos(theta)
-    float over = sqrt(1 - up * up); // sin(theta)
-    float around = u01(rng) * TWO_PI;
-#endif // stratified_sampling
-    // Use not-normal direction to generate two perpendicular directions
-    glm::vec3 perpendicularDirection1;
-    glm::vec3 perpendicularDirection2;
-    CoordinateSys(normal, perpendicularDirection1, perpendicularDirection2);
+__host__ __device__ __forceinline__
+Material sampleMaterialFromTex(
+    Material& m, 
+    const vc2& uv,
+    vc3* textureArray) {
+    Material ret_m = m;
+    if (m.baseColorTexture.valid == 1) {
+        m.color *= sampleTexture(textureArray, uv, m.baseColorTexture);
+        //printf("color: (%f, %f, %f)\n", m.color.r, m.color.g, m.color.b);
+    }
 
-    return up * normal
-        + cos(around) * over * perpendicularDirection1
-        + sin(around) * over * perpendicularDirection2;
+    if (m.disneyPara.RoughMetalTexture.valid == 1) {
+        vc3 rgb = sampleTexture(textureArray, uv, m.disneyPara.RoughMetalTexture);
+        // R: metal, G: rough // ps: this is not for sure
+        m.disneyPara.metallic *= rgb.b;
+        m.disneyPara.roughness *= rgb.g;
+        //printf("tex: (%f, %f, %f), meta: %f, rough: %f\n", rgb.r, rgb.g, rgb.b, m.disneyPara.metallic, m.disneyPara.roughness);
+    }
 }
 
 __host__ __device__
@@ -93,6 +80,7 @@ vc3 perfectSpecularReflection(
     vc3& wiw,
     const vc3& wow,
     Float& pdf,
+    PrevSegmentInfo& prev,
     const ShadeableIntersection& itsct,
     const Material& m,
     glm::vec3* textureArray,
@@ -100,10 +88,11 @@ vc3 perfectSpecularReflection(
 
     wiw = glm::reflect(-wow, itsct.vtx.normal);
     vc3 f = m.specular.color / glm::abs(glm::dot(wiw, itsct.vtx.normal));
-    if (m.specularTexture.valid == 1) {
+    /*if (m.specularTexture.valid == 1) {
         f *= sampleTexture(textureArray, itsct.vtx.uv, m.specularTexture);
-    }
+    }*/
     pdf = 1.;
+    prev = { pdf, BxDFType::BSDF_REFLECTION | BxDFType::BSDF_SPECULAR };
     return f;
 }
 
@@ -114,14 +103,14 @@ vc3 imperfectSpecularReflection(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
-    int& bxdf,
+    PrevSegmentInfo& prev,
     vc3* textureArray,
     thrust::default_random_engine& rng) {
     
     
     const float n = m.specular.exponent;
     if (n >= 4096.0f) {
-        return perfectSpecularReflection(wiw, wow, pdf, itsct, m, textureArray, rng);
+        return perfectSpecularReflection(wiw, wow, pdf, prev, itsct, m, textureArray, rng);
     }
     else {
         thrust::uniform_real_distribution<float> u01(0, 1);
@@ -151,10 +140,11 @@ vc3 imperfectSpecularReflection(
 
         wiw = base_m * local_dir;
         vc3 f = m.specular.color / glm::abs(glm::dot(wiw, itsct.vtx.normal));
-        if (m.specularTexture.valid == 1) {
+        /*if (m.specularTexture.valid == 1) {
             f *= sampleTexture(textureArray, itsct.vtx.uv, m.specularTexture);
-        }
+        }*/
         pdf = 1.;
+        prev = { pdf, BxDFType::BSDF_REFLECTION | BxDFType::BSDF_SPECULAR };
         return f;
     }
 }
@@ -165,16 +155,16 @@ vc3 LambertBRDF(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
-    int& bxdf,
+    PrevSegmentInfo& prev,
     glm::vec3* textureArray,
     thrust::default_random_engine& rng) {
     vc3 f = m.color / glm::pi<Float>();
-    wiw = calculateRandomDirectionInHemisphere(itsct.vtx.normal, rng);
-    if (m.baseColorTexture.valid == 1) {
+    wiw = CosineSampleHemisphere(itsct.vtx.normal, rng);
+    /*if (m.baseColorTexture.valid == 1) {
         f *= sampleTexture(textureArray, itsct.vtx.uv, m.baseColorTexture);
-    }
+    }*/
     pdf = glm::dot(itsct.vtx.normal, wiw) / glm::pi<Float>();
-    bxdf |= BxDFType::BSDF_DIFFUSE;
+    prev.Bxdf |= BxDFType::BSDF_DIFFUSE;
     return f;
 }
 
@@ -185,7 +175,7 @@ vc3 refraction(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
-    int& bxdf,
+    PrevSegmentInfo& prev,
     vc3* textureArray,
     thrust::default_random_engine& rng
 ) {
@@ -208,17 +198,16 @@ vc3 refraction(
     if (glm::length(refract_dir) == 0) {
         // internal reflection
         // TODO
-        f = perfectSpecularReflection(wiw, wow, pdf, itsct, m, textureArray, rng);
-        bxdf = BxDFType::BSDF_SPECULAR | BxDFType::BSDF_REFLECTION;
+        f = perfectSpecularReflection(wiw, wow, pdf, prev, itsct, m, textureArray, rng);
     }
     else {
         wiw = refract_dir;
         f = m.specular.color / glm::abs(glm::dot(wiw, itsct.vtx.normal));
-        if (m.specularTexture.valid == 1) {
+        /*if (m.specularTexture.valid == 1) {
             f *= sampleTexture(textureArray, itsct.vtx.uv, m.specularTexture);
-        }
+        }*/
         pdf = 1.;
-        bxdf = BxDFType::BSDF_SPECULAR | BxDFType::BSDF_TRANSMISSION;
+        prev = { pdf, BxDFType::BSDF_SPECULAR | BxDFType::BSDF_TRANSMISSION };
     }
     return f;
 
@@ -231,7 +220,7 @@ vc3 SchlickFresnel(
     Float& pdf,
     const ShadeableIntersection& itsct,
     const Material& m,
-    int& bxdf,
+    PrevSegmentInfo& prev,
     vc3* textureArray,
     thrust::default_random_engine& rng
 ) {
@@ -247,10 +236,10 @@ vc3 SchlickFresnel(
     float R_theta = R_0 + (1 - R_0) * powf( (1 - cos_theta), 5.0f);
 
     if (R_theta < u01(rng)) {
-        return refraction(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
+        return refraction(wiw, wow, pdf, itsct, m, prev, textureArray, rng);
     }
     else {
-        return imperfectSpecularReflection(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
+        return imperfectSpecularReflection(wiw, wow, pdf, itsct, m, prev, textureArray, rng);
     }
 }
 
@@ -281,35 +270,41 @@ vc3 evalBsdf(
     bool on_same_side = glm::dot(wiw, itsct.vtx.normal) * glm::dot(wow, itsct.vtx.normal) > 0;
 
     vc3 f;
-    if (p > m.hasReflective + m.hasRefractive) {
-        if (m.dist.type == Flat) {
-            // diffuse on cos sample
-            Float cosIn = glm::max(glm::dot(itsct.vtx.normal, wiw), 0.0f);
-            f = cosIn * m.color;
-            if (m.baseColorTexture.valid == 1) {
-                f *= sampleTexture(textureArray, itsct.vtx.uv, m.baseColorTexture);
+    if (m.m_model_type == MaterialModelType::SpecularGlossy) {
+        if (p > m.hasReflective + m.hasRefractive) {
+            if (m.dist.type == Flat) {
+                // diffuse on cos sample
+                Float cosIn = glm::max(glm::dot(itsct.vtx.normal, wiw), 0.0f);
+                f = cosIn * m.color;
+                /*if (m.baseColorTexture.valid == 1) {
+                    f *= sampleTexture(textureArray, itsct.vtx.uv, m.baseColorTexture);
+                }*/
+                pdf = cosIn / glm::pi<Float>();
             }
-            pdf = cosIn / glm::pi<Float>();
+            else if (m.dist.type == TrowbridgeReitz) {
+                f = microfaceBRDF_f(wow, wiw, itsct, m, textureArray);
+                pdf = microfaceBRDF_pdf(m.dist, wow, wiw, itsct.vtx.normal);
+            }
+
         }
-        else if (m.dist.type == TrowbridgeReitz) {
-            f = microfaceBRDF_f(wow, wiw, itsct, m, textureArray);
-            pdf = microfaceBRDF_pdf(m.dist, wow, wiw, itsct.vtx.normal);
+        else if (m.hasReflective > 0 && m.hasRefractive > 0 && !on_same_side) {
+            // fresnel
+            f = vc3(0.);
+            pdf = 0.;
         }
-        
+        else if (p > m.hasRefractive) {
+            f = vc3(0.);
+            pdf = 0.;
+        }
+        else {
+            f = vc3(0.);
+            pdf = 0.;
+        }
     }
-    else if (m.hasReflective > 0 && m.hasRefractive > 0 && !on_same_side) {
-        // fresnel
-        f = vc3(0.);
-        pdf = 0.;
+    else if (m.m_model_type == MaterialModelType::Disney){
+        f = PxrDisney::evaluateBSDF(itsct, m, wow, wiw, pdf, rng);
     }
-    else if (p > m.hasRefractive) {
-        f = vc3(0.);
-        pdf = 0.;
-    }
-    else {
-        f = vc3(0.);
-        pdf = 0.;
-    }
+    
     return f;
 }
 
@@ -320,7 +315,7 @@ vc3 sampleBsdf(
     vc3& wiw,
     Float& pdf,
     const Material& m,
-    int& bxdf,
+    PrevSegmentInfo& prev,
     glm::vec3* textureArray,
     thrust::default_random_engine& rng
 ) {
@@ -331,35 +326,41 @@ vc3 sampleBsdf(
     float p = u01(rng);
     int t = static_cast<int>(m.dist.type);
     vc3 brdf;
-    if (p > m.hasReflective + m.hasRefractive) {
-        if (m.dist.type == Flat) {
-            brdf = LambertBRDF(wiw, pdf, itsct, m, bxdf, textureArray, rng);
-        }
-        else if (m.dist.type == TrowbridgeReitz) {
-            brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, bxdf, pdf, textureArray, rng);
+    if (m.m_model_type == MaterialModelType::SpecularGlossy) {
+        if (p > m.hasReflective + m.hasRefractive) {
+            if (m.dist.type == Flat) {
+                brdf = LambertBRDF(wiw, pdf, itsct, m, prev, textureArray, rng);
+            }
+            else if (m.dist.type == TrowbridgeReitz) {
+                brdf = microfaceBRDF_sample_f(wow, wiw, itsct, m, prev, pdf, textureArray, rng);
 #if _DEBUG
-            if (!isfinite(brdf.x) || !isfinite(brdf.y) || !isfinite(brdf.z)) {
-                printf("brdf infinite or Nan\n");
-            }
+                if (!isfinite(brdf.x) || !isfinite(brdf.y) || !isfinite(brdf.z)) {
+                    printf("brdf infinite or Nan\n");
+                }
 
-            if (!isfinite(pdf)) {
-                printf("pdf infinite or Nan and is %f, wow: %f, %f, %f, wiw: %f, %f, %f\n", wow.x, wow.y, wow.z, wiw.x, wiw.y, wiw.z, pdf);
-            }
+                if (!isfinite(pdf)) {
+                    printf("pdf infinite or Nan and is %f, wow: %f, %f, %f, wiw: %f, %f, %f\n", wow.x, wow.y, wow.z, wiw.x, wiw.y, wiw.z, pdf);
+                }
 #endif
+}
+
+    }
+        else if (m.hasReflective > 0 && m.hasRefractive > 0) {
+            // fresnel
+            brdf = SchlickFresnel(wiw, wow, pdf, itsct, m, prev, textureArray, rng);
         }
-        
-    }
-    else if (m.hasReflective > 0 && m.hasRefractive > 0) {
-        // fresnel
-        brdf = SchlickFresnel(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
-    }
-    else if (p > m.hasRefractive) {
-        brdf = imperfectSpecularReflection(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
+        else if (p > m.hasRefractive) {
+            brdf = imperfectSpecularReflection(wiw, wow, pdf, itsct, m, prev, textureArray, rng);
+        }
+        else {
+            // refractive under construction
+            brdf = refraction(wiw, wow, pdf, itsct, m, prev, textureArray, rng);
+        }
     }
     else {
-        // refractive under construction
-        brdf = refraction(wiw, wow, pdf, itsct, m, bxdf, textureArray, rng);
+        brdf = PxrDisney::sampleBSDF(itsct, wow, wiw, pdf, prev, m, rng);
     }
+    
     return brdf;
 }
 
@@ -395,17 +396,16 @@ void scatterRay(
         const Material &m,
         glm::vec3* textureArray,
         thrust::default_random_engine &rng) {
-    // A basic implementation of pure-diffuse shading will just call the
-    // calculateRandomDirectionInHemisphere defined above.
     vc3 brdf;
     vc3 lightIn;
     Float pdf;
 
-    brdf = sampleBsdf(itsct, -pathSegment.ray.direction, lightIn, pdf, m, pathSegment.prevBxdf, textureArray, rng);
-    pathSegment.colorThroughput *= brdf * abs(glm::dot(itsct.vtx.normal, lightIn)) / pdf;
+    brdf = sampleBsdf(itsct, -pathSegment.ray.direction, lightIn, pdf, m, pathSegment.prevSample, textureArray, rng);
+    pathSegment.colorThroughput *= brdf * abs(glm::dot(itsct.vtx.normal, lightIn)) / (pdf + EPSILON);
     pathSegment.ray.direction = lightIn;
     pathSegment.ray.origin = itsct.vtx.pos + lightIn * 1e-3f;
     pathSegment.remainingBounces--;
+    pathSegment.prevSample.BSDFPdf = pdf;
 }
 
 __host__ __device__
@@ -522,11 +522,6 @@ glm::vec3 env_Light_Le(const GeomTransform& lightTransform, const vc3& rayDir, c
     //printf("env light sample uv: (%f, %f), color: (%f, %f, %f), tex valid: %d\n", st.x, st.y, f.x, f.y, f.z, mat.baseColorTexture.valid);
     return f;
 }
-
-//__device__ __host__
-//vc3 env_light_sample_Li() {
-//
-//}
 
 __device__ __host__
 glm::vec3 Light_sample_Li(
@@ -794,7 +789,7 @@ glm::vec3 EstimateDirect(
     const ShadeableIntersection& itsct,
     const PathSegment& pathSegment,
     const glm::vec3& wow,
-    Material* materials,
+    const Material& itsct_m, Material* materials,
     Geom* geoms, int geom_size, GLTF_Model* models, Triangle* triangles,
     Primitive* primitives, LinearBVHNode* LBVHnodes,
     glm::vec3* textureArray,
@@ -825,16 +820,17 @@ glm::vec3 EstimateDirect(
     glm::vec2 uScattering(u01(rng), u01(rng));
     // the to-be-estimated pos
     glm::vec3 itsct_p = itsct.vtx.pos;
-    const Material& mat = materials[itsct.materialId];
+    //Material mat = materials[itsct.materialId];
+    //sampleMaterialFromTex
     ShadeableIntersection sampled_light_itsct;
     glm::vec3 Li = Light_sample_Li(itsct, sampled_light_itsct, light_geom, materials[light_geom.materialid], uLight, wiw, lightPdf, textureArray);
 #if DirectLightSampleLight == 1
-    //printf("Li: (%f, %f, %f), lightPdf: %f\n", Li.x, Li.y, Li.z, lightPdf);
+    //printf("light_geom: %d, Li: (%f, %f, %f), lightPdf: %f\n", (int)light_geom.type,  Li.x, Li.y, Li.z, lightPdf);
     if (lightPdf > 0. && !isBlack(Li)) {
         glm::vec3 f(0.);
         BxDFType sampledType;
-        if (mat.isSurface) {
-            f = evalBsdf(itsct, wow, wiw, mat, sampledType, scatteringPdf, textureArray, rng) * glm::abs(glm::dot(itsct.vtx.normal, wiw));
+        if (itsct_m.isSurface) {
+            f = evalBsdf(itsct, wow, wiw, itsct_m, sampledType, scatteringPdf, textureArray, rng) * glm::abs(glm::dot(itsct.vtx.normal, wiw));
         }
         else {
             // TODO subsurface
@@ -874,6 +870,9 @@ glm::vec3 EstimateDirect(
                 weight = powerHeuristic(1., lightPdf, 1., scatteringPdf);
                 Ld += f * Li * weight / lightPdf;
             }
+            
+            //printf("Ld: (%f, %f, %f), f: (%f, %f, %f), lightPdf: %f, scatteringPdf: %f, weight: %f\n",Ld.x, Ld.y, Ld.z, f.x, f.y, f.z, lightPdf,scatteringPdf, weight);
+            
         }
     }
     
@@ -884,9 +883,10 @@ glm::vec3 EstimateDirect(
     if (light_geom.type != DELTA) {
         glm::vec3 f(0.);
         bool sampledSpecular = false;
-        if (mat.isSurface) {
+        if (itsct_m.isSurface) {
             int bxdf;
-            f = sampleBsdf(itsct, wow, wiw, scatteringPdf, mat, bxdf, textureArray, rng);
+            PrevSegmentInfo tmp;
+            f = sampleBsdf(itsct, wow, wiw, scatteringPdf, itsct_m, tmp, textureArray, rng);
             f *= glm::abs(glm::dot(itsct.vtx.normal, wiw));
             // TODO handle sampledSpecular
         }
@@ -951,10 +951,10 @@ glm::vec3 EstimateDirect(
                     }
                 }
             }    
-            
+            //Ld += f * Li * Tr;
             Ld += f * Li * Tr * weight / scatteringPdf;
             /*if (hit_light) {
-                printf("Ld: (%f, %f, %f), f: (%f, %f, %f), lightPdf: %f, weight: %f\n",Ld.x, Ld.y, Ld.z, f.x, f.y, f.z, lightPdf, weight);
+                printf("Ld: (%f, %f, %f), f: (%f, %f, %f), lightPdf: %f, scatteringPdf: %f, weight: %f\n",Ld.x, Ld.y, Ld.z, f.x, f.y, f.z, lightPdf,scatteringPdf, weight);
             }*/
             
         }
@@ -970,7 +970,7 @@ __host__ __device__
 void UniformSampleOneLight(
     PathSegment& pathSegment,
     const ShadeableIntersection& itsct,
-    Material* materials,
+    const Material& itsct_m, Material* materials,
     const glm::vec3& wow,
     const int& nLights, int* lightIDs, const int& env_lightID_idx,
     Geom* geoms, int geom_size, GLTF_Model* models, Triangle* triangles,
@@ -985,7 +985,8 @@ void UniformSampleOneLight(
     thrust::uniform_int_distribution<int> dist(0, nLights-1);
     int chosen_light_id = lightIDs[dist(rng)];
     int env_light_id = env_lightID_idx != -1 ? lightIDs[env_lightID_idx] : NULL_PRIMITIVE;
-    vc3 f = EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, materials,
+    vc3 f = EstimateDirect(itsct, pathSegment, -pathSegment.ray.direction, 
+        itsct_m, materials,
         geoms, geom_size, models, triangles,
         primitives, LBVHnodes,
         textureArray,

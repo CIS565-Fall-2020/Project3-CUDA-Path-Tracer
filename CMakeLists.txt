@@ -82,6 +82,8 @@ set(headers
     src/cudaUtils.cuh
     src/sampler.h
     src/cudahelper.h
+    src/disney.h
+    src/Constants.h
     external/include/raytrace/gltf-loader.h
     )
 

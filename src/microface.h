@@ -69,6 +69,7 @@ vc3 distribution_sample_wh(const MicroDistribution& distrib, const vc3& wo, cons
 		glm::vec3 y;
 		CoordinateSys(normal, x, y);
 		wh = cosTheta * normal + sinTheta * glm::cos(phi) * x + sinTheta * glm::sin(phi) * y;
+		wh = glm::normalize(wh);
 		//wh = vc3(sinTheta * glm::cos(phi), sinTheta * glm::sin(phi), cosTheta);
 		if (!SameHemiSphere(wo, wh, normal)) wh = -wh;
 
@@ -106,7 +107,7 @@ Float distribution_D(const MicroDistribution& distrib, const vc3& wh, const vc3&
 		Float cosTheta = glm::dot(wh, normal);
 		Float cos2Theta = cosTheta * cosTheta;
 		Float tan2Theta = glm::max(0., 1. - cos2Theta) / cos2Theta;
-		if (!isfinite(tan2Theta)) { // handle infinity and Nan 
+		if (!isfinite(tan2Theta)) { // handle infinity and Nan and it's normal
 #if _DEBUG
 			printf("meet infinite: wh: %f, %f, %f, n: %f, %f, %f\n", wh.x, wh.y, wh.z, normal.x, normal.y, normal.z);
 			printf("cosTheta: %f, 2theta: %f, tan: %f\n", cosTheta, cos2Theta, tan2Theta);
@@ -120,8 +121,8 @@ Float distribution_D(const MicroDistribution& distrib, const vc3& wh, const vc3&
 		Float e = (c * c / (distrib.alpha.x * distrib.alpha.x) +
 				   s * s / (distrib.alpha.y * distrib.alpha.y)
 				) * tan2Theta;
-
-		Float D = 1. / (glm::pi<Float>() * distrib.alpha.x * distrib.alpha.y * cos4Theta * (1 + e) * (1 + e));
+		Float D = 1.f / (glm::pi<Float>() * distrib.alpha.x * distrib.alpha.y * cos4Theta * (1 + e) * (1 + e));
+		//printf("D: %f, cosTheta: %f, x: %f, y: %f, tan: %f, c: %f, s: %f, e: %f\n", D, cosTheta, distrib.alpha.x, distrib.alpha.y, tan2Theta, c, s, e);
 		return D;
 	}
 	return 0.;
@@ -135,8 +136,15 @@ Float distribution_pdf(const MicroDistribution& distrib, const vc3& wo, const vc
 __host__ __device__
 Float distribution_G(const MicroDistribution& distrib, const vc3& wo, const vc3& wi, const vc3& normal) {
 	Float l1 = Lambda(distrib, wo, normal);
-	Float l2 = Lambda(distrib, wo, normal);
-	return 1. / (1. + l1 + l2);
+	Float l2 = Lambda(distrib, wi, normal);
+	return 1.f / (1.f + l1 + l2);
+}
+
+__host__ __device__ __forceinline__
+Float distribution_G1(const MicroDistribution& distrib, const vc3& ww, const vc3& normal) {
+	// For disney: it used separable masking-shadowing model
+	Float l = Lambda(distrib, ww, normal);
+	return 1.f / (1.f + l);
 }
 
 __host__ __device__
@@ -152,15 +160,14 @@ vc3 microfaceBRDF_f(
 	if (glm::length2(wh) < 1e-4f) return vc3(0.f);
 
 	wh = glm::normalize(wh);
-	float3 f3_wh = make_float3(wh.x, wh.y, wh.z);
 	vc3 F = fresnel_evalulate(glm::dot(wi, wh));
 	Float D = distribution_D(mat.dist, wh, itsct.vtx.normal);
 	Float G = distribution_G(mat.dist, wo, wi, itsct.vtx.normal);
 
 	vc3 c = mat.color;
-	if (mat.baseColorTexture.valid == 1) {
+	/*if (mat.baseColorTexture.valid == 1) {
 		c *= sampleTexture(textureArray, itsct.vtx.uv, mat.baseColorTexture);
-	}
+	}*/
 
 	// printf("microF: D: %f, G: %f, cosThetaI: %f, cosThetaO: %f\n", D, G, cosThetaI, cosThetaO);
 	return c * D * G * F /
@@ -182,7 +189,7 @@ vc3 microfaceBRDF_sample_f(
 	const vc3& wo, vc3& wi,
 	const ShadeableIntersection& itsct,
 	const Material& mat,
-	int& bxdf,
+	PrevSegmentInfo& prev,
 	Float& pdf, 
 	vc3* textureArray,
 	thrust::default_random_engine& rng) {
@@ -206,8 +213,8 @@ vc3 microfaceBRDF_sample_f(
 		pdf = Float(0);
 		return vc3(0.);
 	}
-	bxdf = BxDFType::BSDF_GLOSSY | BxDFType::BSDF_REFLECTION;
 	pdf = distribution_pdf(mat.dist, wo, wh, itsct.vtx.normal) / (4. * glm::dot(wo, wh) + 1e-6);
+	prev = { pdf, BxDFType::BSDF_GLOSSY | BxDFType::BSDF_REFLECTION };
 	return microfaceBRDF_f(wo, wi, itsct, mat, textureArray);
 }
 

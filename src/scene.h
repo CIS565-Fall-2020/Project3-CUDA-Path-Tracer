@@ -24,7 +24,7 @@ using namespace std;
 class Scene {
 private:
     ifstream fp_in;
-    int loadMaterial(string materialid);
+    int loadMaterial(string materialid, const MaterialModelType& materialType);
     int loadGeom(string objectid);
     int loadCamera();
     // jack12
@@ -66,9 +66,6 @@ public:
 
     std::vector<Texture*> textures;
     std::unordered_map<string, Texture*> textureMap; // avoid repeated texture
-
-    std::vector<Float> sampler_pdf;
-    std::vector<Float> sampler_cdf;
 
     RenderState state;
 };

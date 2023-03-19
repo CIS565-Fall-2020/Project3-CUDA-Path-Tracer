@@ -1,0 +1,224 @@
+// Emissive material (light)
+MATERIAL 0
+RGB         1 1 1
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   1
+
+// Diffuse white
+MATERIAL 1
+RGB         .98 .98 .98
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Diffuse red
+MATERIAL 2
+RGB         .85 .35 .35
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Diffuse green
+MATERIAL 3
+RGB         .35 .85 .35
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// Specular white
+MATERIAL 4
+RGB         .98 .98 .98
+SPECEX      5000
+SPECRGB     .98 .98 .98
+REFL        1
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+
+// env map
+MATERIAL 5
+RGB         1 1 1
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   1
+ENV_MAP ./scenes/Tex/gamrig_4k.hdr
+
+//
+MATERIAL_DISNEY 6
+RGB         1.0 1.0 1.0
+ANISO		0
+ROUGH		0.5
+SHEEN		0.0
+SHEENTINT	0
+METALLIC	0.8
+SPECTRANS	0
+SPECTINT	0
+SUBSURFACE	0
+CLEARCOAT	0
+REFRIOR     1.5
+EMITTANCE   0
+TEX_DIFFUSE ./scenes/swordfish/textures/Wall_baseColor.jpeg
+TEX_NORMAL  ./scenes/swordfish/textures/Wall_normal.png
+TEX_ROUGH_METAL ./scenes/swordfish/textures/Wall_metallicRoughness.png
+
+//
+MATERIAL_DISNEY 7
+RGB         1.0 1.0 1.0
+ANISO		0
+ROUGH		0.9
+SHEEN		0.0
+SHEENTINT	0
+METALLIC	0.9
+SPECTRANS	0
+SPECTINT	0
+SUBSURFACE	0
+CLEARCOAT	0
+REFRIOR     1.5
+EMITTANCE   0
+TEX_NORMAL  ./scenes/kirby_vending/textures/DefaultMaterial_normal.png
+TEX_ROUGH_METAL ./scenes/kirby_vending/textures/DefaultMaterial_metallicRoughness.png
+TEX_DIFFUSE ./scenes/kirby_vending/textures/DefaultMaterial_baseColor.png
+
+
+MATERIAL 8
+RGB         1. 1. 1.
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     0
+EMITTANCE   0
+TEX_DIFFUSE ./scenes/kirby_plush/textures/Material_0_baseColor.jpeg
+
+MATERIAL_DISNEY 9
+RGB         1.0 1.0 1.0
+ANISO		0
+ROUGH		0.5
+SHEEN		0.0
+SHEENTINT	0
+METALLIC	1.0
+SPECTRANS	0
+SPECTINT	0
+SUBSURFACE	0
+CLEARCOAT	0
+REFRIOR     1.5
+EMITTANCE   0
+TEX_NORMAL  ./scenes/smg/textures/Scene_-_Root_normal.png
+TEX_ROUGH_METAL ./scenes/smg/textures/Scene_-_Root_metallicRoughness.png
+TEX_DIFFUSE ./scenes/smg/textures/Scene_-_Root_baseColor.png
+
+MATERIAL 10
+RGB         1. 1. 1.
+SPECEX      0
+SPECRGB     0 0 0
+REFL        0
+REFR        0
+REFRIOR     1.5
+EMITTANCE   0
+TEX_DIFFUSE ./scenes/smg/textures/Scene_-_Root_baseColor.png
+
+// Camera
+CAMERA
+RES         800 800
+FOVY        45
+ITERATIONS  5000
+DEPTH       16
+FILE        cornell
+EYE         0.0 5 10.5
+LOOKAT      0 5 0
+UP          0 1 0
+
+
+// Ceiling light
+OBJECT 0
+plane
+material 0
+TRANS       0 9.99 0
+ROTAT       90 0 0
+SCALE       4 4 1
+
+// Floor
+OBJECT 1
+cube
+material 1
+TRANS       0 0 0
+ROTAT       0 0 0
+SCALE       10 .01 10
+
+// Ceiling
+OBJECT 2
+cube
+material 1
+TRANS       0 10 0
+ROTAT       0 0 90
+SCALE       .01 10 10
+
+// Back wall
+OBJECT 3
+cube
+material 1
+TRANS       0 5 -5
+ROTAT       0 90 0
+SCALE       .01 10 10
+
+// Left wall
+OBJECT 4
+cube
+material 2
+TRANS       -5 5 0
+ROTAT       0 0 0
+SCALE       .01 10 10
+
+// Right wall
+OBJECT 5
+cube
+material 3
+TRANS       5 5 0
+ROTAT       0 0 0
+SCALE       .01 10 10
+
+// env light
+OBJECT 6
+infinite
+material 5
+TRANS       0 0 0
+ROTAT       -90 0 90
+SCALE       1 1 1
+
+// kirby plush
+//OBJECT 7
+gltf_mesh
+material 8
+//PATH		./scenes/kirby_plush/scene.gltf
+TRANS       -2 2.75 3
+ROTAT		90 0 -30
+SCALE       0.5 0.5 0.5 
+
+//
+OBJECT 7
+gltf_mesh
+material 7
+//TRANS       4 4 0
+ROTAT       0 0 0
+//SCALE       0.1 0.1 0.1
+//PATH		./scenes/smg/scene.gltf
+//PATH		./scenes/swordfish/scene.gltf
+TRANS       0 4 0
+SCALE       0.5 0.5 0.5
+PATH		./scenes/kirby_vending/scene.gltf

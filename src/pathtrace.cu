@@ -387,7 +387,7 @@ __global__ void shadeTrueMaterial(
         ShadeableIntersection intersection = shadeableIntersections[idx];
         PathSegment& cur_pathSegment = pathSegments[idx];
         
-        bool specularBounce = (cur_pathSegment.prevBxdf & BSDF_SPECULAR) != 0;
+        bool specularBounce = (cur_pathSegment.prevSample.Bxdf & BSDF_SPECULAR) != 0;
         if (intersection.t > 0.0f) { // if the intersection exists...
             // Set up the RNG
             // LOOK: this is how you use thrust's RNG! Please look at
@@ -395,38 +395,37 @@ __global__ void shadeTrueMaterial(
             thrust::default_random_engine rng = makeSeededRandomEngine(iter, idx, 0);
             thrust::uniform_real_distribution<float> u01(0, 1);
 
-            const Material& material = materials[intersection.materialId];
-            glm::vec3 materialColor = material.color;
+            Material itsct_m = materials[intersection.materialId];
+            sampleMaterialFromTex(itsct_m, intersection.vtx.uv, textures);
+            glm::vec3 materialColor = itsct_m.color;
 
             // If the material indicates that the object was a light, "light" the ray
-            if (material.emittance > 0.0f) {
+            if (itsct_m.emittance > 0.0f) {
 #if DirectLightPass == 1:
                 if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
-                    cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
+                    cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * itsct_m.emittance);
                     // stop if hit a light
                     cur_pathSegment.remainingBounces = 0;
                 }
 #else
-                cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * material.emittance);
+                cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * (materialColor * itsct_m.emittance);
                 // stop if hit a light
                 cur_pathSegment.remainingBounces = 0;
 #endif
-                cur_pathSegment.prevBxdf = BxDFType::BSDF_NULL;
+                cur_pathSegment.prevSample = {0.f, 0};
             }
-            // Otherwise, do some pseudo-lighting computation. This is actually more
-            // like what you would expect from shading in a rasterizer like OpenGL.
-            // TODO: replace this! you should be able to start with basically a one-liner
             else {
                 vc3& n = intersection.vtx.normal;
 
-                if (material.normalTexture.valid == 1) {
-                    vc3 tangent_normal = glm::normalize((Float)2 * sampleTexture(textures, intersection.vtx.uv, material.normalTexture) - (Float)1);
+                if (itsct_m.normalTexture.valid == 1) {
+                    vc3 tangent_normal = glm::normalize((Float)2 * sampleTexture(textures, intersection.vtx.uv, itsct_m.normalTexture) - (Float)1);
                     n = geometry::normalMapping(tangent_normal, n);
                 }
 #if DirectLightPass == 1
                 UniformSampleOneLight(
                     cur_pathSegment,
                     intersection,
+                    itsct_m,
                     materials,
                     -cur_pathSegment.ray.direction,
                     light_size,
@@ -446,7 +445,7 @@ __global__ void shadeTrueMaterial(
                 scatterRay(
                     cur_pathSegment,
                     intersection,
-                    material,
+                    itsct_m,
                     textures,
                     rng
                 );
@@ -461,11 +460,11 @@ __global__ void shadeTrueMaterial(
             // Lots of renderers use 4 channel color, RGBA, where A = alpha, often
             // used for opacity, in which case they can indicate "no opacity".
             // This can be useful for post-processing and image compositing.
+            //printf("env_light_id: %d \n", env_light_id_idx);
             if (env_light_id_idx == NULL_PRIMITIVE) {
                 cur_pathSegment.colorThroughput = glm::vec3(0.0f);
             }
             else {
-                // TODO add environment light
                 //if (cur_pathSegment.remainingBounces == max_depth || specularBounce) {
                 //    
                 //}
@@ -474,10 +473,22 @@ __global__ void shadeTrueMaterial(
                 GeomTransform t = geoms[env_light_id].geomT;
                 int mat_id = geoms[env_light_id].materialid;
 #elif RAY_SCENE_INTERSECTION == HBVH
-                GeomTransform t = primitives[env_light_id].geomT;
-                int mat_id = primitives[env_light_id].materialid;
+                GeomTransform t = geoms[env_light_id].geomT;
+                int mat_id = geoms[env_light_id].materialid;
 #endif // RAY_SCENE_INTERSECTION == BRUTE_FORCE
-                cur_pathSegment.colorSum += cur_pathSegment.colorThroughput * env_Light_Le(t, cur_pathSegment.ray.direction, materials[mat_id], textures);
+                Float weight = 1.0;
+                
+                if (cur_pathSegment.remainingBounces != max_depth && !specularBounce) {
+                    weight = powerHeuristic(
+                        1, cur_pathSegment.prevSample.BSDFPdf,
+                        1, env_light_pdf(geoms[env_light_id], materials[mat_id], cur_pathSegment.ray.direction)
+                        // TODO I want the env light pdf be the first term, but turns out too much fireflies
+                    );
+                    //printf("env weight %f\n", weight);
+                }
+                vc3 env = cur_pathSegment.colorThroughput * env_Light_Le(t, cur_pathSegment.ray.direction, materials[mat_id], textures) * weight;
+                
+                cur_pathSegment.colorSum += env;
             }
             cur_pathSegment.remainingBounces = 0;
         }
@@ -756,7 +767,7 @@ void initDeviceTexture(Scene* scene)
     for (int i = 0; i < scene->textures.size(); i++)
         totalMemory += scene->textures[i]->xSize * scene->textures[i]->ySize;
 
-    std::cout << "Total texture memory: " << totalMemory << std::endl;
+    std::cout << "Total texture memory: " << totalMemory / 1024 / 1024 * sizeof(glm::vec3) << " MB." << std::endl;
 
     std::vector<int> offsetList;
 
@@ -797,6 +808,11 @@ void initDeviceTexture(Scene* scene)
 
         if (m.normalTexture.index >= 0)
             m.normalTexture.index = offsetList[m.normalTexture.index];
+
+        if (m.disneyPara.RoughMetalTexture.index >= 0)
+            m.disneyPara.RoughMetalTexture.index = offsetList[m.disneyPara.RoughMetalTexture.index];
+
+        // TODO emissive
     }
 
     checkCUDAError("initializeDeviceTextures end");

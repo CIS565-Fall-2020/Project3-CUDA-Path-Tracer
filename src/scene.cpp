@@ -22,9 +22,14 @@ Scene::Scene(string filename) {
         if (!line.empty()) {
             vector<string> tokens = utilityCore::tokenizeString(line);
             if (strcmp(tokens[0].c_str(), "MATERIAL") == 0) {
-                loadMaterial(tokens[1]);
+                loadMaterial(tokens[1], MaterialModelType::SpecularGlossy);
                 std::cout << " " << endl;
-            } else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
+            }
+            else if (strcmp(tokens[0].c_str(), "MATERIAL_DISNEY") == 0) {
+                loadMaterial(tokens[1], MaterialModelType::Disney);
+                std::cout << " " << endl;
+            }
+            else if (strcmp(tokens[0].c_str(), "OBJECT") == 0) {
                 loadGeom(tokens[1]);
                 std::cout << " " << endl;
             } else if (strcmp(tokens[0].c_str(), "CAMERA") == 0) {
@@ -50,8 +55,8 @@ Scene::Scene(string filename) {
     // TODO assign for HBVH
     for (int i = 0; i < primitives.size(); i++) {
         if (materials[primitives[i].materialid].emittance > 0.) {
-            lightIDs.push_back(i);
-            if (geoms[i].type == GeomType::INFINITE_SHAPE) {
+            lightIDs.push_back(primitives[i].geom_idx);
+            if (geoms[primitives[i].geom_idx].type == GeomType::INFINITE_SHAPE) {
                 this->environmentLightID_idx = lightIDs.size() - 1;
             }
         }
@@ -132,6 +137,7 @@ void Scene::buildAccelerationStructure()
             p.trans = g.geomT;
             p.type = g.type;
             p.materialid = g.materialid;
+            p.geom_idx = g.geom_idx;
             primitives[idx] = p;
 
             idx++;
@@ -377,7 +383,7 @@ void Scene::setDeviceEnvMap()
 int Scene::loadGeom(string objectid) {
     int id = atoi(objectid.c_str());
     if (id != geoms.size()) {
-        std::cout << "ERROR: OBJECT ID does not match expected number of geoms" << endl;
+        std::cout << "OBJECT ID " << id <<  " does not match number of geoms, some Geoms contains multiple meshes" << geoms.size() << endl;
         return -1;
     } else {
         std::cout << "Loading Geom " << id << "..." << endl;
@@ -1102,6 +1108,7 @@ int Scene::loadGLTFMesh(const std::string& file_path, const Geom& parent_geom) {
             cur_bbox.geomT.scale = maxVal_vec - minVal_vec;
             cur_bbox.geomT.translation = maxVal_vec / 2.0f + minVal_vec / 2.0f;
             cur_bbox.geomT.rotation = glm::vec3(0);
+            printf("bbox range min: %f, %f, %f, max: %f, %f, %f\n", minVal_vec.x, minVal_vec.y, minVal_vec.z, maxVal_vec.x, maxVal_vec.y, maxVal_vec.z);
 
             cur_bbox.geomT.transform = utilityCore::buildTransformationMatrix(
                 cur_bbox.geomT.translation,
@@ -1210,7 +1217,7 @@ int Scene::loadCamera() {
     return 1;
 }
 
-int Scene::loadMaterial(string materialid) {
+int Scene::loadMaterial(string materialid, const MaterialModelType& materialType) {
     int id = atoi(materialid.c_str());
     if (id != materials.size()) {
         cout << "ERROR: MATERIAL ID does not match expected number of materials" << endl;
@@ -1218,6 +1225,7 @@ int Scene::loadMaterial(string materialid) {
     } else {
         cout << "Loading Material " << id << "..." << endl;
         Material newMaterial;
+        newMaterial.m_model_type = materialType;
 
         string line;
         utilityCore::safeGetline(fp_in, line);
@@ -1227,9 +1235,54 @@ int Scene::loadMaterial(string materialid) {
             utilityCore::safeGetline(fp_in, line);*/
             vector<string> tokens = utilityCore::tokenizeString(line);
             if (strcmp(tokens[0].c_str(), "RGB") == 0) {
-                glm::vec3 color( atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()) );
+                glm::vec3 color(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
                 newMaterial.color = color;
-            } else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
+            }
+#pragma region DISNEY_PARAMETER
+            else if (strcmp(tokens[0].c_str(), "ANISO") == 0)
+            {
+                newMaterial.disneyPara.anisotropic = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "ROUGH") == 0)
+            {
+                Float rough = atof(tokens[1].c_str());
+                // when rough == 0, scene starts to become black TODO
+                newMaterial.disneyPara.roughness = glm::clamp(rough, EPSILON, 1.0f);
+            }
+            else if (strcmp(tokens[0].c_str(), "SHEEN") == 0)
+            {
+                newMaterial.disneyPara.sheen = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "SHEENTINT") == 0)
+            {
+                newMaterial.disneyPara.sheenTint = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "METALLIC") == 0)
+            {
+                newMaterial.disneyPara.metallic = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "SPECTINT") == 0)
+            {
+                newMaterial.disneyPara.specularTint = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "SPECTRANS") == 0)
+            {
+                newMaterial.disneyPara.specularTrans = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "SUBSURFACE") == 0)
+            {
+                newMaterial.disneyPara.subsurface = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "CLEARCOAT") == 0)
+            {
+                newMaterial.disneyPara.clearcoat = atof(tokens[1].c_str());
+            }
+            else if (strcmp(tokens[0].c_str(), "CLEARCOATGLOSS") == 0)
+            {
+                newMaterial.disneyPara.clearcoatGloss = atof(tokens[1].c_str());
+            }
+#pragma endregion
+            else if (strcmp(tokens[0].c_str(), "SPECEX") == 0) {
                 newMaterial.specular.exponent = atof(tokens[1].c_str());
             } else if (strcmp(tokens[0].c_str(), "SPECRGB") == 0) {
                 glm::vec3 specColor(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str()));
@@ -1254,6 +1307,10 @@ int Scene::loadMaterial(string materialid) {
             else if (strcmp(tokens[0].c_str(), "TEX_NORMAL") == 0)
             {
                 newMaterial.normalTexture = loadTexture(tokens[1], false);
+            }
+            else if (strcmp(tokens[0].c_str(), "TEX_ROUGH_METAL") == 0)
+            {
+                newMaterial.disneyPara.RoughMetalTexture = loadTexture(tokens[1], false);
             }
             else if (strcmp(tokens[0].c_str(), "ENV_MAP") == 0)
             {

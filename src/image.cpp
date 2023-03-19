@@ -53,7 +53,8 @@ Texture::Texture(const std::string& filename, float gamma, bool normalize): gamm
 void Texture::Load(const std::string& path)
 {
 	int channels = 0;
-	float* rawPixels = stbi_loadf(path.c_str(), &this->xSize, &this->ySize, &channels, 3);
+	const int desired_channels = 3;
+	float* rawPixels = stbi_loadf(path.c_str(), &this->xSize, &this->ySize, &channels, desired_channels);
 
 	if (channels == 3 || channels == 4)
 	{
@@ -67,9 +68,9 @@ void Texture::Load(const std::string& path)
 			for (int i = 0; i < xSize * ySize; i++)
 			{
 				glm::vec3 color;
-				color.x = rawPixels[i * channels];
-				color.y = rawPixels[i * channels + 1];
-				color.z = rawPixels[i * channels + 2];
+				color.x = rawPixels[i * desired_channels];
+				color.y = rawPixels[i * desired_channels + 1];
+				color.z = rawPixels[i * desired_channels + 2];
 
 				accum += color;
 			}
@@ -80,9 +81,9 @@ void Texture::Load(const std::string& path)
 		for (int i = 0; i < xSize * ySize; i++)
 		{
 			glm::vec3 color;
-			color.x = rawPixels[i * channels];
-			color.y = rawPixels[i * channels + 1];
-			color.z = rawPixels[i * channels + 2];
+			color.x = rawPixels[i * desired_channels];
+			color.y = rawPixels[i * desired_channels + 1];
+			color.z = rawPixels[i * desired_channels + 2];
 
 			if (normalize)
 				color /= accum;

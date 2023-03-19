@@ -136,17 +136,7 @@ struct Primitive { // the geom info
     int geom_idx;
 };
 
-//ref: https://github.com/mmerchante/CUDA-Path-tracer
-struct TextureDescriptor
-{
-    int valid;
-    int type; // 0 bitmap, 1 procedural TODO
-    int index;
-    int width;
-    int height;
-    glm::vec2 repeat;
-    TextureDescriptor() : valid(-1), type(0), index(-1), width(0), height(0), repeat(glm::vec2(1.f)){};
-};
+
 
 enum MicroDistributionType {
     Flat = 0,
@@ -158,13 +148,30 @@ struct MicroDistribution {
     vc2 alpha;
 };
 
-enum MaterialModelType {
+enum class MaterialModelType: unsigned char {
     SpecularGlossy = 0,
     Light = 1,
-    MetalFlow = 1,
-    Disney = 2
+    MetalFlow = 2,
+    Disney = 3
 };
 
+struct DisneyParameters{
+    Float
+        anisotropic,
+        subsurface,
+        roughness,
+        metallic,
+        specularTrans,
+        specularTint,
+        sheen,
+        sheenTint,
+        clearcoat,
+        clearcoatGloss;
+
+    TextureDescriptor RoughMetalTexture;
+};
+
+struct TextureDescriptor;
 struct Material {
     MaterialModelType m_model_type = MaterialModelType::SpecularGlossy;
     glm::vec3 color;
@@ -176,12 +183,16 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+
+    DisneyParameters disneyPara;
     bool isSurface = true;
     MicroDistribution dist{Flat, vc2(0.)};
 
     TextureDescriptor baseColorTexture;
     TextureDescriptor specularTexture;
     TextureDescriptor normalTexture;
+    TextureDescriptor emissiveTexture;
+
     Distribution2D envMapSampler;
 };
 
@@ -207,13 +218,19 @@ struct RenderState {
     std::string imageName;
 };
 
+struct PrevSegmentInfo {
+    // for environment sample
+    float BSDFPdf;
+    int Bxdf;
+};
+
 struct PathSegment {
 	Ray ray;
 	glm::vec3 colorSum;
     glm::vec3 colorThroughput;
 	int pixelIndex;
 	int remainingBounces;
-    int prevBxdf;
+    PrevSegmentInfo prevSample;
 };
 
 struct Vertex

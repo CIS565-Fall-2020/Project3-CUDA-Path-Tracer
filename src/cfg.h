@@ -21,7 +21,7 @@
 
 #define InDirectLightPass 1
 
-#define RAY_SCENE_INTERSECTION BRUTE_FORCE // 0 no acceleration, 1 for LBVH
+#define RAY_SCENE_INTERSECTION HBVH // 0 no acceleration, 1 for LBVH
 
 #define usebbox 1
 #define motion_blur 0
