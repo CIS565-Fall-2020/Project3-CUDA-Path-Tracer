@@ -1,6 +1,7 @@
-#include "main.h"
+﻿#include "main.h"
 #include "preview.h"
 #include <cstring>
+#include "PerformanceTimer.h"
 
 static std::string startTimeString;
 
@@ -26,6 +27,10 @@ int iteration;
 int width;
 int height;
 
+double time_passed;
+
+std::chrono::steady_clock::time_point begin;
+std::chrono::steady_clock::time_point end;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -38,11 +43,11 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    const char *sceneFile = argv[1];
+    //std::cout << "Current dir: "<< argv[0] << std::endl;
 
+    const char *sceneFile = argv[1];
     // Load scene file
     scene = new Scene(sceneFile);
-
     // Set up camera stuff from loaded path tracer settings
     iteration = 0;
     renderState = &scene->state;
@@ -68,7 +73,9 @@ int main(int argc, char** argv) {
 
     // Initialize CUDA and GL components
     init();
-
+    // cuda memory operation should be after init()!
+    scene->setDeviceEnvMap();
+    initDeviceTexture(scene);
     // GLFW main loop
     mainLoop();
 
@@ -78,7 +85,7 @@ int main(int argc, char** argv) {
 void saveImage() {
     float samples = iteration;
     // output image file
-    image img(width, height);
+    Image img(width, height);
 
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
@@ -90,7 +97,8 @@ void saveImage() {
 
     std::string filename = renderState->imageName;
     std::ostringstream ss;
-    ss << filename << "." << startTimeString << "." << samples << "samp";
+    ss << filename << "_" << startTimeString << "_" << samples << "samp" <<
+        "_" << renderState -> traceDepth << "depth";
     filename = ss.str();
 
     // CHECKITOUT
@@ -98,7 +106,7 @@ void saveImage() {
     //img.saveHDR(filename);  // Save a Radiance HDR file
 }
 
-void runCuda() {
+void runCuda(PerformanceTimer& m_timer) {
     if (camchanged) {
         iteration = 0;
         Camera &cam = renderState->camera;
@@ -116,8 +124,8 @@ void runCuda() {
         cam.position = cameraPosition;
         cameraPosition += cam.lookAt;
         cam.position = cameraPosition;
-        camchanged = false;
-      }
+        camchanged = false;    
+    }
 
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
@@ -125,8 +133,10 @@ void runCuda() {
     if (iteration == 0) {
         pathtraceFree();
         pathtraceInit(scene);
-    }
 
+        m_timer.startSysTimer();
+    }
+    
     if (iteration < renderState->iterations) {
         uchar4 *pbo_dptr = NULL;
         iteration++;
@@ -134,11 +144,17 @@ void runCuda() {
 
         // execute the kernel
         int frame = 0;
+        //m_timer.startGpuTimer();
         pathtrace(pbo_dptr, frame, iteration);
 
         // unmap buffer object
         cudaGLUnmapBufferObject(pbo);
     } else {
+        m_timer.endSysTimer();
+        time_passed = m_timer.getSysElapsedTimeForPreviousOperation();
+        std::cout << "Average iteration time " << time_passed / iteration  << std::endl;
+        
+
         saveImage();
         pathtraceFree();
         cudaDeviceReset();

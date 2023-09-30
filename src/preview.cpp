@@ -105,6 +105,7 @@ void cleanupCuda() {
 
 void initCuda() {
     cudaGLSetGLDevice(0);
+    checkCUDAError("cudaGLSetDevice");
 
     // Clean up on program exit
     atexit(cleanupCuda);
@@ -169,9 +170,10 @@ bool init() {
 }
 
 void mainLoop() {
+    PerformanceTimer m_timer;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        runCuda();
+        runCuda(m_timer);
 
         string title = "CIS565 Path Tracer | " + utilityCore::convertIntToString(iteration) + " Iterations";
         glfwSetWindowTitle(window, title.c_str());

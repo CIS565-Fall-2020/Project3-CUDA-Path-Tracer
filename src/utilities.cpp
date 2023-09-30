@@ -8,7 +8,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <iostream>
 #include <cstdio>
-
+#include "cfg.h"
 #include "utilities.h"
 
 float utilityCore::clamp(float f, float min, float max) {
@@ -62,7 +62,7 @@ bool utilityCore::epsilonCheck(float a, float b) {
     }
 }
 
-glm::mat4 utilityCore::buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale) {
+glm::mat4 utilityCore::buildTransformationMatrix(const glm::vec3& translation, const glm::vec3& rotation, const glm::vec3& scale) {
     glm::mat4 translationMat = glm::translate(glm::mat4(), translation);
     glm::mat4 rotationMat =   glm::rotate(glm::mat4(), rotation.x * (float) PI / 180, glm::vec3(1, 0, 0));
     rotationMat = rotationMat * glm::rotate(glm::mat4(), rotation.y * (float) PI / 180, glm::vec3(0, 1, 0));
@@ -109,4 +109,102 @@ std::istream& utilityCore::safeGetline(std::istream& is, std::string& t) {
             t += (char)c;
         }
     }
+}
+
+/*
+std::string GetFilePathExtension(const std::string& FileName) {
+    if (FileName.find_last_of(".") != std::string::npos)
+        return FileName.substr(FileName.find_last_of(".") + 1);
+    return "";
+}*/
+
+aabbBounds geometry::bbUnion(const aabbBounds& a, const aabbBounds& b)
+{
+    return aabbBounds{ glm::min(a.bmin, b.bmin), glm::max(a.bmax, b.bmax) };
+}
+
+void geometry::aabbForImplicit(aabbBounds& aabb, const Geom& geom)
+{
+    if (geom.type == SPHERE) {
+        // TODO handle sphere with transform with efficient way
+        // https://stackoverflow.com/questions/4368961/calculating-an-aabb-for-a-transformed-sphere
+        vc3 verts[8]{
+               {  0.5f,  0.5f,  0.5f },
+               {  0.5f,  0.5f, -0.5f },
+               {  0.5f, -0.5f,  0.5f },
+               {  0.5f, -0.5f, -0.5f },
+               { -0.5f,  0.5f,  0.5f },
+               { -0.5f,  0.5f, -0.5f },
+               { -0.5f, -0.5f,  0.5f },
+               { -0.5f, -0.5f, -0.5f }
+        };
+
+        for (int i = 0; i < 8; i++) {
+            vc4 tmp = geom.geomT.transform * vc4(verts[i], 1.0f);
+            verts[i] =  vc3(tmp/tmp.w);
+        }
+        aabb = aabbForVertex(verts, 8);
+    }
+    else if (geom.type == CUBE) {
+        vc3 verts[8]{
+               {  0.5f,  0.5f,  0.5f },
+               {  0.5f,  0.5f, -0.5f },
+               {  0.5f, -0.5f,  0.5f },
+               {  0.5f, -0.5f, -0.5f },
+               { -0.5f,  0.5f,  0.5f },
+               { -0.5f,  0.5f, -0.5f },
+               { -0.5f, -0.5f,  0.5f },
+               { -0.5f, -0.5f, -0.5f }
+        };
+
+        for (int i = 0; i < 8; i++) {
+            vc4 tmp = geom.geomT.transform * vc4(verts[i], 1.0f);
+            verts[i] = vc3(tmp / tmp.w);
+        }
+        aabb = aabbForVertex(verts, 8);
+    }
+    else if (geom.type == PLANE) {
+        vc3 verts[8]{
+               {  0.5f,  0.5f,  0.01f },
+               {  0.5f,  0.5f, -0.01f },
+               {  0.5f, -0.5f,  0.01f },
+               {  0.5f, -0.5f, -0.01f },
+               { -0.5f,  0.5f,  0.01f },
+               { -0.5f,  0.5f, -0.01f },
+               { -0.5f, -0.5f,  0.01f },
+               { -0.5f, -0.5f, -0.01f }
+        };
+        for (int i = 0; i < 8; i++) {
+            vc4 tmp = geom.geomT.transform * vc4(verts[i], 1.0f);
+            verts[i] = vc3(tmp / tmp.w);
+        }
+        aabb = aabbForVertex(verts, 8);
+    }
+}
+
+void geometry::aabbForTriangle(aabbBounds& aabb, const Triangle& geom)
+{
+    vc3 verts[3]{
+               geom.v0,
+               geom.v1,
+               geom.v2
+    };
+    aabb = aabbForVertex(verts, 3);
+}
+
+aabbBounds geometry::aabbForVertex(vc3* verts, int num)
+{
+    // assume 8 vertex
+    vc3 min, max = verts[0];
+
+    for (int i = 1; i < num; i++) {
+        min = glm::min(min, verts[i]);
+        max = glm::max(max, verts[i]);
+    }
+    return aabbBounds{min, max};
+}
+
+aabbBounds geometry::bbUnion(const aabbBounds& a, const vc3& b)
+{
+    return aabbBounds{ glm::min(a.bmin, b), glm::max(a.bmax, b) };
 }

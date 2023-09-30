@@ -558,3 +558,6 @@ xcuserdata
 *.xccheckout
 *.moved-aside
 *.xcuserstate
+
+# Jack12
+gltf_mesh/*

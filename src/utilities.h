@@ -8,11 +8,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cuda.h>
 
-#define PI                3.1415926535897932384626422832795028841971f
-#define TWO_PI            6.2831853071795864769252867665590057683943f
-#define SQRT_OF_ONE_THIRD 0.5773502691896257645091487805019574556476f
-#define EPSILON           0.00001f
+#include "sceneStructs.h"
+#include "Constants.h"
+
 
 namespace utilityCore {
     extern float clamp(float f, float min, float max);
@@ -20,7 +20,46 @@ namespace utilityCore {
     extern glm::vec3 clampRGB(glm::vec3 color);
     extern bool epsilonCheck(float a, float b);
     extern std::vector<std::string> tokenizeString(std::string str);
-    extern glm::mat4 buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale);
+    extern glm::mat4 buildTransformationMatrix(const glm::vec3& translation, const glm::vec3& rotation, const glm::vec3& scale);
     extern std::string convertIntToString(int number);
     extern std::istream& safeGetline(std::istream& is, std::string& t); //Thanks to http://stackoverflow.com/a/6089413
+    // Jack12 add
+    // ref https://github.com/syoyo/tinygltf/blob/master/examples/glview/glview.cc
+    //extern std::string GetFilePathExtension(const std::string& FileName);
+   // __host__ __device__ glm::mat4 utilityCore::device_buildTransformationMatrix(glm::vec3 translation, glm::vec3 rotation, glm::vec3 scale);
+}
+
+struct aabbBounds;
+struct Geom;
+struct Triangle;
+namespace geometry {
+    extern aabbBounds bbUnion(const aabbBounds& a, const aabbBounds& b);
+    extern aabbBounds bbUnion(const aabbBounds& a, const glm::vec3& b);
+    extern void aabbForImplicit(aabbBounds& aabb, const Geom& geom);
+    extern void aabbForTriangle(aabbBounds& aabb, const Triangle& geom);
+    extern aabbBounds aabbForVertex(glm::vec3* verts, int num);
+
+    __device__ inline vc3 normalMapping(const vc3& tangent_normal, const vc3& origin_normal) {
+        glm::vec3 t = (glm::abs(tangent_normal.x) > 0.9999f) ? vc3(0.f, 1.f, 0.f) : vc3(1.f, 0.f, 0.f);
+        glm::vec3 b = glm::normalize(glm::cross(tangent_normal, t));
+        t = glm::cross(b, tangent_normal);
+        return glm::mat3(t, b, tangent_normal) * origin_normal;
+    }
+}
+
+namespace Math {
+    __host__ __device__ inline Float SphericalTheta(const vc3& v) {
+        return glm::acos(glm::clamp(v.z, (Float)-1, (Float)1));
+    }
+
+    __host__ __device__ inline Float SphericalPhi(const vc3& v) {
+        Float p = glm::atan(v.y, v.x);
+        return (p < 0) ? (p + 2 * PI) : p;
+    }
+
+    __host__ __device__ inline float luminance(const glm::vec3& color) {
+        // For the sRGB colorspace, the relative luminance of a color is defined as L = 0.2126 * R + 0.7152 * G + 0.0722 * B
+        const glm::vec3 T(.2126f, .7152f, .0722f);
+        return glm::dot(color, T);
+    }
 }
